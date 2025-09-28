@@ -28,10 +28,12 @@ import {
   Calendar,
   Eye,
   MessageCircle,
-  Trash2
+  Trash2,
+  HelpCircle
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { getUser, updateUser, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing } from "@/lib/firestore";
+import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing } from "@/lib/firestore";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,6 +57,7 @@ const Profile = () => {
     rentPerDay: 0,
     category: '',
   });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -120,6 +123,58 @@ const Profile = () => {
         description: "Failed to update profile",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !auth.currentUser) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      
+      // Upload to Cloudinary
+      const result = await uploadToCloudinary(file, 'rent-share/profile-photos');
+      
+      // Update user profile photo URL in Firestore
+      await updateUserProfilePhoto(auth.currentUser.uid, result.secure_url);
+      
+      // Update local state
+      setUser(prev => prev ? { ...prev, profilePhotoUrl: result.secure_url } : null);
+      
+      toast({
+        title: "Success",
+        description: "Profile photo updated successfully"
+      });
+    } catch (error) {
+      console.error('Error uploading profile photo:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload profile photo",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -250,11 +305,36 @@ const Profile = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-2xl">
-                {user.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-20 w-20">
+                {user.profilePhotoUrl ? (
+                  <img 
+                    src={user.profilePhotoUrl} 
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-2xl">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <label 
+                htmlFor="profile-photo-upload"
+                className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors"
+                title="Change profile photo"
+              >
+                <Camera className="h-4 w-4" />
+              </label>
+              <input
+                id="profile-photo-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleProfilePhotoUpload}
+                className="hidden"
+                disabled={uploadingPhoto}
+              />
+            </div>
             <div>
               <h1 className="text-3xl font-urbanist font-bold">
                 <span className="gradient-text">{user.name}</span>
@@ -386,6 +466,7 @@ const Profile = () => {
             <TabsTrigger value="saved">Saved Rentals</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="support">Help & Support</TabsTrigger>
           </TabsList>
 
           <TabsContent value="info" className="space-y-6">
@@ -639,9 +720,14 @@ const Profile = () => {
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Profile Information
                   </Button>
-                  <Button variant="outline" className="w-full justify-start glass-effect">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start glass-effect"
+                    onClick={() => document.getElementById('profile-photo-upload')?.click()}
+                    disabled={uploadingPhoto}
+                  >
                     <Camera className="h-4 w-4 mr-2" />
-                    Change Profile Picture
+                    {uploadingPhoto ? 'Uploading...' : 'Change Profile Picture'}
                   </Button>
                   <Button variant="outline" className="w-full justify-start glass-effect">
                     <Settings className="h-4 w-4 mr-2" />
@@ -650,6 +736,10 @@ const Profile = () => {
                   <Button variant="outline" className="w-full justify-start glass-effect">
                     <DollarSign className="h-4 w-4 mr-2" />
                     Payment Methods
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect">
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Help & Support
                   </Button>
                 </CardContent>
               </Card>
@@ -682,6 +772,90 @@ const Profile = () => {
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="support" className="space-y-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <HelpCircle className="h-5 w-5 mr-2" />
+                    Contact Support
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email Support</p>
+                        <a 
+                          href="mailto:rentshare11@gmail.com" 
+                          className="font-medium text-primary hover:underline"
+                        >
+                          rentshare11@gmail.com
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phone Support</p>
+                        <a 
+                          href="tel:+918547652100" 
+                          className="font-medium text-primary hover:underline"
+                        >
+                          +91 8547652100
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Our support team is available to help you with any questions or issues. 
+                      We typically respond within 24 hours.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <MessageCircle className="h-5 w-5 mr-2" />
+                    FAQ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I post an item?</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Click "Post Item" in the header and fill out the form with your item details.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I contact item owners?</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Click "Contact" on any item page to start a chat with the owner.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I update my profile?</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Go to your Profile page and click "Edit Profile" to update your information.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I upload a profile photo?</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Click the camera icon on your avatar or go to Settings → "Change Profile Picture".
+                      </p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

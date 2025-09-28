@@ -25,6 +25,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { getCityNameFromCoordinates } from "@/lib/utils";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -36,6 +37,7 @@ const ProductDetail = () => {
   const [listing, setListing] = useState<Listing | null>(null);
   const [owner, setOwner] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cityName, setCityName] = useState<string>('');
 
   useEffect(() => {
     const fetchListingData = async () => {
@@ -59,6 +61,15 @@ const ProductDetail = () => {
         }
 
         setListing(listingData);
+
+        // Fetch city name from coordinates
+        if (listingData.location) {
+          const city = await getCityNameFromCoordinates(
+            listingData.location.latitude, 
+            listingData.location.longitude
+          );
+          setCityName(city);
+        }
 
         // Fetch owner data
         const ownerData = await getUser(listingData.ownerId);
@@ -261,6 +272,49 @@ const ProductDetail = () => {
     }
   };
 
+  const handleShare = async () => {
+    if (!listing) return;
+
+    const shareData = {
+      title: listing.title,
+      text: `Check out this item: ${listing.title} - ₹${listing.rentPerDay}/day`,
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared successfully!",
+          description: "The item has been shared."
+        });
+      } else {
+        // Fallback: Copy to clipboard
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Link copied!",
+          description: "The item link has been copied to your clipboard."
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Link copied!",
+          description: "The item link has been copied to your clipboard."
+        });
+      } catch (clipboardError) {
+        toast({
+          title: "Share failed",
+          description: "Unable to share or copy the link. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -365,11 +419,29 @@ const ProductDetail = () => {
                   variant="outline"
                   size="icon"
                   className="glass-effect hover-scale"
+                  onClick={handleShare}
                 >
                   <Share2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
+            
+            {/* Video Display */}
+            {listing.videoProof && (
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-2">360° Video Proof</h3>
+                <div className="relative rounded-lg overflow-hidden">
+                  <video 
+                    src={listing.videoProof} 
+                    controls
+                    className="w-full h-64 object-cover rounded-lg"
+                    preload="metadata"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              </div>
+            )}
             
             {/* Thumbnail Gallery */}
             {listing.images.length > 1 && (
@@ -410,10 +482,7 @@ const ProductDetail = () => {
                 <div className="flex items-center gap-2">
                   <div className="flex items-center text-muted-foreground">
                     <MapPin className="h-4 w-4 mr-1" />
-                  {listing.location 
-                    ? `${listing.location.latitude.toFixed(6)}, ${listing.location.longitude.toFixed(6)}`
-                    : 'Location not available'
-                  }
+                    {cityName || (listing.location ? 'Loading location...' : 'Location not available')}
                   </div>
                   {listing.location && (
                     <button 
@@ -424,8 +493,8 @@ const ProductDetail = () => {
                       className="flex items-center text-primary hover:text-primary/80 transition-colors cursor-pointer"
                       title="Get Directions"
                     >
-                      <Navigation className="h-4 w-4" />
-                      <ExternalLink className="h-3 w-3 ml-1" />
+                      <Navigation className="h-5 w-5" />
+                      <ExternalLink className="h-4 w-4 ml-1" />
                     </button>
                   )}
                 </div>
@@ -441,8 +510,16 @@ const ProductDetail = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                      <User className="h-6 w-6 text-white" />
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                      {owner.profilePhotoUrl ? (
+                        <img 
+                          src={owner.profilePhotoUrl} 
+                          alt={owner.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-6 w-6 text-white" />
+                      )}
                     </div>
                     <div>
                       <h3 className="font-semibold">{owner.name}</h3>

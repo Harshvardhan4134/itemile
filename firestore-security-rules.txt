@@ -66,3 +66,62 @@ service cloud.firestore {
 # 2. Replace the existing rules with the above content
 # 3. Click "Publish" to deploy the rules
 # 4. Test the rules using the Rules Playground in Firebase Console
+
+# previous working rule "rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Listings
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null &&
+        request.auth.uid == request.resource.data.ownerId;
+    }
+
+    // Transactions (only owner & renter can access)
+    match /transactions/{transactionId} {
+      allow create: if request.auth != null &&
+        (request.resource.data.ownerId == request.auth.uid ||
+         request.resource.data.renterId == request.auth.uid);
+
+      allow read, update, delete: if request.auth != null &&
+        (request.auth.uid == resource.data.ownerId ||
+         request.auth.uid == resource.data.renterId);
+
+      // Messages inside a transaction
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null &&
+          (request.auth.uid == get(/databases/$(database)/documents/transactions/$(transactionId)).data.ownerId ||
+           request.auth.uid == get(/databases/$(database)/documents/transactions/$(transactionId)).data.renterId);
+      }
+    }
+
+    // Chats
+    match /chats/{chatId} {
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.participants;
+
+      allow read, update, delete: if request.auth != null &&
+        request.auth.uid in resource.data.participants;
+
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+    }
+
+    // Notifications: user can read their own notifications
+    match /notifications/{notificationId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+    }
+  }
+}
+"

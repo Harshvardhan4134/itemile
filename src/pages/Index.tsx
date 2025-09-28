@@ -30,7 +30,9 @@ import {
   Home,
   Scissors,
   Wrench,
-  Dumbbell
+  Dumbbell,
+  Mail,
+  Phone
 } from "lucide-react";
 
 const Index = () => {
@@ -412,16 +414,60 @@ const Index = () => {
         {/* Footer */}
         <footer className="py-12 border-t border-border/40">
           <div className="container">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="flex items-center space-x-2 mb-4 md:mb-0">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-white" />
+            <div className="grid md:grid-cols-3 gap-8">
+              {/* Brand Section */}
+              <div className="flex flex-col items-center md:items-start">
+                <div className="flex items-center space-x-2 mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-urbanist font-bold text-xl gradient-text">Rent Share</span>
                 </div>
-                <span className="font-urbanist font-bold text-xl gradient-text">Rent Share</span>
+                <p className="text-muted-foreground text-sm text-center md:text-left">
+                  © 2024 Rent Share. Built with love for the sharing community.
+                </p>
               </div>
-              <p className="text-muted-foreground text-sm">
-                © 2024 Rent Share. Built with love for the sharing community.
-              </p>
+
+              {/* Contact Section */}
+              <div className="flex flex-col items-center md:items-start">
+                <h3 className="font-semibold mb-4">Contact Support</h3>
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a 
+                      href="mailto:rentshare11@gmail.com" 
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      rentshare11@gmail.com
+                    </a>
+                  </div>
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a 
+                      href="tel:+918547652100" 
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      +91 8547652100
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Links */}
+              <div className="flex flex-col items-center md:items-start">
+                <h3 className="font-semibold mb-4">Quick Links</h3>
+                <div className="space-y-2 text-center md:text-left">
+                  <Link to="/explore" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+                    Explore Items
+                  </Link>
+                  <Link to="/post" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+                    Post Item
+                  </Link>
+                  <Link to="/profile" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+                    My Profile
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </footer>

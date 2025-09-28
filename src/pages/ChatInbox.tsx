@@ -32,12 +32,13 @@ const ChatInbox = () => {
   const { chatId } = useParams<{ chatId?: string }>();
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<UserType | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [chatUsers, setChatUsers] = useState<Map<string, UserType>>(new Map());
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -45,9 +46,26 @@ const ChatInbox = () => {
       return;
     }
 
-    const unsubscribe = subscribeToChats(auth.currentUser!.uid, (userChats) => {
+    const unsubscribe = subscribeToChats(auth.currentUser!.uid, async (userChats) => {
       setChats(userChats);
       setLoading(false);
+
+      // Load user data for all chats
+      const userMap = new Map<string, UserType>();
+      for (const chat of userChats) {
+        const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
+        if (otherUserId && !userMap.has(otherUserId)) {
+          try {
+            const userData = await getUser(otherUserId);
+            if (userData) {
+              userMap.set(otherUserId, userData);
+            }
+          } catch (error) {
+            console.error('Error loading user data:', error);
+          }
+        }
+      }
+      setChatUsers(userMap);
 
       // If a specific chat is selected, load it
       if (chatId) {
@@ -192,6 +210,7 @@ const ChatInbox = () => {
                   <div className="space-y-1">
                     {filteredChats.map((chat) => {
                       const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
+                      const otherUserData = otherUserId ? chatUsers.get(otherUserId) : null;
                       const isActive = chat.id === chatId;
                       
                       return (
@@ -204,21 +223,29 @@ const ChatInbox = () => {
                         >
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                                {otherUserId?.charAt(0).toUpperCase() || 'U'}
-                              </AvatarFallback>
+                              {otherUserData?.profilePhotoUrl ? (
+                                <img 
+                                  src={otherUserData.profilePhotoUrl} 
+                                  alt={otherUserData.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
+                                  {otherUserData?.name?.charAt(0).toUpperCase() || otherUserId?.charAt(0).toUpperCase() || 'U'}
+                                </AvatarFallback>
+                              )}
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <p className="font-medium text-sm truncate">
-                                  Chat with {otherUserId?.charAt(0).toUpperCase() || 'User'}
+                                  {otherUserData?.name || `User ${otherUserId?.slice(0, 6)}`}
                                 </p>
                                 <span className="text-xs text-muted-foreground">
                                   {formatTime(chat.lastUpdated)}
                                 </span>
                               </div>
                               <p className="text-xs text-muted-foreground truncate">
-                                {chat.lastMessage || 'No messages yet'}
+                                {chat.listingTitle ? `About: ${chat.listingTitle}` : (chat.lastMessage || 'No messages yet')}
                               </p>
                             </div>
                           </div>
@@ -238,9 +265,17 @@ const ChatInbox = () => {
                 <CardHeader className="border-b">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                        {otherUser.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
+                      {otherUser.profilePhotoUrl ? (
+                        <img 
+                          src={otherUser.profilePhotoUrl} 
+                          alt={otherUser.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
+                          {otherUser.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
                     <div>
                       <h3 className="font-semibold">{otherUser.name}</h3>

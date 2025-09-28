@@ -33,6 +33,7 @@ export interface User {
   createdAt: any;
   role?: 'rent' | 'swap' | 'both';
   idProofUrl?: string;
+  profilePhotoUrl?: string;
   location?: {
     latitude: number;
     longitude: number;
@@ -125,6 +126,11 @@ export const getUser = async (uid: string): Promise<User | null> => {
 export const updateUser = async (uid: string, updates: Partial<User>): Promise<void> => {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, updates);
+};
+
+export const updateUserProfilePhoto = async (uid: string, profilePhotoUrl: string): Promise<void> => {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, { profilePhotoUrl });
 };
 
 export const updateUserLocation = async (uid: string, latitude: number, longitude: number): Promise<void> => {
@@ -519,10 +525,61 @@ export const getChat = async (chatId: string): Promise<Chat | null> => {
   return chatSnap.exists() ? { id: chatId, ...chatSnap.data() } as Chat : null;
 };
 
+// Helper function to find existing chat between two users for a listing
+const findExistingChat = async (ownerId: string, renterId: string, listingId: string): Promise<string | null> => {
+  try {
+    const q = query(
+      collection(db, "chats"),
+      where("participants", "array-contains", ownerId),
+      where("listingId", "==", listingId)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    for (const doc of snapshot.docs) {
+      const chatData = doc.data();
+      if (chatData.participants.includes(renterId) && chatData.participants.includes(ownerId)) {
+        return doc.id;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error finding existing chat:', error);
+    return null;
+  }
+};
+
 // Transaction + Chat creation function
 export const createTransactionAndChat = async (listing: any, renterId: string): Promise<{transactionId: string, chatId: string}> => {
+  // First, check if there's already a chat between these users for this listing
+  const existingChatId = await findExistingChat(listing.ownerId, renterId, listing.id);
+  
+  if (existingChatId) {
+    console.log('Found existing chat:', existingChatId);
+    
+    // Check if there's already a transaction for this listing and renter
+    const transactionQuery = query(
+      collection(db, "transactions"),
+      where("listingId", "==", listing.id),
+      where("renterId", "==", renterId),
+      where("ownerId", "==", listing.ownerId)
+    );
+    
+    const transactionSnapshot = await getDocs(transactionQuery);
+    
+    if (!transactionSnapshot.empty) {
+      const existingTransaction = transactionSnapshot.docs[0];
+      console.log('Found existing transaction:', existingTransaction.id);
+      return { 
+        transactionId: existingTransaction.id, 
+        chatId: existingChatId 
+      };
+    }
+  }
+
   const transactionId = `txn_${listing.id}_${renterId}_${Date.now()}`;
-  const chatId = `chat_${listing.ownerId}_${renterId}_${Date.now()}`;
+  const chatId = existingChatId || `chat_${listing.ownerId}_${renterId}_${Date.now()}`;
 
   console.log('Creating transaction and chat:', {
     transactionId,
@@ -530,7 +587,8 @@ export const createTransactionAndChat = async (listing: any, renterId: string): 
     listingId: listing.id,
     ownerId: listing.ownerId,
     renterId,
-    listingTitle: listing.title
+    listingTitle: listing.title,
+    isNewChat: !existingChatId
   });
 
   // Step 1: Create Transaction
@@ -553,19 +611,29 @@ export const createTransactionAndChat = async (listing: any, renterId: string): 
   await setDoc(doc(db, "transactions", transactionId), transactionData);
   console.log('Transaction created successfully');
 
-  // Step 2: Create Chat linked to this transaction
-  const chatData = {
-    chatId,
-    participants: [listing.ownerId, renterId], // 🔑
-    transactionId,
-    listingTitle: listing.title,
-    lastMessage: "",
-    lastUpdated: serverTimestamp(),
-  };
+  // Step 2: Create Chat linked to this transaction (only if it's a new chat)
+  if (!existingChatId) {
+    const chatData = {
+      chatId,
+      participants: [listing.ownerId, renterId],
+      transactionId,
+      listingId: listing.id,
+      listingTitle: listing.title,
+      lastMessage: "",
+      lastUpdated: serverTimestamp(),
+    };
 
-  console.log('Chat data to be saved:', chatData);
-  await setDoc(doc(db, "chats", chatId), chatData);
-  console.log('Chat created successfully');
+    console.log('Chat data to be saved:', chatData);
+    await setDoc(doc(db, "chats", chatId), chatData);
+    console.log('Chat created successfully');
+  } else {
+    // Update existing chat with transaction reference
+    await updateDoc(doc(db, "chats", chatId), {
+      transactionId,
+      lastUpdated: serverTimestamp(),
+    });
+    console.log('Existing chat updated with transaction reference');
+  }
 
   return { transactionId, chatId };
 };

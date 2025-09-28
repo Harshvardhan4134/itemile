@@ -237,9 +237,17 @@ const Chat = () => {
               <CardHeader className="border-b">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                      {otherUser.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
+                    {otherUser.profilePhotoUrl ? (
+                      <img 
+                        src={otherUser.profilePhotoUrl} 
+                        alt={otherUser.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
+                        {otherUser.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                   <div>
                     <h3 className="font-semibold">{otherUser.name}</h3>
