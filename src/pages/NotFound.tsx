@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   Home, 
   Mail, 
-  Phone, 
   HelpCircle 
 } from "lucide-react";
 
@@ -61,15 +60,6 @@ const NotFound = () => {
                     className="text-primary hover:underline"
                   >
                     rentshare11@gmail.com
-                  </a>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a 
-                    href="tel:+918547652100" 
-                    className="text-primary hover:underline"
-                  >
-                    +91 8547652100
                   </a>
                 </div>
               </div>

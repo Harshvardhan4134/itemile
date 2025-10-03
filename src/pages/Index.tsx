@@ -32,7 +32,6 @@ import {
   Wrench,
   Dumbbell,
   Mail,
-  Phone
 } from "lucide-react";
 
 const Index = () => {
@@ -439,15 +438,6 @@ const Index = () => {
                       className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       rentshare11@gmail.com
-                    </a>
-                  </div>
-                  <div className="flex items-center justify-center md:justify-start gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href="tel:+918547652100" 
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      +91 8547652100
                     </a>
                   </div>
                 </div>

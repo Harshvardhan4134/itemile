@@ -800,18 +800,6 @@ const Profile = () => {
                         </a>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Phone Support</p>
-                        <a 
-                          href="tel:+918547652100" 
-                          className="font-medium text-primary hover:underline"
-                        >
-                          +91 8547652100
-                        </a>
-                      </div>
-                    </div>
                   </div>
                   <div className="pt-4 border-t">
                     <p className="text-sm text-muted-foreground">
