@@ -17,7 +17,8 @@ import {
   getUser,
   getListings,
   Listing,
-  User
+  User,
+  canUserReview
 } from "@/lib/firestore";
 import TransactionMap from "@/components/TransactionMap";
 import LiveMap from "@/components/LiveMap";
@@ -32,8 +33,10 @@ import {
   User as UserIcon,
   Package,
   MessageCircle,
-  MapPin
+  MapPin,
+  Star
 } from "lucide-react";
+import ReviewDialog from "@/components/ReviewDialog";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -45,6 +48,10 @@ const Transactions = () => {
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [selectedTransactionForReview, setSelectedTransactionForReview] = useState<Transaction | null>(null);
+  const [revieweeInfo, setRevieweeInfo] = useState<{ id: string; name: string } | null>(null);
+  const [canReview, setCanReview] = useState<Record<string, boolean>>({});
 
   const fetchTransactions = async () => {
     if (!auth.currentUser) return;
@@ -81,6 +88,22 @@ const Transactions = () => {
 
       setListings(listingsMap);
       setUsers(usersMap);
+
+      // Check which transactions can be reviewed
+      if (auth.currentUser) {
+        const reviewChecks = await Promise.all(
+          allTransactions.map(async (transaction) => ({
+            id: transaction.id,
+            canReview: await canUserReview(transaction.id, auth.currentUser!.uid)
+          }))
+        );
+        
+        const reviewMap: Record<string, boolean> = {};
+        reviewChecks.forEach(check => {
+          reviewMap[check.id] = check.canReview;
+        });
+        setCanReview(reviewMap);
+      }
     } catch (error) {
       console.error('Error fetching transactions:', error);
     } finally {
@@ -212,6 +235,17 @@ const Transactions = () => {
         alert('Error deleting transaction. Please try again.');
       }
     }
+  };
+
+  const handleOpenReviewDialog = (transaction: Transaction, revieweeId: string, revieweeName: string) => {
+    setSelectedTransactionForReview(transaction);
+    setRevieweeInfo({ id: revieweeId, name: revieweeName });
+    setReviewDialogOpen(true);
+  };
+
+  const handleReviewSubmitted = async () => {
+    // Refresh transactions to update review status
+    await fetchTransactions();
   };
 
 
@@ -435,14 +469,36 @@ const Transactions = () => {
                             )}
 
                             {transaction.status === "completed" && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-blue-500 border-blue-500 hover:bg-blue-50"
-                              >
-                                <MessageCircle className="h-4 w-4 mr-1" />
-                                Chat
-                              </Button>
+                              <div className="flex gap-2">
+                                {canReview[transaction.id] && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="text-yellow-500 border-yellow-500 hover:bg-yellow-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const revieweeId = isOwner ? transaction.renterId : transaction.ownerId;
+                                      const revieweeName = isOwner ? renter?.name : owner?.name;
+                                      handleOpenReviewDialog(transaction, revieweeId, revieweeName || 'Unknown User');
+                                    }}
+                                  >
+                                    <Star className="h-4 w-4 mr-1" />
+                                    Review
+                                  </Button>
+                                )}
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTransactionClick(transaction);
+                                  }}
+                                >
+                                  <MessageCircle className="h-4 w-4 mr-1" />
+                                  Chat
+                                </Button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -556,6 +612,18 @@ const Transactions = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Review Dialog */}
+      {selectedTransactionForReview && revieweeInfo && (
+        <ReviewDialog
+          open={reviewDialogOpen}
+          onOpenChange={setReviewDialogOpen}
+          transaction={selectedTransactionForReview}
+          revieweeId={revieweeInfo.id}
+          revieweeName={revieweeInfo.name}
+          onReviewSubmitted={handleReviewSubmitted}
+        />
+      )}
     </div>
   );
 };

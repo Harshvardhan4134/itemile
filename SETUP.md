@@ -71,6 +71,19 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset_name
 - text (string)
 - createdAt (timestamp)
 
+**reviews/{reviewId}**
+- reviewerId (string)
+- reviewerName (string)
+- reviewerPhotoUrl (string) - optional
+- revieweeId (string)
+- transactionId (string)
+- listingId (string)
+- listingTitle (string)
+- rating (number) - 1-5 stars
+- comment (string)
+- createdAt (timestamp)
+- updatedAt (timestamp) - optional
+
 ## Google Maps Setup
 
 1. Go to Google Cloud Console

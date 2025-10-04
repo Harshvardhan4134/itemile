@@ -32,7 +32,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing } from "@/lib/firestore";
+import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing, getReviewsByUser, Review } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +43,7 @@ const Profile = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [savedListings, setSavedListings] = useState<Listing[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -81,6 +82,10 @@ const Profile = () => {
         // Fetch user's listings
         const listings = await getListingsByOwner(auth.currentUser!.uid);
         setMyListings(listings);
+
+        // Fetch user's reviews
+        const userReviews = await getReviewsByUser(auth.currentUser!.uid);
+        setReviews(userReviews);
 
         // TODO: Implement saved listings functionality
         setSavedListings([]);
@@ -342,7 +347,7 @@ const Profile = () => {
               <p className="text-muted-foreground">{user.email}</p>
               <div className="flex items-center mt-1">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                <span className="text-sm">{user.rating.toFixed(1)} (0 reviews)</span>
+                <span className="text-sm">{user.rating.toFixed(1)} ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
               </div>
             </div>
           </div>
@@ -463,6 +468,7 @@ const Profile = () => {
           <TabsList className="glass-effect border-0">
             <TabsTrigger value="info">User Info</TabsTrigger>
             <TabsTrigger value="rentals">My Rentals</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="saved">Saved Rentals</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -610,6 +616,79 @@ const Profile = () => {
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reviews">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Star className="h-5 w-5 mr-2" />
+                  User Reviews ({reviews.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reviews.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No reviews yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Reviews from other users will appear here after completed transactions
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <Card key={review.id} className="glass-card">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                              {review.reviewerPhotoUrl ? (
+                                <img 
+                                  src={review.reviewerPhotoUrl} 
+                                  alt={review.reviewerName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <User className="h-6 w-6 text-white" />
+                              )}
+                            </div>
+                            
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <h4 className="font-semibold">{review.reviewerName}</h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    {review.createdAt?.toDate().toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <div className="flex items-center">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`h-4 w-4 ${
+                                        star <= review.rating
+                                          ? "fill-yellow-400 text-yellow-400"
+                                          : "text-gray-300"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              <p className="text-sm text-muted-foreground mb-2">
+                                Transaction: <span className="font-medium text-foreground">{review.listingTitle}</span>
+                              </p>
+                              
+                              <p className="text-sm">{review.comment}</p>
                             </div>
                           </div>
                         </CardContent>

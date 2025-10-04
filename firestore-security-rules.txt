@@ -58,6 +58,20 @@ service cloud.firestore {
         request.auth.uid == resource.data.userId;
       allow create: if request.auth != null;
     }
+
+    // Reviews: users can create reviews for completed transactions they participated in
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if request.auth != null;
+      
+      // Can create review if user is part of the transaction and it's completed
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.reviewerId;
+      
+      // Can update/delete own reviews
+      allow update, delete: if request.auth != null &&
+        request.auth.uid == resource.data.reviewerId;
+    }
   }
 }
 

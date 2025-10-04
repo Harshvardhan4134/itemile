@@ -89,6 +89,21 @@ export interface Notification {
   read: boolean;
 }
 
+export interface Review {
+  id: string;
+  reviewerId: string;
+  reviewerName: string;
+  reviewerPhotoUrl?: string;
+  revieweeId: string;
+  transactionId: string;
+  listingId: string;
+  listingTitle: string;
+  rating: number; // 1-5 stars
+  comment: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
 export interface Chat {
   id: string;
   chatId: string;
@@ -773,6 +788,129 @@ export const getChatByTransactionId = async (transactionId: string, userId?: str
   } catch (error) {
     console.error('Error getting chat by transaction ID:', error);
     return null;
+  }
+};
+
+// Review functions
+export const createReview = async (reviewData: Omit<Review, 'id' | 'createdAt'>): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'reviews'), {
+    ...reviewData,
+    createdAt: serverTimestamp()
+  });
+  
+  // Update user's average rating
+  await updateUserRating(reviewData.revieweeId);
+  
+  return docRef.id;
+};
+
+export const getReviewsByUser = async (userId: string): Promise<Review[]> => {
+  const reviewsRef = collection(db, 'reviews');
+  const q = query(
+    reviewsRef,
+    where('revieweeId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Review[];
+};
+
+export const getReviewByTransaction = async (transactionId: string, reviewerId: string): Promise<Review | null> => {
+  const reviewsRef = collection(db, 'reviews');
+  const q = query(
+    reviewsRef,
+    where('transactionId', '==', transactionId),
+    where('reviewerId', '==', reviewerId)
+  );
+  const querySnapshot = await getDocs(q);
+  
+  if (querySnapshot.empty) {
+    return null;
+  }
+  
+  const reviewDoc = querySnapshot.docs[0];
+  return {
+    id: reviewDoc.id,
+    ...reviewDoc.data()
+  } as Review;
+};
+
+export const updateReview = async (reviewId: string, reviewData: Partial<Review>): Promise<void> => {
+  const reviewRef = doc(db, 'reviews', reviewId);
+  await updateDoc(reviewRef, {
+    ...reviewData,
+    updatedAt: serverTimestamp()
+  });
+  
+  // Get the review to update user rating
+  const reviewDoc = await getDoc(reviewRef);
+  if (reviewDoc.exists()) {
+    const review = reviewDoc.data() as Review;
+    await updateUserRating(review.revieweeId);
+  }
+};
+
+export const deleteReview = async (reviewId: string): Promise<void> => {
+  const reviewRef = doc(db, 'reviews', reviewId);
+  const reviewDoc = await getDoc(reviewRef);
+  
+  if (reviewDoc.exists()) {
+    const review = reviewDoc.data() as Review;
+    await deleteDoc(reviewRef);
+    
+    // Update user's average rating after deletion
+    await updateUserRating(review.revieweeId);
+  }
+};
+
+export const updateUserRating = async (userId: string): Promise<void> => {
+  try {
+    const reviews = await getReviewsByUser(userId);
+    
+    if (reviews.length === 0) {
+      // If no reviews, set rating to 0
+      await updateDoc(doc(db, 'users', userId), {
+        rating: 0
+      });
+      return;
+    }
+    
+    // Calculate average rating
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = totalRating / reviews.length;
+    
+    // Update user's rating
+    await updateDoc(doc(db, 'users', userId), {
+      rating: Math.round(averageRating * 10) / 10 // Round to 1 decimal place
+    });
+  } catch (error) {
+    console.error('Error updating user rating:', error);
+  }
+};
+
+export const canUserReview = async (transactionId: string, userId: string): Promise<boolean> => {
+  try {
+    // Check if transaction exists and is completed
+    const transaction = await getTransaction(transactionId);
+    if (!transaction || transaction.status !== 'completed') {
+      return false;
+    }
+    
+    // Check if user is part of the transaction
+    if (transaction.ownerId !== userId && transaction.renterId !== userId) {
+      return false;
+    }
+    
+    // Check if user has already reviewed
+    const existingReview = await getReviewByTransaction(transactionId, userId);
+    return !existingReview;
+  } catch (error) {
+    console.error('Error checking if user can review:', error);
+    return false;
   }
 };
 
