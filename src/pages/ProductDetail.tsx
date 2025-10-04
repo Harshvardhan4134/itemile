@@ -23,7 +23,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType } from "@/lib/firestore";
+import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { getCityNameFromCoordinates } from "@/lib/utils";
 
@@ -36,6 +36,7 @@ const ProductDetail = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [listing, setListing] = useState<Listing | null>(null);
   const [owner, setOwner] = useState<UserType | null>(null);
+  const [ownerReviews, setOwnerReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [cityName, setCityName] = useState<string>('');
 
@@ -74,6 +75,12 @@ const ProductDetail = () => {
         // Fetch owner data
         const ownerData = await getUser(listingData.ownerId);
         setOwner(ownerData);
+
+        // Fetch owner reviews
+        if (ownerData) {
+          const reviews = await getReviewsByUser(listingData.ownerId);
+          setOwnerReviews(reviews);
+        }
       } catch (error) {
         console.error('Error fetching listing:', error);
         toast({
@@ -525,7 +532,7 @@ const ProductDetail = () => {
                       <h3 className="font-semibold">{owner.name}</h3>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
-                        {owner.rating || 4.5} • Usually responds within 2 hours
+                        {owner.rating.toFixed(1)} ({ownerReviews.length} {ownerReviews.length === 1 ? 'review' : 'reviews'})
                       </div>
                     </div>
                   </div>
@@ -672,6 +679,106 @@ const ProductDetail = () => {
                   </li>
                 )}
               </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Owner Reviews Section */}
+        <div className="mt-8">
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="font-semibold text-xl">Owner Reviews</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    See what others are saying about {owner.name}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-2xl font-bold">{owner.rating.toFixed(1)}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {ownerReviews.length} {ownerReviews.length === 1 ? 'review' : 'reviews'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {ownerReviews.length === 0 ? (
+                <div className="text-center py-8">
+                  <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <p className="text-muted-foreground">No reviews yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Be the first to rent from this owner and leave a review!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {ownerReviews.slice(0, 5).map((review) => (
+                    <Card key={review.id} className="glass-card border-muted/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                            {review.reviewerPhotoUrl ? (
+                              <img 
+                                src={review.reviewerPhotoUrl} 
+                                alt={review.reviewerName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User className="h-5 w-5 text-white" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h4 className="font-semibold text-sm">{review.reviewerName}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {review.createdAt?.toDate().toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`h-3.5 w-3.5 ${
+                                      star <= review.rating
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Rented: <span className="font-medium text-foreground">{review.listingTitle}</span>
+                            </p>
+                            
+                            <p className="text-sm">{review.comment}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {ownerReviews.length > 5 && (
+                    <div className="text-center pt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Showing 5 of {ownerReviews.length} reviews
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
