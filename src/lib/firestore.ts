@@ -38,6 +38,15 @@ export interface User {
     latitude: number;
     longitude: number;
   };
+  // KYC fields
+  aadharFrontUrl?: string;
+  aadharBackUrl?: string;
+  panUrl?: string;
+  selfieUrl?: string;
+  verificationStatus?: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  submittedAt?: any;
+  verifiedAt?: any;
 }
 
 export interface Listing {
@@ -82,11 +91,21 @@ export interface Message {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'rental_request' | 'swap_proposal' | 'message' | 'transaction_update';
+  type: 'rental_request' | 'swap_proposal' | 'message' | 'transaction_update' | 'verification_approved' | 'verification_rejected';
   transactionId?: string;
   message: string;
   createdAt: any;
   read: boolean;
+}
+
+export interface EmailNotification {
+  id?: string;
+  email: string;
+  subject: string;
+  message: string;
+  type: 'rental_request' | 'message' | 'verification_approved' | 'verification_rejected';
+  read?: boolean;
+  createdAt: any;
 }
 
 export interface Review {
@@ -126,10 +145,25 @@ export interface ChatMessage {
 // User functions
 export const createUser = async (userData: Omit<User, 'uid' | 'createdAt'>): Promise<void> => {
   const userRef = doc(db, 'users', userData.uid);
-  await setDoc(userRef, {
+
+  // Read current doc to avoid overwriting verified=true back to false on sign-in
+  const existingSnap = await getDoc(userRef);
+
+  // Determine verified flag safely:
+  // - If user already exists, preserve existing 'verified' value
+  // - If new user, default to provided value or false
+  const existingVerified = existingSnap.exists() ? (existingSnap.data() as any).verified : undefined;
+  const safeVerified = existingVerified !== undefined
+    ? existingVerified
+    : (userData as any).verified ?? false;
+
+  const payload = {
     ...userData,
-    createdAt: serverTimestamp()
-  }, { merge: true }); // merge: true creates doc if it doesn't exist, updates if it does
+    verified: safeVerified,
+    createdAt: existingSnap.exists() ? (existingSnap.data() as any).createdAt ?? serverTimestamp() : serverTimestamp()
+  } as any;
+
+  await setDoc(userRef, payload, { merge: true });
 };
 
 export const getUser = async (uid: string): Promise<User | null> => {
@@ -912,5 +946,103 @@ export const canUserReview = async (transactionId: string, userId: string): Prom
     console.error('Error checking if user can review:', error);
     return false;
   }
+};
+
+// KYC Functions
+export const submitKYCDocuments = async (uid: string, documents: {
+  aadharFrontUrl: string;
+  aadharBackUrl: string;
+  panUrl: string;
+  selfieUrl?: string;
+}): Promise<void> => {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    ...documents,
+    verificationStatus: 'pending',
+    submittedAt: serverTimestamp()
+  });
+};
+
+export const getPendingKYCVerifications = async (): Promise<User[]> => {
+  const usersRef = collection(db, 'users');
+  const q = query(
+    usersRef,
+    where('verificationStatus', '==', 'pending'),
+    orderBy('submittedAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  
+  return querySnapshot.docs.map(doc => ({
+    uid: doc.id,
+    ...doc.data()
+  })) as User[];
+};
+
+export const approveKYCVerification = async (uid: string): Promise<void> => {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    verified: true,
+    verificationStatus: 'approved',
+    verifiedAt: serverTimestamp(),
+    rejectionReason: ''
+  });
+  
+  // Get user email for notification
+  const user = await getUser(uid);
+  if (user) {
+    // Create in-app notification
+    await createNotification({
+      userId: uid,
+      type: 'verification_approved',
+      message: 'Your verification has been approved! You can now access all features.',
+      read: false
+    });
+    
+    // Create email notification
+    await sendEmailNotification({
+      email: user.email,
+      subject: 'Verification Approved ✅ - Rent Share',
+      message: `Hi ${user.name},\n\nGreat news! Your verification has been approved. You now have full access to all Rent Share features.\n\nThank you for verifying your identity.\n\nBest regards,\nRent Share Team`,
+      type: 'verification_approved',
+      createdAt: serverTimestamp()
+    });
+  }
+};
+
+export const rejectKYCVerification = async (uid: string, reason: string): Promise<void> => {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    verified: false,
+    verificationStatus: 'rejected',
+    rejectionReason: reason,
+    verifiedAt: serverTimestamp()
+  });
+  
+  // Get user email for notification
+  const user = await getUser(uid);
+  if (user) {
+    // Create in-app notification
+    await createNotification({
+      userId: uid,
+      type: 'verification_rejected',
+      message: `Your verification was rejected: ${reason}. Please re-upload your documents.`,
+      read: false
+    });
+    
+    // Create email notification
+    await sendEmailNotification({
+      email: user.email,
+      subject: 'Verification Failed - Action Required - Rent Share',
+      message: `Hi ${user.name},\n\nUnfortunately, your verification could not be approved.\n\nReason: ${reason}\n\nPlease re-upload your documents in your profile section.\n\nIf you have any questions, contact us at rentshare11@gmail.com.\n\nBest regards,\nRent Share Team`,
+      type: 'verification_rejected',
+      createdAt: serverTimestamp()
+    });
+  }
+};
+
+// Email Notification Functions
+export const sendEmailNotification = async (emailData: Omit<EmailNotification, 'id'>): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'email_notifications'), emailData);
+  return docRef.id;
 };
 

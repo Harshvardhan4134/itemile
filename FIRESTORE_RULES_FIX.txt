@@ -1,0 +1,101 @@
+CRITICAL FIX: Update Firestore Security Rules
+
+The issue is that admin approval sets verificationStatus but Firestore rules 
+are blocking the 'verified' field update.
+
+Go to Firebase Console → Firestore → Rules
+
+Replace with these rules:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        request.auth.token.email in [
+          'rentshare11@gmail.com', 
+          'admin@rentshare.com',
+          'gharsha238@gmail.com'
+        ];
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles
+      allow read: if request.auth != null;
+      
+      // Users can create their own profile
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // CRITICAL: Admins can update ANY field including 'verified'
+      allow update: if isAdmin();
+      
+      // Users can update their own profile (except verification fields)
+      allow update: if request.auth != null && 
+        request.auth.uid == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['verified', 'verificationStatus', 'verifiedAt']);
+      
+      // Users can submit KYC documents
+      allow update: if request.auth != null && 
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['aadharFrontUrl', 'aadharBackUrl', 'panUrl', 'selfieUrl', 
+                    'verificationStatus', 'submittedAt', 'rejectionReason']);
+    }
+    
+    // Email notifications
+    match /email_notifications/{notificationId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+    
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    // Listings
+    match /listings/{listingId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    }
+    
+    // Transactions
+    match /transactions/{transactionId} {
+      allow read: if request.auth != null && 
+        (resource.data.ownerId == request.auth.uid || 
+         resource.data.renterId == request.auth.uid);
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && 
+        (resource.data.ownerId == request.auth.uid || 
+         resource.data.renterId == request.auth.uid);
+    }
+    
+    // Chats
+    match /chats/{chatId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in resource.data.participants;
+        
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+    
+    // Reviews
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.reviewerId == request.auth.uid;
+    }
+  }
+}
+
+IMPORTANT: The key fix is moving the admin check BEFORE the user's own update check.
+This ensures admins can update the 'verified' field.
+

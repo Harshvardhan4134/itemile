@@ -25,11 +25,13 @@ import {
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
-import { getUnreadNotificationCount, subscribeToNotifications } from "@/lib/firestore";
+import { getUnreadNotificationCount, subscribeToNotifications, getUser } from "@/lib/firestore";
+import { VerificationBanner } from "@/components/VerificationBanner";
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,9 +40,13 @@ export const Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setUser(user);
       if (user) {
+        // Get user data for verification status
+        const data = await getUser(user.uid);
+        setUserData(data);
+        
         // Subscribe to real-time notification count
         const notificationUnsubscribe = subscribeToNotifications(user.uid, (count) => {
           setNotificationCount(count);
@@ -49,6 +55,7 @@ export const Header = () => {
         return () => notificationUnsubscribe();
       } else {
         setNotificationCount(0);
+        setUserData(null);
       }
     });
 
@@ -74,8 +81,9 @@ export const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 glass-card">
-      <div className="container flex h-16 items-center justify-between">
+    <>
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 glass-card">
+        <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
@@ -316,6 +324,13 @@ export const Header = () => {
           </div>
         </div>
       )}
-    </header>
+      </header>
+      {userData && (
+        <VerificationBanner 
+          verificationStatus={userData.verificationStatus}
+          rejectionReason={userData.rejectionReason}
+        />
+      )}
+    </>
   );
 };

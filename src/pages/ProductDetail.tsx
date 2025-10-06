@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Navigation,
-  ExternalLink
+  ExternalLink,
+  CheckCircle
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review } from "@/lib/firestore";
@@ -529,7 +530,12 @@ const ProductDetail = () => {
                       )}
                     </div>
                     <div>
-                      <h3 className="font-semibold">{owner.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{owner.name}</h3>
+                        {owner.verified && (
+                          <CheckCircle className="h-4 w-4 text-blue-500 fill-blue-500" title="Verified User" />
+                        )}
+                      </div>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
                         {owner.rating.toFixed(1)} ({ownerReviews.length} {ownerReviews.length === 1 ? 'review' : 'reviews'})

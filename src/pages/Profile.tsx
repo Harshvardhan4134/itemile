@@ -29,13 +29,16 @@ import {
   Eye,
   MessageCircle,
   Trash2,
-  HelpCircle
+  HelpCircle,
+  CheckCircle,
+  RefreshCw
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing, getReviewsByUser, Review } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
+import { KYCVerification } from "@/components/KYCVerification";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -60,48 +63,68 @@ const Profile = () => {
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  useEffect(() => {
+  const fetchUserData = async () => {
     if (!auth.currentUser) {
       navigate('/login');
       return;
     }
 
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        const userData = await getUser(auth.currentUser!.uid);
-        if (userData) {
-          setUser(userData);
-          setEditForm({
-            name: userData.name,
-            email: userData.email,
-            phone: userData.phone,
+    try {
+      setLoading(true);
+      console.log('🔄 Fetching fresh user data from Firestore...');
+      const userData = await getUser(auth.currentUser.uid);
+      console.log('📦 Received user data:', userData);
+      console.log('✅ Verified status:', userData?.verified);
+      console.log('📋 Verification status:', userData?.verificationStatus);
+      
+      if (userData) {
+        setUser(userData);
+        setEditForm({
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error fetching user data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh profile data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchUserData();
+      
+      if (auth.currentUser) {
+        try {
+          // Fetch user's listings
+          const listings = await getListingsByOwner(auth.currentUser.uid);
+          setMyListings(listings);
+
+          // Fetch user's reviews
+          const userReviews = await getReviewsByUser(auth.currentUser.uid);
+          setReviews(userReviews);
+
+          // TODO: Implement saved listings functionality
+          setSavedListings([]);
+        } catch (error) {
+          console.error('Error fetching additional data:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load some profile data",
+            variant: "destructive"
           });
         }
-
-        // Fetch user's listings
-        const listings = await getListingsByOwner(auth.currentUser!.uid);
-        setMyListings(listings);
-
-        // Fetch user's reviews
-        const userReviews = await getReviewsByUser(auth.currentUser!.uid);
-        setReviews(userReviews);
-
-        // TODO: Implement saved listings functionality
-        setSavedListings([]);
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load profile data",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
       }
     };
-
-    fetchUserData();
+    
+    loadData();
   }, [navigate, toast]);
 
   const handleEditProfile = async () => {
@@ -341,9 +364,14 @@ const Profile = () => {
               />
             </div>
             <div>
-              <h1 className="text-3xl font-urbanist font-bold">
-                <span className="gradient-text">{user.name}</span>
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-urbanist font-bold">
+                  <span className="gradient-text">{user.name}</span>
+                </h1>
+                {user.verified && (
+                  <CheckCircle className="h-6 w-6 text-blue-500 fill-blue-500" title="Verified User" />
+                )}
+              </div>
               <p className="text-muted-foreground">{user.email}</p>
               <div className="flex items-center mt-1">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
@@ -467,6 +495,7 @@ const Profile = () => {
         <Tabs defaultValue="info" className="space-y-6">
           <TabsList className="glass-effect border-0">
             <TabsTrigger value="info">User Info</TabsTrigger>
+            <TabsTrigger value="verification">Verification</TabsTrigger>
             <TabsTrigger value="rentals">My Rentals</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="saved">Saved Rentals</TabsTrigger>
@@ -526,9 +555,27 @@ const Profile = () => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Verification Status</span>
-                    <Badge className={user.verified ? 'bg-green-500' : 'bg-yellow-500'}>
-                      {user.verified ? 'Verified' : 'Unverified'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={user.verified ? 'bg-green-500' : 'bg-yellow-500'}>
+                        {user.verified ? 'Verified' : 'Unverified'}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          console.log('🔄 Manually refreshing...');
+                          await fetchUserData();
+                          toast({
+                            title: "Refreshed",
+                            description: user.verified ? '✅ Verified' : 'Status unchanged',
+                          });
+                        }}
+                        className="h-6 w-6 p-0"
+                        title="Refresh verification status"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Rating</span>
@@ -548,6 +595,16 @@ const Profile = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="verification">
+            <KYCVerification 
+              user={user} 
+              onVerificationSubmitted={async () => {
+                // Reload user data after submission
+                await fetchUserData();
+              }} 
+            />
           </TabsContent>
 
           <TabsContent value="rentals">

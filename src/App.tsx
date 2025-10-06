@@ -18,6 +18,7 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
+import AdminKYC from "./pages/AdminKYC";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin/verify-users" element={<AdminKYC />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
