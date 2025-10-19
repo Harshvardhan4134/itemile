@@ -91,8 +91,9 @@ export interface Message {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'rental_request' | 'swap_proposal' | 'message' | 'transaction_update' | 'verification_approved' | 'verification_rejected';
+  type: 'rental_request' | 'swap_proposal' | 'message' | 'transaction_update' | 'verification_approved' | 'verification_rejected' | 'request_match' | 'new_request_nearby';
   transactionId?: string;
+  requestId?: string;
   message: string;
   createdAt: any;
   read: boolean;
@@ -132,12 +133,28 @@ export interface Chat {
   transactionId?: string;
   listingTitle?: string;
   listingId?: string;
+  requestId?: string;
 }
 
 export interface ChatMessage {
   id: string;
   senderId: string;
   text: string;
+  createdAt: any;
+}
+
+export interface Request {
+  id: string;
+  userId: string;
+  itemName: string;
+  description: string;
+  location: GeoPoint;
+  duration: number; // in days
+  maxBudget?: number; // optional budget limit
+  category: string;
+  matched: boolean;
+  matchedAt?: any;
+  matchedWith?: string; // userId who responded
   createdAt: any;
 }
 
@@ -497,26 +514,49 @@ export const ensureChat = async (
 ): Promise<void> => {
   const chatRef = doc(db, 'chats', chatId);
   
-  await setDoc(chatRef, {
+  const chatData: any = {
     chatId,
     participants,
     lastMessage: '',
     lastUpdated: serverTimestamp(),
-    listingTitle,
-    listingId,
-  }, { merge: true });
+  };
+
+  // Only add optional fields if they are defined
+  if (listingTitle !== undefined) {
+    chatData.listingTitle = listingTitle;
+  }
+  if (listingId !== undefined) {
+    chatData.listingId = listingId;
+  }
+  
+  await setDoc(chatRef, chatData, { merge: true });
 };
 
 // Helper function to create a chat between two users
-export const createChat = async (chatId: string, uid1: string, uid2: string, listingTitle?: string, listingId?: string): Promise<void> => {
-  await setDoc(doc(db, 'chats', chatId), {
+export const createChat = async (chatId: string, uid1: string, uid2: string, listingTitle?: string, listingId?: string, requestId?: string): Promise<void> => {
+  console.log('createChat called with:', { chatId, uid1, uid2, listingTitle, listingId, requestId });
+  
+  const chatData: any = {
     chatId,
     participants: [uid1, uid2],
     lastMessage: '',
     lastUpdated: serverTimestamp(),
-    listingTitle,
-    listingId,
-  });
+  };
+
+  // Only add optional fields if they are defined
+  if (listingTitle !== undefined) {
+    chatData.listingTitle = listingTitle;
+  }
+  if (listingId !== undefined) {
+    chatData.listingId = listingId;
+  }
+  if (requestId !== undefined) {
+    chatData.requestId = requestId;
+    console.log('Adding requestId to chat data:', requestId);
+  }
+  
+  console.log('Final chat data being saved:', chatData);
+  await setDoc(doc(db, 'chats', chatId), chatData);
 };
 
 export const sendMessage = async (chatId: string, senderId: string, text: string): Promise<void> => {
@@ -572,6 +612,114 @@ export const getChat = async (chatId: string): Promise<Chat | null> => {
   const chatRef = doc(db, 'chats', chatId);
   const chatSnap = await getDoc(chatRef);
   return chatSnap.exists() ? { id: chatId, ...chatSnap.data() } as Chat : null;
+};
+
+// Function to find a chat by requestId (with user authorization check)
+export const getChatByRequestId = async (requestId: string, userId?: string): Promise<Chat | null> => {
+  try {
+    console.log('getChatByRequestId called with:', { requestId, userId });
+    
+    // First get the request to check authorization
+    const request = await getRequest(requestId);
+    if (!request) {
+      console.error('Request not found:', requestId);
+      return null;
+    }
+
+    console.log('Found request:', request);
+
+    // If userId is provided, check if user is authorized (either requester or matched user)
+    if (userId && request.userId !== userId && request.matchedWith !== userId) {
+      console.error('User not authorized to access this chat', {
+        userId,
+        requestUserId: request.userId,
+        requestMatchedWith: request.matchedWith
+      });
+      return null;
+    }
+
+    // Use getChatsByUser which works with security rules, then filter by requestId
+    if (userId) {
+      const userChats = await getChatsByUser(userId);
+      console.log('User chats found:', userChats.length);
+      console.log('Looking for requestId:', requestId, 'in chats:', userChats.map(c => ({ id: c.id, requestId: c.requestId })));
+      console.log('Full chat details:', userChats.map(c => ({ 
+        id: c.id, 
+        requestId: c.requestId, 
+        participants: c.participants,
+        listingTitle: c.listingTitle 
+      })));
+      
+      const matchingChat = userChats.find(chat => chat.requestId === requestId);
+      console.log('Matching chat found:', matchingChat ? matchingChat.id : 'none');
+      
+      if (matchingChat) {
+        return matchingChat;
+      }
+      
+      // If no chat found by requestId, it might be a timing issue or the requestId field wasn't set
+      // Let's try to find any chat between the requester and this user that might be for this request
+      console.log('No chat found by requestId, trying fallback approach...');
+      const otherUserId = request.userId === userId ? request.matchedWith : request.userId;
+      console.log('Looking for chat between users:', userId, 'and', otherUserId);
+      
+      if (otherUserId) {
+        // First try: find chat with the other user that has requestId (might be null/undefined but chat exists)
+        let fallbackChat = userChats.find(chat => 
+          chat.participants.includes(otherUserId) && 
+          chat.requestId === requestId
+        );
+        
+        if (fallbackChat) {
+          console.log('Found chat via requestId fallback:', fallbackChat.id);
+          return fallbackChat;
+        }
+        
+        // Second try: find any chat with the other user that has a listingTitle matching the request
+        fallbackChat = userChats.find(chat => 
+          chat.participants.includes(otherUserId) && 
+          chat.listingTitle && 
+          chat.listingTitle.includes(request.itemName)
+        );
+        
+        if (fallbackChat) {
+          console.log('Found chat via listingTitle fallback:', fallbackChat.id);
+          return fallbackChat;
+        }
+        
+        // Third try: find the most recent chat with the other user (likely to be the request chat)
+        const recentChats = userChats
+          .filter(chat => chat.participants.includes(otherUserId))
+          .sort((a, b) => {
+            const aTime = a.lastUpdated?.toDate ? a.lastUpdated.toDate().getTime() : 0;
+            const bTime = b.lastUpdated?.toDate ? b.lastUpdated.toDate().getTime() : 0;
+            return bTime - aTime;
+          });
+          
+        if (recentChats.length > 0) {
+          console.log('Found most recent chat with other user:', recentChats[0].id);
+          return recentChats[0];
+        }
+      }
+      
+      return null;
+    } else {
+      // Fallback: try direct query if no userId provided (less secure but sometimes needed)
+      const chatsRef = collection(db, 'chats');
+      const q = query(chatsRef, where('requestId', '==', requestId));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return null;
+      }
+      
+      const chatDoc = querySnapshot.docs[0];
+      return { id: chatDoc.id, ...chatDoc.data() } as Chat;
+    }
+  } catch (error) {
+    console.error('Error finding chat by requestId:', error);
+    return null;
+  }
 };
 
 // Helper function to find existing chat between two users for a listing
@@ -1044,5 +1192,169 @@ export const rejectKYCVerification = async (uid: string, reason: string): Promis
 export const sendEmailNotification = async (emailData: Omit<EmailNotification, 'id'>): Promise<string> => {
   const docRef = await addDoc(collection(db, 'email_notifications'), emailData);
   return docRef.id;
+};
+
+// Request functions
+export const createRequest = async (requestData: Omit<Request, 'id' | 'createdAt' | 'matched'>): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'requests'), {
+    ...requestData,
+    matched: false,
+    createdAt: serverTimestamp()
+  });
+  return docRef.id;
+};
+
+export const getRequests = async (): Promise<Request[]> => {
+  const requestsRef = collection(db, 'requests');
+  const q = query(requestsRef, where('matched', '==', false));
+  const querySnapshot = await getDocs(q);
+  
+  const requests = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Request[];
+  
+  // Sort by createdAt in descending order on the client side
+  return requests.sort((a, b) => {
+    if (!a.createdAt || !b.createdAt) return 0;
+    const aTime = a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+    const bTime = b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+    return bTime - aTime;
+  });
+};
+
+export const getRequestsByUser = async (userId: string): Promise<Request[]> => {
+  const requestsRef = collection(db, 'requests');
+  const q = query(requestsRef, where('userId', '==', userId));
+  const querySnapshot = await getDocs(q);
+  
+  const requests = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Request[];
+  
+  // Sort by createdAt in descending order on the client side
+  return requests.sort((a, b) => {
+    if (!a.createdAt || !b.createdAt) return 0;
+    const aTime = a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+    const bTime = b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+    return bTime - aTime;
+  });
+};
+
+export const getAllRequests = async (): Promise<Request[]> => {
+  const requestsRef = collection(db, 'requests');
+  const querySnapshot = await getDocs(requestsRef);
+  
+  const requests = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Request[];
+  
+  // Sort by createdAt in descending order on the client side
+  return requests.sort((a, b) => {
+    if (!a.createdAt || !b.createdAt) return 0;
+    const aTime = a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+    const bTime = b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+    return bTime - aTime;
+  });
+};
+
+export const getRequest = async (requestId: string): Promise<Request | null> => {
+  const requestRef = doc(db, 'requests', requestId);
+  const requestSnap = await getDoc(requestRef);
+  return requestSnap.exists() ? { id: requestId, ...requestSnap.data() } as Request : null;
+};
+
+export const updateRequest = async (requestId: string, updates: Partial<Request>): Promise<void> => {
+  const requestRef = doc(db, 'requests', requestId);
+  await updateDoc(requestRef, updates);
+};
+
+export const markRequestAsMatched = async (requestId: string, matchedWith: string): Promise<void> => {
+  const requestRef = doc(db, 'requests', requestId);
+  await updateDoc(requestRef, {
+    matched: true,
+    matchedAt: serverTimestamp(),
+    matchedWith
+  });
+};
+
+export const deleteRequest = async (requestId: string, userId: string): Promise<void> => {
+  // First get the request to verify user is the owner
+  const request = await getRequest(requestId);
+  if (!request) {
+    throw new Error('Request not found');
+  }
+  
+  if (request.userId !== userId) {
+    throw new Error('Unauthorized to delete this request');
+  }
+  
+  const requestRef = doc(db, 'requests', requestId);
+  await deleteDoc(requestRef);
+};
+
+// Function to find nearby users for request notifications
+export const getNearbyUsers = async (location: GeoPoint, radiusKm: number = 10): Promise<User[]> => {
+  // Note: Firestore doesn't support native geo queries, so we'll use a simpler approach
+  // In a production app, you might want to use a service like Algolia or implement
+  // a grid-based system for location queries
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('verified', '==', true));
+  const querySnapshot = await getDocs(q);
+  
+  const users = querySnapshot.docs.map(doc => ({
+    uid: doc.id,
+    ...doc.data()
+  })) as User[];
+  
+  // Filter by distance (simplified calculation)
+  const filteredUsers = users.filter(user => {
+    if (!user.location) return false;
+    
+    const userLat = user.location.latitude;
+    const userLng = user.location.longitude;
+    const requestLat = location.latitude;
+    const requestLng = location.longitude;
+    
+    // Simple distance calculation (in km)
+    const distance = Math.sqrt(
+      Math.pow(userLat - requestLat, 2) + Math.pow(userLng - requestLng, 2)
+    ) * 111; // Rough conversion to km
+    
+    return distance <= radiusKm;
+  });
+  
+  return filteredUsers;
+};
+
+// Function to notify nearby users about new requests
+export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<void> => {
+  try {
+    const nearbyUsers = await getNearbyUsers(request.location);
+    
+    // Filter out the user who made the request
+    const usersToNotify = nearbyUsers.filter(user => user.uid !== request.userId);
+    
+    // Create notifications for each nearby user
+    const batch = writeBatch(db);
+    
+    for (const user of usersToNotify.slice(0, 50)) { // Limit to 50 notifications to avoid spam
+      const notificationRef = doc(collection(db, 'notifications'));
+      batch.set(notificationRef, {
+        userId: user.uid,
+        type: 'new_request_nearby',
+        requestId: request.id,
+        message: `Someone near you is looking for "${request.itemName}" - earn money by renting yours!`,
+        read: false,
+        createdAt: serverTimestamp()
+      });
+    }
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error notifying nearby users about request:', error);
+  }
 };
 

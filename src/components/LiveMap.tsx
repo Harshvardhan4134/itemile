@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Wrapper, Status } from '@googlemaps/react-wrapper';
 import { MapPin, RefreshCw } from 'lucide-react';
-import { Listing } from '@/lib/firestore';
+import { Listing, Request } from '@/lib/firestore';
 
 interface LiveMapProps {
   listings: Listing[];
+  requests?: Request[];
   onListingSelect?: (listing: Listing) => void;
+  onRequestSelect?: (request: Request) => void;
   userLocation?: { lat: number; lng: number } | null;
   onLocationUpdate?: () => void;
   center?: google.maps.LatLngLiteral;
@@ -18,7 +20,9 @@ interface LiveMapComponentProps extends LiveMapProps {
 
 const LiveMapComponent: React.FC<LiveMapComponentProps> = ({ 
   listings, 
+  requests = [],
   onListingSelect,
+  onRequestSelect,
   userLocation,
   onLocationUpdate,
   center = { lat: 37.7749, lng: -122.4194 }, 
@@ -64,14 +68,12 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
 
   useEffect(() => {
     if (map && infoWindow) {
-      console.log('LiveMap: Updating markers, userLocation:', userLocation);
       // Clear existing markers
       markers.forEach(marker => marker.setMap(null));
       const newMarkers: google.maps.Marker[] = [];
 
       // Add user's current location marker
       if (userLocation) {
-        console.log('Adding user location marker at:', userLocation);
         const userMarker = new google.maps.Marker({
           position: userLocation,
           map,
@@ -168,9 +170,71 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
         }
       });
 
+      // Add request markers
+      requests.forEach((request) => {
+        if (request.location && request.location.latitude && request.location.longitude) {
+          const marker = new google.maps.Marker({
+            position: {
+              lat: request.location.latitude,
+              lng: request.location.longitude
+            },
+            map,
+            title: request.itemName,
+            icon: {
+              url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="20" cy="20" r="18" fill="${request.matched ? '#10b981' : '#f59e0b'}" stroke="#ffffff" stroke-width="2"/>
+                  <path d="M16 16l8 0M16 20l6 0M16 24l4 0" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              `),
+              scaledSize: new google.maps.Size(40, 40),
+              anchor: new google.maps.Point(20, 20)
+            }
+          });
+
+          marker.addListener('click', () => {
+            const content = `
+              <div style="padding: 8px; min-width: 200px;">
+                <div style="margin-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <div style="width: 16px; height: 16px; background: ${request.matched ? '#10b981' : '#f59e0b'}; border-radius: 50%;"></div>
+                    <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">${request.itemName}</h3>
+                  </div>
+                  <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280; max-height: 40px; overflow: hidden;">${request.description}</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
+                  <span style="background: #f3f4f6; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${request.category}</span>
+                  <span style="background: ${request.matched ? '#dcfce7' : '#fef3c7'}; color: ${request.matched ? '#166534' : '#92400e'}; padding: 2px 6px; border-radius: 4px; font-size: 10px;">
+                    ${request.matched ? 'MATCHED' : 'ACTIVE'}
+                  </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px; font-size: 11px; color: #6b7280;">
+                  <span>⏱️ ${request.duration} day${request.duration !== 1 ? 's' : ''}</span>
+                  ${request.maxBudget ? `<span>💰 Up to ₹${request.maxBudget}</span>` : ''}
+                </div>
+                <button onclick="window.viewRequestDetails('${request.id}')" 
+                        style="width: 100%; background: ${request.matched ? '#10b981' : '#f59e0b'}; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                  ${request.matched ? 'View Matched' : 'View Request'}
+                </button>
+              </div>
+            `;
+            
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
+            
+            // Add global function for button click
+            (window as any).viewRequestDetails = (requestId: string) => {
+              window.location.href = `/requests#${requestId}`;
+            };
+          });
+
+          newMarkers.push(marker);
+        }
+      });
+
       setMarkers(newMarkers);
     }
-  }, [map, infoWindow, listings, onListingSelect, userLocation]);
+  }, [map, infoWindow, listings, requests, onListingSelect, onRequestSelect, userLocation]);
 
   return (
     <div style={{ height: '100%', width: '100%', position: 'relative' }}>

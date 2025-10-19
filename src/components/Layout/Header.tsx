@@ -118,6 +118,14 @@ export const Header = () => {
           {user && (
             <>
               <Link 
+                to="/requests" 
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  isActive('/requests') ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                Requests
+              </Link>
+              <Link 
                 to="/transactions" 
                 className={`text-sm font-medium transition-colors hover:text-primary ${
                   isActive('/transactions') ? 'text-primary' : 'text-muted-foreground'
@@ -170,6 +178,17 @@ export const Header = () => {
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">Post Item</span>
+                </Button>
+              </Link>
+              
+              <Link to="/post-request">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Post Request</span>
                 </Button>
               </Link>
 
@@ -272,6 +291,13 @@ export const Header = () => {
                 {user && (
                   <>
                     <Link 
+                      to="/requests" 
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Requests
+                    </Link>
+                    <Link 
                       to="/chat" 
                       className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setIsMenuOpen(false)}
@@ -299,6 +325,29 @@ export const Header = () => {
                     >
                       Transactions
                     </Link>
+                    
+                    {/* Mobile Post Buttons */}
+                    <div className="flex flex-col space-y-2 pt-2 border-t border-border/40">
+                      <Link to="/post" onClick={() => setIsMenuOpen(false)}>
+                        <Button 
+                          size="sm" 
+                          className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Post Item
+                        </Button>
+                      </Link>
+                      <Link to="/post-request" onClick={() => setIsMenuOpen(false)}>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Post Request
+                        </Button>
+                      </Link>
+                    </div>
                   </>
                 )}
                 {!user && (

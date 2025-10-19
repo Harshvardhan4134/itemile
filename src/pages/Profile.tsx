@@ -31,10 +31,13 @@ import {
   Trash2,
   HelpCircle,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Clock,
+  Tag
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing, getReviewsByUser, Review } from "@/lib/firestore";
+import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing, getReviewsByUser, Review, getRequestsByUser, Request, deleteRequest, getChatByRequestId } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +48,7 @@ const Profile = () => {
   const { toast } = useToast();
   const [user, setUser] = useState<UserType | null>(null);
   const [myListings, setMyListings] = useState<Listing[]>([]);
+  const [myRequests, setMyRequests] = useState<Request[]>([]);
   const [savedListings, setSavedListings] = useState<Listing[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +110,10 @@ const Profile = () => {
           // Fetch user's listings
           const listings = await getListingsByOwner(auth.currentUser.uid);
           setMyListings(listings);
+
+          // Fetch user's requests
+          const userRequests = await getRequestsByUser(auth.currentUser.uid);
+          setMyRequests(userRequests);
 
           // Fetch user's reviews
           const userReviews = await getReviewsByUser(auth.currentUser.uid);
@@ -288,9 +296,63 @@ const Profile = () => {
     }
   };
 
+  const handleDeleteRequest = async (requestId: string) => {
+    if (window.confirm('Are you sure you want to delete this request? This action cannot be undone.')) {
+      try {
+        await deleteRequest(requestId, auth.currentUser!.uid);
+        
+        // Refresh requests
+        const requests = await getRequestsByUser(auth.currentUser!.uid);
+        setMyRequests(requests);
+
+        toast({
+          title: "Success",
+          description: "Request deleted successfully",
+        });
+      } catch (error) {
+        console.error('Error deleting request:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete request",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Unknown';
     return timestamp.toDate().toLocaleDateString();
+  };
+
+  const formatLocation = (location: any) => {
+    if (!location || !location.latitude || !location.longitude) return 'Location not specified';
+    return `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
+  };
+
+  const handleViewChat = async (requestId: string) => {
+    if (!auth.currentUser) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to view chats",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const chat = await getChatByRequestId(requestId, auth.currentUser.uid);
+      if (chat) {
+        navigate(`/chat/${chat.id}`);
+      } else {
+        // Fallback to chat inbox if specific chat not found
+        navigate('/chat');
+      }
+    } catch (error) {
+      console.error('Error finding chat:', error);
+      // Fallback to chat inbox
+      navigate('/chat');
+    }
   };
 
   if (loading) {
@@ -497,6 +559,7 @@ const Profile = () => {
             <TabsTrigger value="info">User Info</TabsTrigger>
             <TabsTrigger value="verification">Verification</TabsTrigger>
             <TabsTrigger value="rentals">My Rentals</TabsTrigger>
+            <TabsTrigger value="requests">My Requests</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="saved">Saved Rentals</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
@@ -673,6 +736,105 @@ const Profile = () => {
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="requests">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Search className="h-5 w-5 mr-2" />
+                  My Requests ({myRequests.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {myRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No requests yet</h3>
+                    <p className="text-muted-foreground mb-4">Start by posting what you need to rent</p>
+                    <Button onClick={() => navigate('/post-request')}>
+                      Post Your First Request
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {myRequests.map((request) => (
+                      <Card key={request.id} className="glass-card hover-scale">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Badge 
+                                variant={request.matched ? "default" : "secondary"} 
+                                className="text-xs"
+                              >
+                                {request.matched ? (
+                                  <>
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Matched
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Active
+                                  </>
+                                )}
+                              </Badge>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-red-500 border-red-500 hover:bg-red-50 p-1 h-8 w-8"
+                                onClick={() => handleDeleteRequest(request.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-sm">{request.itemName}</h3>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{request.description}</p>
+                              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                <span>{request.duration} days</span>
+                                <Tag className="h-3 w-3 ml-2" />
+                                <span>{request.category}</span>
+                              </div>
+                              {request.maxBudget && (
+                                <div className="flex items-center gap-2 mt-1 text-xs">
+                                  <DollarSign className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-muted-foreground">Max: ₹{request.maxBudget}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
+                                <span>{formatLocation(request.location)}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-2">
+                                Posted: {formatDate(request.createdAt)}
+                              </div>
+                              {request.matched && request.matchedWith && (
+                                <div className="mt-3">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="w-full"
+                                    onClick={() => {
+                                      // Navigate to the specific chat for this request
+                                      handleViewChat(request.id);
+                                    }}
+                                  >
+                                    <MessageCircle className="h-3 w-3 mr-1" />
+                                    View Messages
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </CardContent>

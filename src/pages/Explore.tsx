@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import LiveMap from "@/components/LiveMap";
-import { getListings, Listing } from "@/lib/firestore";
+import { getListings, Listing, getAllRequests, Request } from "@/lib/firestore";
 import { 
   MapPin, 
   Search, 
@@ -20,10 +20,12 @@ import {
 } from "lucide-react";
 
 const Explore = () => {
+  const navigate = useNavigate();
   const [selectedItem, setSelectedItem] = useState<Listing | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     category: "",
@@ -35,18 +37,22 @@ const Explore = () => {
   const [attemptedGeolocation, setAttemptedGeolocation] = useState(false);
 
   useEffect(() => {
-    const fetchListings = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getListings();
-        setListings(data);
+        const [listingsData, requestsData] = await Promise.all([
+          getListings(),
+          getAllRequests()
+        ]);
+        setListings(listingsData);
+        setRequests(requestsData);
       } catch (error) {
-        console.error('Error fetching listings:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchListings();
+    fetchData();
   }, []);
 
   const filteredItems = listings.filter(item => {
@@ -63,6 +69,10 @@ const Explore = () => {
 
   const handleListingSelect = (listing: Listing) => {
     setSelectedItem(listing);
+  };
+
+  const handleRequestSelect = (request: Request) => {
+    navigate(`/requests#${request.id}`);
   };
 
   const handleLocationUpdate = () => {
@@ -134,7 +144,9 @@ const Explore = () => {
               attemptedGeolocation ? (
                 <LiveMap 
                   listings={filteredItems}
+                  requests={requests}
                   onListingSelect={handleListingSelect}
+                  onRequestSelect={handleRequestSelect}
                   center={userLocation || { lat: 37.7749, lng: -122.4194 }}
                   zoom={12}
                   userLocation={userLocation}

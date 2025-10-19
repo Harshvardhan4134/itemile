@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import Explore from "./pages/Explore";
 import ProductDetail from "./pages/ProductDetail";
 import PostItem from "./pages/PostItem";
+import PostRequest from "./pages/PostRequest";
+import RequestsFeed from "./pages/RequestsFeed";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Chat from "./pages/Chat";
@@ -33,6 +35,8 @@ const App = () => (
           <Route path="/explore" element={<Explore />} />
           <Route path="/item/:id" element={<ProductDetail />} />
           <Route path="/post" element={<PostItem />} />
+          <Route path="/post-request" element={<PostRequest />} />
+          <Route path="/requests" element={<RequestsFeed />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/transactions/:transactionId" element={<Chat />} />
