@@ -497,16 +497,16 @@ const ProductDetail = () => {
                   </div>
                   {listing.location && (
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant="default"
+                      size="default"
                       onClick={() => {
                         const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${listing.location.latitude},${listing.location.longitude}`;
                         window.open(googleMapsUrl, '_blank');
                       }}
-                      className="text-xs px-2 py-1 h-6 text-primary hover:text-primary/80 hover:bg-primary/10 border-primary/20"
+                      className="bg-primary hover:bg-primary/90 text-white border-primary px-4 py-2 h-8"
                       title="Get Directions"
                     >
-                      <Navigation className="h-3 w-3 mr-1 text-primary" />
+                      <Navigation className="h-4 w-4 mr-2 text-white" />
                       Direction
                     </Button>
                   )}
