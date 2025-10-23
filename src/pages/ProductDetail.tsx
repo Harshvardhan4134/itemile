@@ -375,13 +375,16 @@ const ProductDetail = () => {
       
       <div className="container py-6">
         {/* Back Button */}
-        <Link 
-          to="/explore" 
-          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors mb-6"
+        <Button
+          variant="outline"
+          asChild
+          className="mb-6"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Explore
-        </Link>
+          <Link to="/explore" className="inline-flex items-center">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Explore
+          </Link>
+        </Button>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Image Gallery */}
@@ -493,17 +496,19 @@ const ProductDetail = () => {
                     {cityName || (listing.location ? 'Loading location...' : 'Location not available')}
                   </div>
                   {listing.location && (
-                    <button 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${listing.location.latitude},${listing.location.longitude}`;
                         window.open(googleMapsUrl, '_blank');
                       }}
-                      className="flex items-center text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                      className="text-xs px-2 py-1 h-6 text-primary hover:text-primary/80 hover:bg-primary/10 border-primary/20"
                       title="Get Directions"
                     >
-                      <Navigation className="h-5 w-5" />
-                      <ExternalLink className="h-4 w-4 ml-1" />
-                    </button>
+                      <Navigation className="h-3 w-3 mr-1 text-primary" />
+                      Direction
+                    </Button>
                   )}
                 </div>
               </div>
