@@ -52,11 +52,27 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
         mapTypeControl: false,
         zoomControl: false,
         rotateControl: false,
+        // Ensure map is responsive on mobile
+        gestureHandling: 'greedy',
       });
       setMap(newMap);
       setInfoWindow(new window.google.maps.InfoWindow());
     }
   }, [ref, map, center, zoom, userLocation]);
+
+  // Handle window resize to ensure map renders properly on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (map) {
+        setTimeout(() => {
+          google.maps.event.trigger(map, 'resize');
+        }, 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [map]);
 
   // Recenter the map when userLocation changes
   useEffect(() => {
@@ -240,8 +256,8 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
     <div style={{ height: '100%', width: '100%', position: 'relative' }}>
       <div ref={ref} style={{ height: '100%', width: '100%' }} />
       
-      {/* Location Status Indicator */}
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg border border-gray-200 p-3 max-w-xs z-10">
+      {/* Location Status Indicator - Hidden on mobile to save space */}
+      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg border border-gray-200 p-3 max-w-xs z-10 hidden sm:block">
         <div className="flex items-center gap-2 mb-2">
           <div className={`w-3 h-3 rounded-full ${userLocation ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
           <span className="text-sm font-medium">
@@ -262,7 +278,7 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
       {onLocationUpdate && (
         <button
           onClick={onLocationUpdate}
-          className="absolute top-4 right-4 bg-white hover:bg-gray-50 text-gray-700 p-2 rounded-full shadow-lg border border-gray-200 transition-colors"
+          className="absolute top-4 right-4 bg-white hover:bg-gray-50 text-gray-700 p-2 rounded-full shadow-lg border border-gray-200 transition-colors z-10"
           title="Update Location"
         >
           <RefreshCw className="h-4 w-4" />

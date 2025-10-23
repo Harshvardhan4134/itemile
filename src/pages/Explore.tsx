@@ -107,7 +107,7 @@ const Explore = () => {
       
       <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
         {/* Map Section */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-[50vh] lg:min-h-full">
           {/* Search Overlay */}
           <div className="absolute top-4 left-4 right-4 z-[1000]">
             <div className="flex gap-2">
@@ -165,11 +165,22 @@ const Explore = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="w-full lg:w-96 border-l border-border bg-card p-4 overflow-y-auto">
+        <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border bg-card p-4 overflow-y-auto max-h-[50vh] lg:max-h-none">
           <div className="mb-6">
-            <h2 className="font-urbanist font-bold text-xl mb-2">
-              Items Near You
-            </h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-urbanist font-bold text-xl">
+                Items Near You
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                className="lg:hidden"
+                onClick={() => setShowFilters(true)}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+            </div>
             <p className="text-muted-foreground text-sm">
               {filteredItems.length} items found
             </p>
