@@ -24,7 +24,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review } from "@/lib/firestore";
+import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review, getActiveTransactionsForListing } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { getCityNameFromCoordinates } from "@/lib/utils";
 
@@ -40,6 +40,7 @@ const ProductDetail = () => {
   const [ownerReviews, setOwnerReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [cityName, setCityName] = useState<string>('');
+  const [isInRent, setIsInRent] = useState(false);
 
   useEffect(() => {
     const fetchListingData = async () => {
@@ -81,6 +82,18 @@ const ProductDetail = () => {
         if (ownerData) {
           const reviews = await getReviewsByUser(listingData.ownerId);
           setOwnerReviews(reviews);
+        }
+
+        // Check if item is currently in rent (has active transaction)
+        // This requires authentication, so we'll try it but handle errors gracefully
+        try {
+          const activeTransactions = await getActiveTransactionsForListing(listingData.id);
+          setIsInRent(activeTransactions.length > 0);
+        } catch (error) {
+          // If we can't check transaction status (user not authenticated or permission issue),
+          // just assume it's not in rent - this won't break the page
+          console.warn('Could not check if item is in rent:', error);
+          setIsInRent(false);
         }
       } catch (error) {
         console.error('Error fetching listing:', error);
@@ -516,6 +529,18 @@ const ProductDetail = () => {
               <div className="text-3xl font-urbanist font-bold text-primary mb-6">
                 ₹{listing.rentPerDay}/day
               </div>
+
+              {/* In Rent Status Badge */}
+              {isInRent && (
+                <div className="mb-4">
+                  <Badge className="bg-orange-500 hover:bg-orange-600 text-white mb-2">
+                    Currently In Rent
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    This item is currently being rented, but you can still contact the vendor to discuss future availability.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Owner Info */}
@@ -608,9 +633,15 @@ const ProductDetail = () => {
                 <Button 
                   className="w-full mt-4 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                   onClick={handleRequestRent}
+                  disabled={isInRent}
                 >
-                  Request to Rent
+                  {isInRent ? 'Currently In Rent' : 'Request to Rent'}
                 </Button>
+                {isInRent && (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Contact the vendor for future availability
+                  </p>
+                )}
                 
                 <Button 
                   variant="outline" 
@@ -634,7 +665,7 @@ const ProductDetail = () => {
                   </li>
                   <li className="flex items-center text-sm">
                     <div className="w-2 h-2 bg-primary rounded-full mr-3" />
-                    Available: {listing.available ? 'Yes' : 'No'}
+                    Status: {isInRent ? 'In Rent' : listing.available ? 'Available' : 'Unavailable'}
                   </li>
                   {listing.swapAllowed && (
                     <li className="flex items-center text-sm">
@@ -657,11 +688,15 @@ const ProductDetail = () => {
                 {listing.description}
               </p>
               
-              <div className="mt-6">
+                <div className="mt-6">
                 <h4 className="font-semibold mb-3">Availability</h4>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="h-4 w-4 mr-2" />
-                  {listing.available ? 'Available for rent' : 'Currently unavailable'}
+                  {isInRent 
+                    ? 'Currently in rent - Contact vendor for future availability' 
+                    : listing.available 
+                    ? 'Available for rent' 
+                    : 'Currently unavailable'}
                 </div>
               </div>
             </CardContent>

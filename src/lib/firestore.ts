@@ -407,6 +407,35 @@ export const getTransaction = async (transactionId: string): Promise<Transaction
   return transactionSnap.exists() ? { id: transactionId, ...transactionSnap.data() } as Transaction : null;
 };
 
+// Get active transactions for a listing (to check if item is currently in rent)
+// Note: This requires the user to be authenticated and be a participant in the transaction
+// due to Firestore security rules. If not authenticated, this will return an empty array.
+export const getActiveTransactionsForListing = async (listingId: string): Promise<Transaction[]> => {
+  try {
+    const transactionsRef = collection(db, 'transactions');
+    const q = query(
+      transactionsRef,
+      where('listingId', '==', listingId),
+      where('status', '==', 'active')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Transaction[];
+  } catch (error: any) {
+    // If permission denied or not authenticated, return empty array
+    // This allows the page to still load even if we can't check transaction status
+    if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+      console.warn('Cannot check transaction status - user may not be authenticated or doesn\'t have permission');
+      return [];
+    }
+    // Re-throw other errors
+    throw error;
+  }
+};
+
 export const updateTransaction = async (transactionId: string, updates: Partial<Transaction>): Promise<void> => {
   const transactionRef = doc(db, 'transactions', transactionId);
   await updateDoc(transactionRef, updates);

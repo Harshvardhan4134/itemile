@@ -59,7 +59,7 @@ const Signup: React.FC = () => {
         rating: 0
       });
       
-      setMessage('Signup successful! Welcome to Rent Share!');
+      setMessage('Signup successful! Welcome to Lendlly!');
       setName(''); setEmail(''); setMobile(''); setPassword('');
       
       // Redirect to explore after successful signup
@@ -91,7 +91,7 @@ const Signup: React.FC = () => {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mr-2">
                 <MapPin className="w-4 h-4 text-white" />
               </div>
-              <span className="font-urbanist font-bold text-xl gradient-text">Rent Share</span>
+              <span className="font-urbanist font-bold text-xl gradient-text">Lendlly</span>
             </div>
             <Badge className="mb-2 glass-effect" variant="outline">✨ Join the Future of Sharing</Badge>
             <CardTitle className="text-2xl font-urbanist font-bold">Create Your Account</CardTitle>

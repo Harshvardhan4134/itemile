@@ -90,7 +90,7 @@ export const Header = () => {
             <MapPin className="w-4 h-4 text-white" />
           </div>
           <span className="font-urbanist font-bold text-xl gradient-text">
-            Rent Share
+            Lendlly
           </span>
         </Link>
 

@@ -88,7 +88,10 @@ const Explore = () => {
         setAttemptedGeolocation(true);
       },
       (err) => {
-        console.error('Error getting current position:', err);
+        // Only log error details if it's not a permission denied (common case)
+        if (err.code !== err.PERMISSION_DENIED) {
+          console.warn('Error getting current position:', err.message || err);
+        }
         setAttemptedGeolocation(true);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }

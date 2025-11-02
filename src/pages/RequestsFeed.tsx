@@ -83,7 +83,10 @@ const RequestsFeed = () => {
           setUserLocation(coords);
         },
         (err) => {
-          console.error('Error getting current position:', err);
+          // Only log error details if it's not a permission denied (common case)
+          if (err.code !== err.PERMISSION_DENIED) {
+            console.warn('Error getting current position:', err.message || err);
+          }
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
       );

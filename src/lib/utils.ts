@@ -56,7 +56,12 @@ export async function getCityNameFromCoordinates(latitude: number, longitude: nu
       console.warn('Google Maps API quota exceeded');
       return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
     } else if (data.status === 'REQUEST_DENIED') {
-      console.error('Google Maps API request denied:', data.error_message);
+      // Handle API key restriction errors gracefully
+      if (data.error_message && data.error_message.includes('referer restrictions')) {
+        console.warn('Google Maps API key has referer restrictions - using coordinates instead');
+      } else {
+        console.error('Google Maps API request denied:', data.error_message);
+      }
       return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
     } else {
       console.error('Geocoding failed with status:', data.status, data.error_message);

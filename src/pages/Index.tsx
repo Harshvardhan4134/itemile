@@ -203,7 +203,7 @@ const Index = () => {
           <div className="container">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-urbanist font-bold mb-4">
-                Why Choose <span className="gradient-text">Rent Share</span>?
+                Why Choose <span className="gradient-text">Lendlly</span>?
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 We've built the most intuitive and secure platform for the sharing economy
@@ -420,10 +420,10 @@ const Index = () => {
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                     <MapPin className="w-4 h-4 text-white" />
                   </div>
-                  <span className="font-urbanist font-bold text-xl gradient-text">Rent Share</span>
+                  <span className="font-urbanist font-bold text-xl gradient-text">Lendlly</span>
                 </div>
                 <p className="text-muted-foreground text-sm text-center md:text-left">
-                  © 2024 Rent Share. Built with love for the sharing community.
+                  © 2024 Lendlly. Built with love for the sharing community.
                 </p>
               </div>
 

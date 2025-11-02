@@ -50,9 +50,10 @@ service cloud.firestore {
       allow update: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
-    // Listings
+    // Listings - allow public read access for browsing, but authenticated users for writes
     match /listings/{listingId} {
-      allow read: if request.auth != null;
+      // Allow public read access so users can browse items without logging in
+      allow read: if true;
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }

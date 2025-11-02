@@ -60,7 +60,7 @@ const Login: React.FC = () => {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mr-2">
                 <MapPin className="w-4 h-4 text-white" />
               </div>
-              <span className="font-urbanist font-bold text-xl gradient-text">Rent Share</span>
+              <span className="font-urbanist font-bold text-xl gradient-text">Lendlly</span>
             </div>
             <Badge className="mb-2 glass-effect" variant="outline">✨ Welcome Back</Badge>
             <CardTitle className="text-2xl font-urbanist font-bold">Sign In</CardTitle>
