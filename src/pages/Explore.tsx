@@ -18,6 +18,8 @@ import {
   Smartphone,
   X
 } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 const Explore = () => {
   const navigate = useNavigate();
@@ -35,25 +37,48 @@ const Explore = () => {
   });
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [attemptedGeolocation, setAttemptedGeolocation] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!auth.currentUser);
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
     const fetchData = async () => {
       try {
-        const [listingsData, requestsData] = await Promise.all([
-          getListings(),
-          getAllRequests()
-        ]);
+        setLoading(true);
+        const listingsPromise = getListings();
+        const requestsPromise = isAuthenticated ? getAllRequests() : Promise.resolve<Request[]>([]);
+
+        const [listingsData, requestsData] = await Promise.all([listingsPromise, requestsPromise]);
+
+        if (!isMounted) return;
+
         setListings(listingsData);
         setRequests(requestsData);
       } catch (error) {
         console.error('Error fetching data:', error);
+        if (!isMounted) return;
+        setRequests([]);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated]);
 
   const filteredItems = listings.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,6 +97,10 @@ const Explore = () => {
   };
 
   const handleRequestSelect = (request: Request) => {
+    if (!isAuthenticated) {
+      setSelectedItem(null);
+      return navigate("/login", { state: { from: `/requests#${request.id}` } });
+    }
     navigate(`/requests#${request.id}`);
   };
 
