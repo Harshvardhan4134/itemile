@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,11 +15,14 @@ import { ArrowLeft } from 'lucide-react';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const fromPath = (location.state as { from?: string } | null)?.from || '/explore';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +36,7 @@ const Login: React.FC = () => {
       
       // Redirect to explore after successful login
       setTimeout(() => {
-        navigate('/explore');
+        navigate(fromPath, { replace: true });
       }, 1500);
     } catch (error: any) {
       setError(error.message);
@@ -111,7 +114,7 @@ const Login: React.FC = () => {
             
             <GoogleAuth 
               className="w-full" 
-              onSuccess={() => navigate('/explore')}
+              onSuccess={() => navigate(fromPath, { replace: true })}
             />
             
             {error && <Alert variant="destructive">{error}</Alert>}
