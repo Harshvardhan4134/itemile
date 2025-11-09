@@ -39,6 +39,7 @@ import {
   Navigation,
 } from "lucide-react";
 import LocationPickerMap from "@/components/LocationPickerMap";
+import { getCityNameFromCoordinates } from "@/lib/utils";
 
 const PostItem = () => {
   const navigate = useNavigate();
@@ -69,6 +70,7 @@ const PostItem = () => {
   const [gettingLocation, setGettingLocation] = useState(false);
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [mapSelectedCoords, setMapSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [resolvingAddress, setResolvingAddress] = useState(false);
 
   const categories = [
     "Photography", "Sports & Outdoor", "Electronics", "Tools", 
@@ -114,14 +116,21 @@ const PostItem = () => {
     setGettingLocation(true);
     
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
         handleInputChange("lat", latitude.toString());
         handleInputChange("lng", longitude.toString());
-        
+        try {
+          const readableLocation = await getCityNameFromCoordinates(latitude, longitude);
+          handleInputChange("location", readableLocation);
+        } catch (err) {
+          console.error("Failed to fetch location name:", err);
+          handleInputChange("location", `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        }
+
         toast({
           title: "Location obtained",
-          description: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`
+          description: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
         });
         setGettingLocation(false);
       },
@@ -193,16 +202,34 @@ const PostItem = () => {
     setIsLocationPickerOpen(true);
   };
 
-  const handleConfirmMapLocation = () => {
-    if (mapSelectedCoords) {
-      handleInputChange("lat", mapSelectedCoords.lat.toFixed(6));
-      handleInputChange("lng", mapSelectedCoords.lng.toFixed(6));
-      toast({
-        title: "Location pinned",
-        description: `Lat: ${mapSelectedCoords.lat.toFixed(6)}, Lng: ${mapSelectedCoords.lng.toFixed(6)}`,
-      });
+  const handleConfirmMapLocation = async () => {
+    if (!mapSelectedCoords) {
+      setIsLocationPickerOpen(false);
+      return;
     }
-    setIsLocationPickerOpen(false);
+
+    setResolvingAddress(true);
+    handleInputChange("lat", mapSelectedCoords.lat.toFixed(6));
+    handleInputChange("lng", mapSelectedCoords.lng.toFixed(6));
+
+    try {
+      const readableLocation = await getCityNameFromCoordinates(mapSelectedCoords.lat, mapSelectedCoords.lng);
+      handleInputChange("location", readableLocation);
+    } catch (error) {
+      console.error("Failed to fetch location name:", error);
+      handleInputChange(
+        "location",
+        `${mapSelectedCoords.lat.toFixed(6)}, ${mapSelectedCoords.lng.toFixed(6)}`
+      );
+    } finally {
+      setResolvingAddress(false);
+      setIsLocationPickerOpen(false);
+    }
+
+    toast({
+      title: "Location pinned",
+      description: `Lat: ${mapSelectedCoords.lat.toFixed(6)}, Lng: ${mapSelectedCoords.lng.toFixed(6)}`,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -730,8 +757,19 @@ const PostItem = () => {
             <Button type="button" variant="outline" onClick={() => setIsLocationPickerOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleConfirmMapLocation} disabled={!mapSelectedCoords}>
-              Use this Location
+            <Button
+              type="button"
+              onClick={handleConfirmMapLocation}
+              disabled={!mapSelectedCoords || resolvingAddress}
+            >
+              {resolvingAddress ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Use this Location"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
