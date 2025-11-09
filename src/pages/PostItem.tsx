@@ -285,11 +285,11 @@ const PostItem = () => {
       await createListing(listingData);
 
       toast({
-        title: "Success",
-        description: "Your listing has been created successfully!"
+        title: "Listing published!",
+        description: "You successfully posted your item. Let's wait for renters to discover it!"
       });
 
-      navigate('/dashboard');
+      navigate('/explore');
     } catch (error) {
       console.error('Error creating listing:', error);
       toast({
