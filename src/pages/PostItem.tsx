@@ -11,15 +11,23 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { createListing } from "@/lib/firestore";
 import { uploadToCloudinary, uploadMultipleImages } from "@/lib/cloudinary";
 import { auth } from "@/lib/firebase";
 import { GeoPoint } from "firebase/firestore";
-import { 
-  Upload, 
-  Plus, 
-  X, 
+import {
+  Upload,
+  Plus,
+  X,
   Calendar as CalendarIcon,
   MapPin,
   DollarSign,
@@ -28,8 +36,9 @@ import {
   CheckCircle,
   Video,
   Loader2,
-  Navigation
+  Navigation,
 } from "lucide-react";
+import LocationPickerMap from "@/components/LocationPickerMap";
 
 const PostItem = () => {
   const navigate = useNavigate();
@@ -58,6 +67,8 @@ const PostItem = () => {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+  const [mapSelectedCoords, setMapSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const categories = [
     "Photography", "Sports & Outdoor", "Electronics", "Tools", 
@@ -171,6 +182,29 @@ const PostItem = () => {
     setVideoUrl("");
   };
 
+  const openMapPicker = () => {
+    const lat = parseFloat(formData.lat);
+    const lng = parseFloat(formData.lng);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+      setMapSelectedCoords({ lat, lng });
+    } else {
+      setMapSelectedCoords(null);
+    }
+    setIsLocationPickerOpen(true);
+  };
+
+  const handleConfirmMapLocation = () => {
+    if (mapSelectedCoords) {
+      handleInputChange("lat", mapSelectedCoords.lat.toFixed(6));
+      handleInputChange("lng", mapSelectedCoords.lng.toFixed(6));
+      toast({
+        title: "Location pinned",
+        description: `Lat: ${mapSelectedCoords.lat.toFixed(6)}, Lng: ${mapSelectedCoords.lng.toFixed(6)}`,
+      });
+    }
+    setIsLocationPickerOpen(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -243,6 +277,7 @@ const PostItem = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-background">
       <Header />
       
@@ -343,23 +378,35 @@ const PostItem = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <Label className="text-base font-medium">Location Coordinates</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={getCurrentLocation}
-                      disabled={gettingLocation}
-                      className="glass-effect"
-                    >
-                      {gettingLocation ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Navigation className="h-4 w-4 mr-2" />
-                      )}
-                      {gettingLocation ? "Getting Location..." : "Get Current Location"}
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={getCurrentLocation}
+                        disabled={gettingLocation}
+                        className="glass-effect"
+                      >
+                        {gettingLocation ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Navigation className="h-4 w-4 mr-2" />
+                        )}
+                        {gettingLocation ? "Getting Location..." : "Get Current Location"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={openMapPicker}
+                        className="glass-effect"
+                      >
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Pin on Map
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="grid md:grid-cols-2 gap-6">
@@ -656,6 +703,40 @@ const PostItem = () => {
         </div>
       </div>
     </div>
+      <Dialog open={isLocationPickerOpen} onOpenChange={setIsLocationPickerOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Select Location on Map</DialogTitle>
+            <DialogDescription>
+              Drop a pin on the map to set where renters can find your item. You can drag the pin to fine-tune the
+              position.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <LocationPickerMap value={mapSelectedCoords} onChange={setMapSelectedCoords} />
+            <div className="text-sm text-muted-foreground">
+              {mapSelectedCoords ? (
+                <p>
+                  Selected:&nbsp;
+                  <span className="font-medium">Lat {mapSelectedCoords.lat.toFixed(6)}</span>,&nbsp;
+                  <span className="font-medium">Lng {mapSelectedCoords.lng.toFixed(6)}</span>
+                </p>
+              ) : (
+                <p>Tap anywhere on the map to drop a pin at your desired location.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => setIsLocationPickerOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleConfirmMapLocation} disabled={!mapSelectedCoords}>
+              Use this Location
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
