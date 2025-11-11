@@ -64,7 +64,7 @@ const Signup: React.FC = () => {
       
       // Redirect to explore after successful signup
       setTimeout(() => {
-        navigate('/explore');
+        navigate('/explore', { state: { triggerTerms: true } });
       }, 1500);
     } catch (error: any) {
       setError(error.message);
@@ -166,7 +166,7 @@ const Signup: React.FC = () => {
             
             <GoogleAuth 
               className="w-full" 
-              onSuccess={() => navigate('/explore')}
+              onSuccess={() => navigate('/explore', { state: { triggerTerms: true } })}
             />
             
             <Button type="button" variant="outline" className="w-full" onClick={() => window.location.href = '/login'}>

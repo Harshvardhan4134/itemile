@@ -22,6 +22,13 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
 import AdminKYC from "./pages/AdminKYC";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminListings from "./pages/admin/AdminListings";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -133,6 +140,20 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/*"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="listings" element={<AdminListings />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

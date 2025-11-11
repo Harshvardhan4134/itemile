@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import LiveMap from "@/components/LiveMap";
 import { getListings, Listing, getAllRequests, Request } from "@/lib/firestore";
 import { 
@@ -19,10 +19,41 @@ import {
   X
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import TermsNotification from "@/components/TermsNotification";
+
+const TERMS_VERSION = "2025-11";
+const buildTermsKey = (uid?: string | null) =>
+  `termsAccepted:${TERMS_VERSION}:${uid ?? "anonymous"}`;
+
+const hasAcceptedTerms = (user?: User | null): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    const key = buildTermsKey(user?.uid);
+    return localStorage.getItem(key) === "true";
+  } catch (error) {
+    console.warn("Unable to read terms acceptance from storage", error);
+    return false;
+  }
+};
+
+const persistTermsAcceptance = (user?: User | null) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    const key = buildTermsKey(user?.uid);
+    localStorage.setItem(key, "true");
+  } catch (error) {
+    console.warn("Unable to persist terms acceptance", error);
+  }
+};
 
 const Explore = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedItem, setSelectedItem] = useState<Listing | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -38,10 +69,15 @@ const Explore = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [attemptedGeolocation, setAttemptedGeolocation] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!auth.currentUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(() => hasAcceptedTerms(auth.currentUser));
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthenticated(!!user);
+      setCurrentUser(user);
+      setTermsAccepted(hasAcceptedTerms(user));
     });
 
     return () => unsubscribe();
@@ -132,6 +168,33 @@ const Explore = () => {
     handleLocationUpdate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const routeState = location.state as { triggerTerms?: boolean } | null;
+    if (routeState?.triggerTerms) {
+      if (!termsAccepted) {
+        setShowTermsDialog(true);
+      }
+      navigate(
+        `${location.pathname}${location.search}${location.hash}`,
+        { replace: true, state: null }
+      );
+    }
+  }, [location, navigate, termsAccepted]);
+
+  const handleTermsDialogToggle = (open: boolean) => {
+    if (!open && !termsAccepted) {
+      setShowTermsDialog(true);
+      return;
+    }
+    setShowTermsDialog(open);
+  };
+
+  const handleAcceptTerms = () => {
+    persistTermsAcceptance(currentUser);
+    setTermsAccepted(true);
+    setShowTermsDialog(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -398,6 +461,12 @@ const Explore = () => {
           </Card>
         </div>
       )}
+
+      <TermsNotification
+        open={showTermsDialog}
+        onAccept={handleAcceptTerms}
+        onRequestClose={handleTermsDialogToggle}
+      />
     </div>
   );
 };
