@@ -15,7 +15,7 @@ import { CheckCircle, XCircle, Eye, Shield } from 'lucide-react';
 const ADMIN_EMAILS = [
   'rentshare11@gmail.com', 
   'admin@rentshare.com',
-  'your-actual-email@gmail.com' // Replace with your email
+  'gharsha238@gmail.com' // Added G Harsha admin email
 ];
 
 export default function AdminKYC() {

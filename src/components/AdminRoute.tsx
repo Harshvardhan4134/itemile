@@ -36,5 +36,3 @@ const AdminRoute = ({ children, allowModerator = true }: AdminRouteProps) => {
 };
 
 export default AdminRoute;
-
-
