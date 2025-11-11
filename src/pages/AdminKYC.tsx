@@ -16,7 +16,10 @@ const ADMIN_EMAILS = [
   'rentshare11@gmail.com', 
   'admin@rentshare.com',
   'gharsha238@gmail.com' // Added G Harsha admin email
-];
+].map((email) => email.toLowerCase());
+
+const isAdminEmail = (email?: string | null) =>
+  typeof email === 'string' ? ADMIN_EMAILS.includes(email.toLowerCase()) : false;
 
 export default function AdminKYC() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -30,7 +33,7 @@ export default function AdminKYC() {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+      if (!user || !isAdminEmail(user.email)) {
         toast.error('Unauthorized access');
         navigate('/');
       } else {
