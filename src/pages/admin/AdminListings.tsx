@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getAllListings, getAllUsers, type Listing, type User } from "@/lib/firestore";
 
 const moderationStatusStyles: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   active: "secondary",
@@ -11,18 +12,103 @@ const moderationStatusStyles: Record<string, "default" | "secondary" | "destruct
   "pending_review": "default",
 };
 
-const mockListings = Array.from({ length: 6 }).map((_, index) => ({
-  id: `listing-${index}`,
-  title: `Listing ${index + 1}`,
-  owner: `owner${index + 1}@example.com`,
-  category: index % 2 === 0 ? "Electronics" : "Sports",
-  city: "Hyderabad",
-  status: index % 3 === 0 ? "flagged" : index % 3 === 1 ? "active" : "pending_review",
-  price: 499 + index * 50,
-}));
-
 const AdminListings = () => {
-  const listings = useMemo(() => mockListings, []);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [owners, setOwners] = useState<Record<string, User>>({});
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+
+  useEffect(() => {
+    let active = true;
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [listingData, usersData] = await Promise.all([
+          getAllListings(),
+          getAllUsers(),
+        ]);
+        if (!active) return;
+        setListings(listingData);
+        setOwners(
+          usersData.reduce<Record<string, User>>((acc, user) => {
+            acc[user.uid] = user;
+            return acc;
+          }, {})
+        );
+      } catch (error) {
+        console.error("Failed to load listings", error);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filteredListings = useMemo(() => {
+    return listings.filter((listing) => {
+      const status =
+        listing.moderation?.status ?? (listing.softDeleted ? "removed" : "active");
+      const matchesStatus =
+        statusFilter === "all" ? true : status === statusFilter;
+      const matchesCategory =
+        categoryFilter === "all"
+          ? true
+          : listing.category?.toLowerCase() === categoryFilter;
+      const matchesCity =
+        cityFilter === "all"
+          ? true
+          : (listing.city ?? "").toLowerCase() === cityFilter;
+
+      return matchesStatus && matchesCategory && matchesCity;
+    });
+  }, [listings, statusFilter, categoryFilter, cityFilter]);
+
+  const uniqueCategories = useMemo(() => {
+    const categories = new Set<string>();
+    listings.forEach((listing) => {
+      if (listing.category) {
+        categories.add(listing.category);
+      }
+    });
+    return Array.from(categories).sort();
+  }, [listings]);
+
+  const uniqueCities = useMemo(() => {
+    const cities = new Set<string>();
+    listings.forEach((listing) => {
+      if (listing.city) {
+        cities.add(listing.city);
+      }
+    });
+    return Array.from(cities).sort();
+  }, [listings]);
+
+  const resolveOwner = (ownerId: string) => {
+    const owner = owners[ownerId];
+    if (!owner) return ownerId;
+    return owner.email || owner.name || ownerId;
+  };
+
+  const resolveStatus = (listing: Listing) => {
+    if (listing.softDeleted) return "removed";
+    return listing.moderation?.status ?? (listing.available ? "active" : "pending_review");
+  };
+
+  const resolveCity = (listing: Listing) => {
+    if (listing.city) return listing.city;
+    if (listing.location) {
+      return `${listing.location.latitude.toFixed(2)}, ${listing.location.longitude.toFixed(2)}`;
+    }
+    return "—";
+  };
 
   return (
     <div className="space-y-6">
@@ -34,7 +120,7 @@ const AdminListings = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -46,70 +132,93 @@ const AdminListings = () => {
               <SelectItem value="pending_review">Pending</SelectItem>
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="electronics">Electronics</SelectItem>
-              <SelectItem value="sports">Sports</SelectItem>
-              <SelectItem value="tools">Tools</SelectItem>
+              {uniqueCategories.map((category) => (
+                <SelectItem
+                  key={category}
+                  value={category.toLowerCase()}
+                >
+                  {category}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={cityFilter} onValueChange={setCityFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="City" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Cities</SelectItem>
-              <SelectItem value="hyderabad">Hyderabad</SelectItem>
-              <SelectItem value="mumbai">Mumbai</SelectItem>
-              <SelectItem value="delhi">Delhi</SelectItem>
+              {uniqueCities.map((city) => (
+                <SelectItem key={city} value={city.toLowerCase()}>
+                  {city}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {listings.map((listing) => (
-          <Card key={listing.id}>
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-base">{listing.title}</h3>
-                <Badge variant={moderationStatusStyles[listing.status] ?? "default"}>
-                  {listing.status.replace("_", " ")}
-                </Badge>
-              </div>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>Owner: {listing.owner}</p>
-                <p>Category: {listing.category}</p>
-                <p>City: {listing.city}</p>
-                <p>Price: ₹{listing.price}/day</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1">
-                  Preview
-                </Button>
-                <Button variant="secondary" className="flex-1">
-                  Contact Owner
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="destructive" className="flex-1">
-                  Takedown
-                </Button>
-                <Button variant="ghost" className="flex-1">
-                  Restore
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          Loading listings…
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredListings.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                No listings match the current filters.
+              </CardContent>
+            </Card>
+          ) : (
+            filteredListings.map((listing) => {
+              const status = resolveStatus(listing);
+              return (
+                <Card key={listing.id}>
+                  <CardContent className="p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-base">{listing.title}</h3>
+                      <Badge variant={moderationStatusStyles[status] ?? "default"}>
+                        {status.replace("_", " ")}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>Owner: {resolveOwner(listing.ownerId)}</p>
+                      <p>Category: {listing.category ?? "—"}</p>
+                      <p>City: {resolveCity(listing)}</p>
+                      <p>Price: ₹{listing.rentPerDay ?? 0}/day</p>
+                      <p>Availability: {listing.available ? "Available" : "Unavailable"}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1">
+                        Preview
+                      </Button>
+                      <Button variant="secondary" className="flex-1">
+                        Contact Owner
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="destructive" className="flex-1">
+                        Takedown
+                      </Button>
+                      <Button variant="ghost" className="flex-1">
+                        Restore
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default AdminListings;
-
-

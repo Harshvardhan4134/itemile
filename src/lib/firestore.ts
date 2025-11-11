@@ -32,6 +32,10 @@ export interface User {
   rating: number;
   createdAt: any;
   role?: 'rent' | 'swap' | 'both';
+  systemRole?: 'user' | 'moderator' | 'admin';
+  trustScore?: number;
+  flagsCount?: number;
+  banned?: boolean;
   idProofUrl?: string;
   profilePhotoUrl?: string;
   location?: {
@@ -62,6 +66,14 @@ export interface Listing {
   videoProof?: string;
   available: boolean;
   createdAt: any;
+  city?: string;
+  moderation?: {
+    status: 'active' | 'flagged' | 'removed' | 'pending_review';
+    reasons?: string[];
+    reviewedBy?: string;
+    reviewedAt?: any;
+  };
+  softDeleted?: boolean;
 }
 
 export interface Transaction {
@@ -158,6 +170,24 @@ export interface Request {
   createdAt: any;
 }
 
+export interface Report {
+  id: string;
+  listingId: string;
+  reporterId: string;
+  ownerId: string;
+  type: 'inappropriate' | 'illegal' | 'counterfeit' | 'spam' | 'other';
+  description: string;
+  status: 'open' | 'reviewing' | 'resolved' | 'dismissed';
+  evidence?: string[];
+  createdAt: any;
+  updatedAt?: any;
+  resolution?: {
+    resolvedBy: string;
+    decision: 'takedown' | 'warn_owner' | 'no_action';
+    notes?: string;
+  };
+}
+
 
 // User functions
 export const createUser = async (userData: Omit<User, 'uid' | 'createdAt'>): Promise<void> => {
@@ -209,6 +239,21 @@ export const updateUserLocation = async (uid: string, latitude: number, longitud
   });
 };
 
+export const getAllUsers = async (): Promise<User[]> => {
+  const usersRef = collection(db, 'users');
+  const snapshot = await getDocs(usersRef);
+  const users = snapshot.docs.map((userDoc) => ({
+    uid: userDoc.id,
+    ...userDoc.data(),
+  })) as User[];
+
+  return users.sort((a, b) => {
+    const aDate = a.createdAt?.toDate?.()?.getTime?.() ?? 0;
+    const bDate = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
+    return bDate - aDate;
+  });
+};
+
 // Listing functions
 export const createListing = async (listingData: Omit<Listing, 'id' | 'createdAt'>): Promise<string> => {
   const docRef = await addDoc(collection(db, 'listings'), {
@@ -244,6 +289,21 @@ export const getListing = async (listingId: string): Promise<Listing | null> => 
   const listingRef = doc(db, 'listings', listingId);
   const listingSnap = await getDoc(listingRef);
   return listingSnap.exists() ? { id: listingId, ...listingSnap.data() } as Listing : null;
+};
+
+export const getAllListings = async (): Promise<Listing[]> => {
+  const listingsRef = collection(db, 'listings');
+  const snapshot = await getDocs(listingsRef);
+  const listings = snapshot.docs.map((listingDoc) => ({
+    id: listingDoc.id,
+    ...listingDoc.data(),
+  })) as Listing[];
+
+  return listings.sort((a, b) => {
+    const aDate = a.createdAt?.toDate?.()?.getTime?.() ?? 0;
+    const bDate = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
+    return bDate - aDate;
+  });
 };
 
 export const updateListing = async (listingId: string, updates: Partial<Listing>): Promise<void> => {
@@ -1293,6 +1353,22 @@ export const getRequest = async (requestId: string): Promise<Request | null> => 
   const requestRef = doc(db, 'requests', requestId);
   const requestSnap = await getDoc(requestRef);
   return requestSnap.exists() ? { id: requestId, ...requestSnap.data() } as Request : null;
+};
+
+export const getAllReports = async (): Promise<Report[]> => {
+  const reportsRef = collection(db, 'reports');
+  const snapshot = await getDocs(reportsRef);
+
+  const reports = snapshot.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...docSnap.data(),
+  })) as Report[];
+
+  return reports.sort((a, b) => {
+    const aDate = a.createdAt?.toDate?.()?.getTime?.() ?? 0;
+    const bDate = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
+    return bDate - aDate;
+  });
 };
 
 export const updateRequest = async (requestId: string, updates: Partial<Request>): Promise<void> => {
