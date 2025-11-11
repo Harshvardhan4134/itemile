@@ -1,3 +1,516 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  adjustUserTrustMetrics,
+  getAllListings,
+  getAllUsers,
+  logAdminAction,
+  setListingModeration,
+  type Listing,
+  type User,
+} from "@/lib/firestore";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { useAuthRole } from "@/hooks/useAuthRole";
+
+const moderationStatusStyles: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  active: "secondary",
+  flagged: "outline",
+  removed: "destructive",
+  pending_review: "default",
+};
+
+const reasonOptions = [
+  { value: "prohibited_item", label: "Prohibited item" },
+  { value: "copyright", label: "Copyright violation" },
+  { value: "counterfeit", label: "Counterfeit goods" },
+  { value: "fraud", label: "Fraudulent activity" },
+  { value: "safety", label: "Safety concern" },
+  { value: "other", label: "Other" },
+];
+
+const AdminListings = () => {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [owners, setOwners] = useState<Record<string, User>>({});
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [takedownOpen, setTakedownOpen] = useState(false);
+  const [selectedReason, setSelectedReason] =
+    useState<string>("prohibited_item");
+  const [additionalNotes, setAdditionalNotes] = useState("");
+  const [strikeUser, setStrikeUser] = useState(false);
+  const [notifyOwner, setNotifyOwner] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [processingListingId, setProcessingListingId] = useState<string | null>(
+    null
+  );
+
+  const { toast } = useToast();
+  const { user } = useAuthRole();
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const resetDialogState = () => {
+    setSelectedReason("prohibited_item");
+    setAdditionalNotes("");
+    setStrikeUser(false);
+    setNotifyOwner(true);
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [listingData, usersData] = await Promise.all([
+        getAllListings(),
+        getAllUsers(),
+      ]);
+      if (!isMountedRef.current) return;
+      setListings(listingData);
+      setOwners(
+        usersData.reduce<Record<string, User>>((acc, user) => {
+          acc[user.uid] = user;
+          return acc;
+        }, {})
+      );
+    } catch (error) {
+      console.error("Failed to load listings", error);
+      toast({
+        title: "Failed to load listings",
+        description: "Try refreshing the page.",
+        variant: "destructive",
+      });
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const filteredListings = useMemo(() => {
+    return listings.filter((listing) => {
+      const status =
+        listing.moderation?.status ?? (listing.softDeleted ? "removed" : "active");
+      const matchesStatus =
+        statusFilter === "all" ? true : status === statusFilter;
+      const matchesCategory =
+        categoryFilter === "all"
+          ? true
+          : listing.category?.toLowerCase() === categoryFilter;
+      const matchesCity =
+        cityFilter === "all"
+          ? true
+          : (listing.city ?? "").toLowerCase() === cityFilter;
+
+      return matchesStatus && matchesCategory && matchesCity;
+    });
+  }, [listings, statusFilter, categoryFilter, cityFilter]);
+
+  const uniqueCategories = useMemo(() => {
+    const categories = new Set<string>();
+    listings.forEach((listing) => {
+      if (listing.category) {
+        categories.add(listing.category);
+      }
+    });
+    return Array.from(categories).sort();
+  }, [listings]);
+
+  const uniqueCities = useMemo(() => {
+    const cities = new Set<string>();
+    listings.forEach((listing) => {
+      if (listing.city) {
+        cities.add(listing.city);
+      }
+    });
+    return Array.from(cities).sort();
+  }, [listings]);
+
+  const resolveOwner = (ownerId: string) => {
+    const owner = owners[ownerId];
+    if (!owner) return ownerId;
+    return owner.email || owner.name || ownerId;
+  };
+
+  const resolveStatus = (listing: Listing) => {
+    if (listing.softDeleted) return "removed";
+    return listing.moderation?.status ?? (listing.available ? "active" : "pending_review");
+  };
+
+  const resolveCity = (listing: Listing) => {
+    if (listing.city) return listing.city;
+    if (listing.location) {
+      return `${listing.location.latitude.toFixed(2)}, ${listing.location.longitude.toFixed(2)}`;
+    }
+    return "—";
+  };
+
+  const openTakedownDialog = (listing: Listing) => {
+    setSelectedListing(listing);
+    resetDialogState();
+    setTakedownOpen(true);
+  };
+
+  const handleTakedown = async () => {
+    if (!selectedListing || !user) {
+      toast({
+        title: "Unable to remove listing",
+        description: "Admin session not detected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reasons = [
+      selectedReason,
+      ...(additionalNotes.trim() ? [additionalNotes.trim()] : []),
+    ];
+
+    setActionLoading(true);
+    try {
+      await setListingModeration({
+        listingId: selectedListing.id,
+        status: "removed",
+        reasons,
+        reviewerId: user.uid,
+        softDeleted: true,
+        available: false,
+      });
+
+      if (strikeUser) {
+        await adjustUserTrustMetrics(selectedListing.ownerId, -10, 1);
+      }
+
+      await logAdminAction({
+        actorId: user.uid,
+        action: "TAKEDOWN",
+        targetType: "listing",
+        targetId: selectedListing.id,
+        reason: selectedReason,
+        metadata: {
+          additionalNotes: additionalNotes.trim() || undefined,
+          notifyOwner,
+          strikeUser,
+        },
+      });
+
+      toast({
+        title: "Listing removed",
+        description: `${selectedListing.title} has been taken down.`,
+      });
+      setTakedownOpen(false);
+      await loadData();
+    } catch (error) {
+      console.error("Failed to take down listing", error);
+      toast({
+        title: "Failed to remove listing",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRestore = async (listing: Listing) => {
+    if (!user) {
+      toast({
+        title: "Unable to restore listing",
+        description: "Admin session not detected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingListingId(listing.id);
+    try {
+      await setListingModeration({
+        listingId: listing.id,
+        status: "active",
+        reasons: [],
+        reviewerId: user.uid,
+        softDeleted: false,
+        available: true,
+      });
+
+      await logAdminAction({
+        actorId: user.uid,
+        action: "RESTORE",
+        targetType: "listing",
+        targetId: listing.id,
+        reason: "restore",
+        metadata: {},
+      });
+
+      toast({
+        title: "Listing restored",
+        description: `${listing.title} is visible again.`,
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Failed to restore listing", error);
+      toast({
+        title: "Failed to restore listing",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingListingId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Listings</h2>
+          <p className="text-sm text-muted-foreground">
+            Moderate active items, verify details, and take swift action on violations.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="flagged">Flagged</SelectItem>
+              <SelectItem value="removed">Removed</SelectItem>
+              <SelectItem value="pending_review">Pending</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {uniqueCategories.map((category) => (
+                <SelectItem key={category} value={category.toLowerCase()}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={cityFilter} onValueChange={setCityFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="City" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {uniqueCities.map((city) => (
+                <SelectItem key={city} value={city.toLowerCase()}>
+                  {city}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      {loading ? (
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          Loading listings…
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredListings.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                No listings match the current filters.
+              </CardContent>
+            </Card>
+          ) : (
+            filteredListings.map((listing) => {
+              const status = resolveStatus(listing);
+              return (
+                <Card key={listing.id}>
+                  <CardContent className="p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-base">{listing.title}</h3>
+                      <Badge variant={moderationStatusStyles[status] ?? "default"}>
+                        {status.replace("_", " ")}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>Owner: {resolveOwner(listing.ownerId)}</p>
+                      <p>Category: {listing.category ?? "—"}</p>
+                      <p>City: {resolveCity(listing)}</p>
+                      <p>Price: ₹{listing.rentPerDay ?? 0}/day</p>
+                      <p>
+                        Availability: {listing.available ? "Available" : "Unavailable"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1">
+                        Preview
+                      </Button>
+                      <Button variant="secondary" className="flex-1">
+                        Contact Owner
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={status === "removed"}
+                        onClick={() => openTakedownDialog(listing)}
+                      >
+                        Takedown
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex-1"
+                        disabled={
+                          status !== "removed" || processingListingId === listing.id
+                        }
+                        onClick={() => handleRestore(listing)}
+                      >
+                        Restore
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      <Dialog
+        open={takedownOpen}
+        onOpenChange={(open) => {
+          setTakedownOpen(open);
+          if (!open) {
+            setSelectedListing(null);
+            resetDialogState();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Remove listing</DialogTitle>
+            <DialogDescription>
+              Choose a policy reason and optionally notify the owner. This action
+              soft deletes the listing and hides it from the marketplace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Select
+                value={selectedReason}
+                onValueChange={setSelectedReason}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reasonOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Additional notes (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Add moderator notes or instructions"
+                value={additionalNotes}
+                onChange={(event) => setAdditionalNotes(event.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Apply actions</Label>
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="notify-owner"
+                  checked={notifyOwner}
+                  onCheckedChange={(value) => setNotifyOwner(Boolean(value))}
+                />
+                <Label htmlFor="notify-owner" className="text-sm font-normal">
+                  Notify owner by email (coming soon)
+                </Label>
+              </div>
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="strike-user"
+                  checked={strikeUser}
+                  onCheckedChange={(value) => setStrikeUser(Boolean(value))}
+                />
+                <Label htmlFor="strike-user" className="text-sm font-normal">
+                  Apply strike (trust -10, flags +1)
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTakedownOpen(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleTakedown}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Removing…" : "Confirm takedown"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminListings;
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

@@ -53,6 +53,8 @@ export interface User {
   verifiedAt?: any;
 }
 
+export type ModerationStatus = 'active' | 'flagged' | 'removed' | 'pending_review';
+
 export interface Listing {
   id: string;
   ownerId: string;
@@ -68,7 +70,7 @@ export interface Listing {
   createdAt: any;
   city?: string;
   moderation?: {
-    status: 'active' | 'flagged' | 'removed' | 'pending_review';
+    status: ModerationStatus;
     reasons?: string[];
     reviewedBy?: string;
     reviewedAt?: any;
@@ -188,6 +190,17 @@ export interface Report {
   };
 }
 
+export interface AdminAction {
+  id?: string;
+  actorId: string;
+  action: 'TAKEDOWN' | 'RESTORE' | 'BAN' | 'WARN' | 'VERIFY';
+  targetType: 'listing' | 'user';
+  targetId: string;
+  reason: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: any;
+}
+
 
 // User functions
 export const createUser = async (userData: Omit<User, 'uid' | 'createdAt'>): Promise<void> => {
@@ -254,6 +267,32 @@ export const getAllUsers = async (): Promise<User[]> => {
   });
 };
 
+export const adjustUserTrustMetrics = async (
+  uid: string,
+  trustDelta: number,
+  flagsDelta: number
+): Promise<void> => {
+  const userRef = doc(db, "users", uid);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) {
+    return;
+  }
+
+  const data = userSnap.data() as Partial<User>;
+  const currentTrust =
+    typeof data.trustScore === "number" ? data.trustScore : 60;
+  const currentFlags =
+    typeof data.flagsCount === "number" ? data.flagsCount : 0;
+
+  const updatedTrust = Math.min(100, Math.max(0, currentTrust + trustDelta));
+  const updatedFlags = Math.max(0, currentFlags + flagsDelta);
+
+  await updateDoc(userRef, {
+    trustScore: updatedTrust,
+    flagsCount: updatedFlags,
+  });
+};
+
 // Listing functions
 export const createListing = async (listingData: Omit<Listing, 'id' | 'createdAt'>): Promise<string> => {
   const docRef = await addDoc(collection(db, 'listings'), {
@@ -304,6 +343,36 @@ export const getAllListings = async (): Promise<Listing[]> => {
     const bDate = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
     return bDate - aDate;
   });
+};
+
+export const setListingModeration = async (params: {
+  listingId: string;
+  status: ModerationStatus;
+  reasons?: string[];
+  reviewerId: string;
+  softDeleted?: boolean;
+  available?: boolean;
+}) => {
+  const listingRef = doc(db, "listings", params.listingId);
+  const updates: Record<string, unknown> = {
+    "moderation.status": params.status,
+    "moderation.reviewedBy": params.reviewerId,
+    "moderation.reviewedAt": serverTimestamp(),
+  };
+
+  if (params.reasons) {
+    updates["moderation.reasons"] = params.reasons;
+  }
+
+  if (typeof params.softDeleted === "boolean") {
+    updates.softDeleted = params.softDeleted;
+  }
+
+  if (typeof params.available === "boolean") {
+    updates.available = params.available;
+  }
+
+  await updateDoc(listingRef, updates);
 };
 
 export const updateListing = async (listingId: string, updates: Partial<Listing>): Promise<void> => {
@@ -1368,6 +1437,15 @@ export const getAllReports = async (): Promise<Report[]> => {
     const aDate = a.createdAt?.toDate?.()?.getTime?.() ?? 0;
     const bDate = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
     return bDate - aDate;
+  });
+};
+
+export const logAdminAction = async (
+  action: Omit<AdminAction, "id" | "createdAt">
+): Promise<void> => {
+  await addDoc(collection(db, "admin_actions"), {
+    ...action,
+    createdAt: serverTimestamp(),
   });
 };
 
