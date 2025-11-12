@@ -129,6 +129,26 @@ const AdminListings = () => {
     loadData();
   }, [loadData]);
 
+  // Helper functions - defined before useMemo calls
+  const resolveOwner = (ownerId: string) => {
+    const owner = owners[ownerId];
+    if (!owner) return ownerId;
+    return owner.email || owner.name || ownerId;
+  };
+
+  const resolveStatus = (listing: Listing) => {
+    if (listing.softDeleted) return "removed";
+    return listing.moderation?.status ?? (listing.available ? "active" : "pending_review");
+  };
+
+  const resolveCity = (listing: Listing) => {
+    if (listing.city) return listing.city;
+    if (listing.location) {
+      return `${listing.location.latitude.toFixed(2)}, ${listing.location.longitude.toFixed(2)}`;
+    }
+    return "—";
+  };
+
   const filteredListings = useMemo(() => {
     return listings.filter((listing) => {
       const status =
@@ -181,25 +201,6 @@ const AdminListings = () => {
     });
     return Array.from(cities).sort();
   }, [listings]);
-
-  const resolveOwner = (ownerId: string) => {
-    const owner = owners[ownerId];
-    if (!owner) return ownerId;
-    return owner.email || owner.name || ownerId;
-  };
-
-  const resolveStatus = (listing: Listing) => {
-    if (listing.softDeleted) return "removed";
-    return listing.moderation?.status ?? (listing.available ? "active" : "pending_review");
-  };
-
-  const resolveCity = (listing: Listing) => {
-    if (listing.city) return listing.city;
-    if (listing.location) {
-      return `${listing.location.latitude.toFixed(2)}, ${listing.location.longitude.toFixed(2)}`;
-    }
-    return "—";
-  };
 
   const openTakedownDialog = (listing: Listing) => {
     setSelectedListing(listing);
