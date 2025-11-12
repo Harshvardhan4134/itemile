@@ -318,7 +318,7 @@ const AdminListings = () => {
 
   const handlePreview = (listing: Listing) => {
     // Open the listing detail page in a new tab
-    window.open(`/product/${listing.id}`, "_blank");
+    window.open(`/item/${listing.id}`, "_blank");
   };
 
   const handleContactOwner = (listing: Listing) => {
