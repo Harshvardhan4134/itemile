@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   adjustUserTrustMetrics,
   getAllListings,
@@ -78,6 +80,7 @@ const AdminListings = () => {
 
   const { toast } = useToast();
   const { user } = useAuthRole();
+  const navigate = useNavigate();
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -144,6 +147,20 @@ const AdminListings = () => {
       return matchesStatus && matchesCategory && matchesCity;
     });
   }, [listings, statusFilter, categoryFilter, cityFilter]);
+
+  const activeListings = useMemo(() => {
+    return filteredListings.filter((listing) => {
+      const status = resolveStatus(listing);
+      return status !== "removed";
+    });
+  }, [filteredListings]);
+
+  const removedListings = useMemo(() => {
+    return filteredListings.filter((listing) => {
+      const status = resolveStatus(listing);
+      return status === "removed";
+    });
+  }, [filteredListings]);
 
   const uniqueCategories = useMemo(() => {
     const categories = new Set<string>();
@@ -298,6 +315,84 @@ const AdminListings = () => {
     }
   };
 
+  const handlePreview = (listing: Listing) => {
+    // Open the listing detail page in a new tab
+    window.open(`/product/${listing.id}`, "_blank");
+  };
+
+  const handleContactOwner = (listing: Listing) => {
+    // Navigate to profile page of the owner
+    navigate(`/profile/${listing.ownerId}`);
+  };
+
+  const renderListingCard = (listing: Listing) => {
+    const status = resolveStatus(listing);
+    const isRemoved = status === "removed";
+    
+    return (
+      <Card key={listing.id}>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-base">{listing.title}</h3>
+            <Badge variant={moderationStatusStyles[status] ?? "default"}>
+              {status.replace("_", " ")}
+            </Badge>
+          </div>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>Owner: {resolveOwner(listing.ownerId)}</p>
+            <p>Category: {listing.category ?? "—"}</p>
+            <p>City: {resolveCity(listing)}</p>
+            <p>Price: ₹{listing.rentPerDay ?? 0}/day</p>
+            <p>
+              Availability: {listing.available ? "Available" : "Unavailable"}
+            </p>
+            {isRemoved && listing.moderation?.reasons && (
+              <p className="text-destructive font-medium">
+                Reason: {listing.moderation.reasons.join(", ")}
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => handlePreview(listing)}
+            >
+              Preview
+            </Button>
+            <Button 
+              variant="secondary" 
+              className="flex-1"
+              onClick={() => handleContactOwner(listing)}
+            >
+              Contact Owner
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            {!isRemoved ? (
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => openTakedownDialog(listing)}
+              >
+                Takedown
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                className="flex-1"
+                disabled={processingListingId === listing.id}
+                onClick={() => handleRestore(listing)}
+              >
+                {processingListingId === listing.id ? "Restoring..." : "Restore"}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -348,73 +443,50 @@ const AdminListings = () => {
           </Select>
         </div>
       </div>
+
       {loading ? (
         <div className="py-10 text-center text-sm text-muted-foreground">
           Loading listings…
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredListings.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                No listings match the current filters.
-              </CardContent>
-            </Card>
-          ) : (
-            filteredListings.map((listing) => {
-              const status = resolveStatus(listing);
-              return (
-                <Card key={listing.id}>
-                  <CardContent className="p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-base">{listing.title}</h3>
-                      <Badge variant={moderationStatusStyles[status] ?? "default"}>
-                        {status.replace("_", " ")}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>Owner: {resolveOwner(listing.ownerId)}</p>
-                      <p>Category: {listing.category ?? "—"}</p>
-                      <p>City: {resolveCity(listing)}</p>
-                      <p>Price: ₹{listing.rentPerDay ?? 0}/day</p>
-                      <p>
-                        Availability: {listing.available ? "Available" : "Unavailable"}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1">
-                        Preview
-                      </Button>
-                      <Button variant="secondary" className="flex-1">
-                        Contact Owner
-                      </Button>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="destructive"
-                        className="flex-1"
-                        disabled={status === "removed"}
-                        onClick={() => openTakedownDialog(listing)}
-                      >
-                        Takedown
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex-1"
-                        disabled={
-                          status !== "removed" || processingListingId === listing.id
-                        }
-                        onClick={() => handleRestore(listing)}
-                      >
-                        Restore
-                      </Button>
-                    </div>
+        <Tabs defaultValue="active" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="active">
+              Active Listings ({activeListings.length})
+            </TabsTrigger>
+            <TabsTrigger value="removed">
+              Removed / Taken Down ({removedListings.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {activeListings.length === 0 ? (
+                <Card>
+                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                    No active listings match the current filters.
                   </CardContent>
                 </Card>
-              );
-            })
-          )}
-        </div>
+              ) : (
+                activeListings.map((listing) => renderListingCard(listing))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="removed" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {removedListings.length === 0 ? (
+                <Card>
+                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                    No removed listings. All items are active or pending review.
+                  </CardContent>
+                </Card>
+              ) : (
+                removedListings.map((listing) => renderListingCard(listing))
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
 
       <Dialog

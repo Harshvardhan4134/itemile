@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAllUsers, type User } from "@/lib/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 const formatDate = (value: any) => {
   if (!value) return "—";
@@ -34,6 +36,8 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     let active = true;
@@ -64,6 +68,25 @@ const AdminUsers = () => {
     () => filterUsers(users, search),
     [users, search]
   );
+
+  const handleViewListings = (user: User) => {
+    // Navigate to admin listings page with owner filter
+    navigate(`/admin/listings?owner=${user.uid}`);
+  };
+
+  const handleWarn = (user: User) => {
+    toast({
+      title: "Warning feature coming soon",
+      description: `Warning functionality for ${user.email} will be available in the next update.`,
+    });
+  };
+
+  const handleBan = (user: User) => {
+    toast({
+      title: "Ban feature coming soon",
+      description: `Ban functionality for ${user.email} will be available in the next update.`,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -146,13 +169,25 @@ const AdminUsers = () => {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleWarn(user)}
+                            >
                               Warn
                             </Button>
-                            <Button variant="secondary" size="sm">
+                            <Button 
+                              variant="secondary" 
+                              size="sm"
+                              onClick={() => handleViewListings(user)}
+                            >
                               View Listings
                             </Button>
-                            <Button variant="destructive" size="sm">
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleBan(user)}
+                            >
                               Ban
                             </Button>
                           </div>
