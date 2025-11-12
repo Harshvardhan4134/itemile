@@ -77,8 +77,10 @@ const AdminListings = () => {
   const [processingListingId, setProcessingListingId] = useState<string | null>(
     null
   );
+  const [ownerDialogOpen, setOwnerDialogOpen] = useState(false);
+  const [selectedOwner, setSelectedOwner] = useState<User | null>(null);
 
-  const { toast } = useToast();
+  const { toast} = useToast();
   const { user } = useAuthRole();
   const navigate = useNavigate();
   const isMountedRef = useRef(true);
@@ -322,8 +324,18 @@ const AdminListings = () => {
   };
 
   const handleContactOwner = (listing: Listing) => {
-    // Navigate to profile page of the owner
-    navigate(`/profile/${listing.ownerId}`);
+    // Show owner details in dialog
+    const owner = owners[listing.ownerId];
+    if (owner) {
+      setSelectedOwner(owner);
+      setOwnerDialogOpen(true);
+    } else {
+      toast({
+        title: "Owner not found",
+        description: "Unable to load owner details.",
+        variant: "destructive",
+      });
+    }
   };
 
   const renderListingCard = (listing: Listing) => {
@@ -489,6 +501,72 @@ const AdminListings = () => {
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Owner Details Dialog */}
+      <Dialog open={ownerDialogOpen} onOpenChange={setOwnerDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Owner Details</DialogTitle>
+            <DialogDescription>
+              Contact information and trust metrics for this listing owner.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOwner && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Name</Label>
+                  <p className="font-medium">{selectedOwner.name}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <p className="font-medium text-sm">{selectedOwner.email}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Phone</Label>
+                  <p className="font-medium">{selectedOwner.phone || "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Trust Score</Label>
+                  <p className="font-medium">{selectedOwner.trustScore ?? 50}/100</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Flags</Label>
+                  <p className="font-medium">{selectedOwner.flagsCount ?? 0}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Badge variant={selectedOwner.banned ? "destructive" : "secondary"}>
+                    {selectedOwner.banned ? "Banned" : "Active"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="pt-4 border-t flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    navigate(`/profile/${selectedOwner.uid}`);
+                    setOwnerDialogOpen(false);
+                  }}
+                >
+                  View Profile
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    navigate(`/admin/users`);
+                    setOwnerDialogOpen(false);
+                  }}
+                >
+                  Manage User
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={takedownOpen}

@@ -4,8 +4,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAllUsers, type User } from "@/lib/firestore";
+import { getAllUsers, adjustUserTrustMetrics, logAdminAction, type User } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthRole } from "@/hooks/useAuthRole";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const formatDate = (value: any) => {
   if (!value) return "—";
@@ -36,32 +49,34 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [warnDialogOpen, setWarnDialogOpen] = useState(false);
+  const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const [actionReason, setActionReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user: adminUser } = useAuthRole();
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error("Failed to load users", error);
+      toast({
+        title: "Failed to load users",
+        description: "Please refresh the page.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let active = true;
-
-    const loadUsers = async () => {
-      try {
-        setLoading(true);
-        const data = await getAllUsers();
-        if (active) {
-          setUsers(data);
-        }
-      } catch (error) {
-        console.error("Failed to load users", error);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
     loadUsers();
-    return () => {
-      active = false;
-    };
   }, []);
 
   const filteredUsers = useMemo(
@@ -74,18 +89,130 @@ const AdminUsers = () => {
     navigate(`/admin/listings?owner=${user.uid}`);
   };
 
-  const handleWarn = (user: User) => {
-    toast({
-      title: "Warning feature coming soon",
-      description: `Warning functionality for ${user.email} will be available in the next update.`,
-    });
+  const openWarnDialog = (user: User) => {
+    setSelectedUser(user);
+    setActionReason("");
+    setWarnDialogOpen(true);
   };
 
-  const handleBan = (user: User) => {
-    toast({
-      title: "Ban feature coming soon",
-      description: `Ban functionality for ${user.email} will be available in the next update.`,
-    });
+  const openBanDialog = (user: User) => {
+    setSelectedUser(user);
+    setActionReason("");
+    setBanDialogOpen(true);
+  };
+
+  const handleWarnConfirm = async () => {
+    if (!selectedUser || !adminUser) {
+      toast({
+        title: "Unable to warn user",
+        description: "Admin session not detected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!actionReason.trim()) {
+      toast({
+        title: "Reason required",
+        description: "Please provide a reason for the warning.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      // Reduce trust score by 5 points
+      await adjustUserTrustMetrics(selectedUser.uid, -5, 0);
+
+      // Log admin action
+      await logAdminAction({
+        actorId: adminUser.uid,
+        action: "WARN",
+        targetType: "user",
+        targetId: selectedUser.uid,
+        reason: actionReason.trim(),
+        metadata: {
+          userEmail: selectedUser.email,
+        },
+      });
+
+      toast({
+        title: "User warned",
+        description: `Warning issued to ${selectedUser.email}. Trust score reduced by 5 points.`,
+      });
+
+      setWarnDialogOpen(false);
+      await loadUsers();
+    } catch (error) {
+      console.error("Failed to warn user", error);
+      toast({
+        title: "Failed to warn user",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBanConfirm = async () => {
+    if (!selectedUser || !adminUser) {
+      toast({
+        title: "Unable to ban user",
+        description: "Admin session not detected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!actionReason.trim()) {
+      toast({
+        title: "Reason required",
+        description: "Please provide a reason for the ban.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      // Set user as banned and set trust score to 0
+      const userRef = doc(db, "users", selectedUser.uid);
+      await updateDoc(userRef, {
+        banned: true,
+        trustScore: 0,
+      });
+
+      // Log admin action
+      await logAdminAction({
+        actorId: adminUser.uid,
+        action: "BAN",
+        targetType: "user",
+        targetId: selectedUser.uid,
+        reason: actionReason.trim(),
+        metadata: {
+          userEmail: selectedUser.email,
+        },
+      });
+
+      toast({
+        title: "User banned",
+        description: `${selectedUser.email} has been banned from the platform.`,
+      });
+
+      setBanDialogOpen(false);
+      await loadUsers();
+    } catch (error) {
+      console.error("Failed to ban user", error);
+      toast({
+        title: "Failed to ban user",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -172,7 +299,8 @@ const AdminUsers = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => handleWarn(user)}
+                              onClick={() => openWarnDialog(user)}
+                              disabled={user.banned}
                             >
                               Warn
                             </Button>
@@ -186,9 +314,10 @@ const AdminUsers = () => {
                             <Button 
                               variant="destructive" 
                               size="sm"
-                              onClick={() => handleBan(user)}
+                              onClick={() => openBanDialog(user)}
+                              disabled={user.banned}
                             >
-                              Ban
+                              {user.banned ? "Banned" : "Ban"}
                             </Button>
                           </div>
                         </td>
@@ -201,6 +330,92 @@ const AdminUsers = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Warning Dialog */}
+      <Dialog open={warnDialogOpen} onOpenChange={setWarnDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Warn User</DialogTitle>
+            <DialogDescription>
+              Issue a warning to{" "}
+              <span className="font-semibold">{selectedUser?.email}</span>. This
+              will reduce their trust score by 5 points and be recorded in the audit
+              log.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="warn-reason">Reason for warning *</Label>
+              <Textarea
+                id="warn-reason"
+                placeholder="Explain why this user is being warned (e.g., inappropriate listing, spam, policy violation)"
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setWarnDialogOpen(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleWarnConfirm}
+              disabled={actionLoading || !actionReason.trim()}
+            >
+              {actionLoading ? "Warning..." : "Confirm Warning"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ban Dialog */}
+      <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ban User</DialogTitle>
+            <DialogDescription>
+              Permanently ban{" "}
+              <span className="font-semibold">{selectedUser?.email}</span> from the
+              platform. This will set their trust score to 0 and prevent them from
+              using RentShare. This action should only be used for serious violations.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ban-reason">Reason for ban *</Label>
+              <Textarea
+                id="ban-reason"
+                placeholder="Provide a detailed reason for the ban (e.g., repeated violations, fraud, illegal activity)"
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBanDialogOpen(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBanConfirm}
+              disabled={actionLoading || !actionReason.trim()}
+            >
+              {actionLoading ? "Banning..." : "Confirm Ban"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
