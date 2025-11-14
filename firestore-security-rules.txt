@@ -116,6 +116,24 @@ service cloud.firestore {
       allow delete: if request.auth != null &&
         request.auth.uid == resource.data.userId;
     }
+    
+    // Message Posts - social media style posts
+    match /messagePosts/{postId} {
+      // Anyone can read message posts (including comments and likes) - public access
+      allow read: if true;
+      
+      // Users can create their own message posts
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+      
+      // Users can update their own posts (for editing)
+      // Anyone authenticated can update to add likes/comments
+      allow update: if request.auth != null;
+      
+      // Users can delete their own posts
+      allow delete: if request.auth != null &&
+        resource.data.userId == request.auth.uid;
+    }
   }
 }
 

@@ -64,6 +64,8 @@ service cloud.firestore {
           .hasAny(['moderation', 'softDeleted']);
       // Admins can update any listing (including moderation fields)
       allow update: if isAdmin();
+      // Anyone authenticated can update to add likes/comments
+      allow update: if request.auth != null;
       allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
     
@@ -119,6 +121,9 @@ service cloud.firestore {
         (request.auth.uid == resource.data.userId ||
          request.auth.uid == request.resource.data.matchedWith);
       
+      // Anyone authenticated can update to add likes/comments
+      allow update: if request.auth != null;
+      
       // Only request creator can delete their requests
       allow delete: if request.auth != null &&
         request.auth.uid == resource.data.userId;
@@ -133,6 +138,24 @@ service cloud.firestore {
     // Admin actions - audit log, admin/moderator only
     match /admin_actions/{actionId} {
       allow create, read: if isAdmin();
+    }
+    
+    // Message Posts - social media style posts
+    match /messagePosts/{postId} {
+      // Anyone can read message posts (including comments and likes) - public access
+      allow read: if true;
+      
+      // Users can create their own message posts
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+      
+      // Users can update their own posts (for editing)
+      // Anyone authenticated can update to add likes/comments
+      allow update: if request.auth != null;
+      
+      // Users can delete their own posts
+      allow delete: if request.auth != null &&
+        resource.data.userId == request.auth.uid;
     }
   }
 }

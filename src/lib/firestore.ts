@@ -69,6 +69,8 @@ export interface Listing {
   available: boolean;
   createdAt: any;
   city?: string;
+  likes?: string[]; // Array of user IDs who liked
+  comments?: ListingComment[]; // Comments on the listing
   moderation?: {
     status: ModerationStatus;
     reasons?: string[];
@@ -76,6 +78,15 @@ export interface Listing {
     reviewedAt?: any;
   };
   softDeleted?: boolean;
+}
+
+export interface ListingComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhotoUrl?: string;
+  text: string;
+  createdAt: any;
 }
 
 export interface Transaction {
@@ -170,6 +181,39 @@ export interface Request {
   matchedAt?: any;
   matchedWith?: string; // userId who responded
   createdAt: any;
+  likes?: string[]; // Array of user IDs who liked
+  comments?: RequestComment[]; // Comments on the request
+}
+
+export interface RequestComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhotoUrl?: string;
+  text: string;
+  createdAt: any;
+}
+
+export interface MessagePost {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhotoUrl?: string;
+  message: string;
+  images: string[];
+  listingId?: string; // Optional link to a listing
+  likes: string[]; // Array of user IDs who liked
+  comments: MessagePostComment[];
+  createdAt: any;
+}
+
+export interface MessagePostComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhotoUrl?: string;
+  text: string;
+  createdAt: any;
 }
 
 export interface Report {
@@ -203,7 +247,7 @@ export interface AdminAction {
 
 
 // User functions
-export const createUser = async (userData: Omit<User, 'uid' | 'createdAt'>): Promise<void> => {
+export const createUser = async (userData: Omit<User, 'createdAt'>): Promise<void> => {
   const userRef = doc(db, 'users', userData.uid);
 
   // Read current doc to avoid overwriting verified=true back to false on sign-in
@@ -1539,5 +1583,203 @@ export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<v
   } catch (error) {
     console.error('Error notifying nearby users about request:', error);
   }
+};
+
+// Message Post functions
+export const createMessagePost = async (postData: Omit<MessagePost, 'id' | 'createdAt' | 'likes' | 'comments'>): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'messagePosts'), {
+    ...postData,
+    likes: [],
+    comments: [],
+    createdAt: serverTimestamp()
+  });
+  return docRef.id;
+};
+
+export const getMessagePosts = async (): Promise<MessagePost[]> => {
+  const postsRef = collection(db, 'messagePosts');
+  const q = query(postsRef, orderBy('createdAt', 'desc'));
+  const querySnapshot = await getDocs(q);
+  
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as MessagePost[];
+};
+
+export const getMessagePost = async (postId: string): Promise<MessagePost | null> => {
+  const postRef = doc(db, 'messagePosts', postId);
+  const postSnap = await getDoc(postRef);
+  return postSnap.exists() ? { id: postId, ...postSnap.data() } as MessagePost : null;
+};
+
+export const likeMessagePost = async (postId: string, userId: string): Promise<void> => {
+  const postRef = doc(db, 'messagePosts', postId);
+  const postSnap = await getDoc(postRef);
+  
+  if (!postSnap.exists()) {
+    throw new Error('Post not found');
+  }
+  
+  const post = postSnap.data() as MessagePost;
+  const likes = post.likes || [];
+  
+  if (likes.includes(userId)) {
+    // Unlike
+    await updateDoc(postRef, {
+      likes: likes.filter(id => id !== userId)
+    });
+  } else {
+    // Like
+    await updateDoc(postRef, {
+      likes: [...likes, userId]
+    });
+  }
+};
+
+export const addCommentToMessagePost = async (
+  postId: string,
+  comment: Omit<MessagePostComment, 'id' | 'createdAt'>
+): Promise<string> => {
+  const postRef = doc(db, 'messagePosts', postId);
+  const postSnap = await getDoc(postRef);
+  
+  if (!postSnap.exists()) {
+    throw new Error('Post not found');
+  }
+  
+  const post = postSnap.data() as MessagePost;
+  const comments = post.comments || [];
+  
+  // Use Date object instead of serverTimestamp() since it can't be used inside arrays
+  const newComment: MessagePostComment = {
+    ...comment,
+    id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date()
+  };
+  
+  await updateDoc(postRef, {
+    comments: [...comments, newComment]
+  });
+  
+  return newComment.id;
+};
+
+export const deleteMessagePost = async (postId: string, userId: string): Promise<void> => {
+  const post = await getMessagePost(postId);
+  if (!post) {
+    throw new Error('Post not found');
+  }
+  
+  if (post.userId !== userId) {
+    throw new Error('Unauthorized to delete this post');
+  }
+  
+  const postRef = doc(db, 'messagePosts', postId);
+  await deleteDoc(postRef);
+};
+
+// Listing like and comment functions
+export const likeListing = async (listingId: string, userId: string): Promise<void> => {
+  const listingRef = doc(db, 'listings', listingId);
+  const listingSnap = await getDoc(listingRef);
+  
+  if (!listingSnap.exists()) {
+    throw new Error('Listing not found');
+  }
+  
+  const listing = listingSnap.data() as Listing;
+  const likes = listing.likes || [];
+  
+  if (likes.includes(userId)) {
+    // Unlike
+    await updateDoc(listingRef, {
+      likes: likes.filter(id => id !== userId)
+    });
+  } else {
+    // Like
+    await updateDoc(listingRef, {
+      likes: [...likes, userId]
+    });
+  }
+};
+
+export const addCommentToListing = async (
+  listingId: string,
+  comment: Omit<ListingComment, 'id' | 'createdAt'>
+): Promise<string> => {
+  const listingRef = doc(db, 'listings', listingId);
+  const listingSnap = await getDoc(listingRef);
+  
+  if (!listingSnap.exists()) {
+    throw new Error('Listing not found');
+  }
+  
+  const listing = listingSnap.data() as Listing;
+  const comments = listing.comments || [];
+  
+  const newComment: ListingComment = {
+    ...comment,
+    id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date()
+  };
+  
+  await updateDoc(listingRef, {
+    comments: [...comments, newComment]
+  });
+  
+  return newComment.id;
+};
+
+// Request like and comment functions
+export const likeRequest = async (requestId: string, userId: string): Promise<void> => {
+  const requestRef = doc(db, 'requests', requestId);
+  const requestSnap = await getDoc(requestRef);
+  
+  if (!requestSnap.exists()) {
+    throw new Error('Request not found');
+  }
+  
+  const request = requestSnap.data() as Request;
+  const likes = request.likes || [];
+  
+  if (likes.includes(userId)) {
+    // Unlike
+    await updateDoc(requestRef, {
+      likes: likes.filter(id => id !== userId)
+    });
+  } else {
+    // Like
+    await updateDoc(requestRef, {
+      likes: [...likes, userId]
+    });
+  }
+};
+
+export const addCommentToRequest = async (
+  requestId: string,
+  comment: Omit<RequestComment, 'id' | 'createdAt'>
+): Promise<string> => {
+  const requestRef = doc(db, 'requests', requestId);
+  const requestSnap = await getDoc(requestRef);
+  
+  if (!requestSnap.exists()) {
+    throw new Error('Request not found');
+  }
+  
+  const request = requestSnap.data() as Request;
+  const comments = request.comments || [];
+  
+  const newComment: RequestComment = {
+    ...comment,
+    id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date()
+  };
+  
+  await updateDoc(requestRef, {
+    comments: [...comments, newComment]
+  });
+  
+  return newComment.id;
 };
 
