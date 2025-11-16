@@ -469,6 +469,12 @@ const Profile = () => {
               <TabsTrigger value="images">Images</TabsTrigger>
               <TabsTrigger value="videos">Videos</TabsTrigger>
               <TabsTrigger value="favorites">Favorites</TabsTrigger>
+              <TabsTrigger value="verification">Verification</TabsTrigger>
+              <TabsTrigger value="requests">Requests</TabsTrigger>
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
+              <TabsTrigger value="payments">Payments</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="support">Help & Support</TabsTrigger>
             </TabsList>
           </div>
 
@@ -656,6 +662,281 @@ const Profile = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Verification tab */}
+          <TabsContent value="verification" className="mt-6">
+            <KYCVerification 
+              user={user} 
+              onVerificationSubmitted={async () => {
+                await fetchUserData();
+              }} 
+            />
+          </TabsContent>
+
+          {/* Requests tab */}
+          <TabsContent value="requests" className="mt-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Search className="h-5 w-5 mr-2" />
+                  My Requests ({myRequests.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {myRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No requests yet</h3>
+                    <p className="text-muted-foreground mb-4">Start by posting what you need to rent</p>
+                    <Button onClick={() => navigate('/post-request')}>Post Your First Request</Button>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {myRequests.map((request) => (
+                      <Card key={request.id} className="glass-card hover-scale">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Badge variant={request.matched ? "default" : "secondary"} className="text-xs">
+                                {request.matched ? (<><CheckCircle className="h-3 w-3 mr-1" />Matched</>) : (<><Clock className="h-3 w-3 mr-1" />Active</>)}
+                              </Badge>
+                              <Button size="sm" variant="outline" className="text-red-500 border-red-500 hover:bg-red-50 p-1 h-8 w-8" onClick={() => handleDeleteRequest(request.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-sm">{request.itemName}</h3>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{request.description}</p>
+                              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" /><span>{request.duration} days</span>
+                                <Tag className="h-3 w-3 ml-2" /><span>{request.category}</span>
+                              </div>
+                              {request.maxBudget && (
+                                <div className="flex items-center gap-2 mt-1 text-xs">
+                                  <DollarSign className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-muted-foreground">Max: ₹{request.maxBudget}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
+                                <span>{formatLocation(request.location)}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-2">Posted: {formatDate(request.createdAt)}</div>
+                              {request.matched && request.matchedWith && (
+                                <div className="mt-3">
+                                  <Button size="sm" variant="outline" className="w-full" onClick={() => { handleViewChat(request.id); }}>
+                                    <MessageCircle className="h-3 w-3 mr-1" />
+                                    View Messages
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Reviews tab */}
+          <TabsContent value="reviews" className="mt-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Star className="h-5 w-5 mr-2" />
+                  User Reviews ({reviews.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reviews.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No reviews yet</h3>
+                    <p className="text-muted-foreground mb-4">Reviews from other users will appear here after completed transactions</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <Card key={review.id} className="glass-card">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                              {review.reviewerPhotoUrl ? (
+                                <img src={review.reviewerPhotoUrl} alt={review.reviewerName} className="w-full h-full object-cover" />
+                              ) : (
+                                <User className="h-6 w-6 text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <h4 className="font-semibold">{review.reviewerName}</h4>
+                                  <p className="text-xs text-muted-foreground">{review.createdAt?.toDate().toLocaleDateString()}</p>
+                                </div>
+                                <div className="flex items-center">
+                                  {[1,2,3,4,5].map((star) => (
+                                    <Star key={star} className={`h-4 w-4 ${star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                                  ))}
+                                </div>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">Transaction: <span className="font-medium text-foreground">{review.listingTitle}</span></p>
+                              <p className="text-sm">{review.comment}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Payments tab */}
+          <TabsContent value="payments" className="mt-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Payment Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Payments Coming Soon</h3>
+                  <p className="text-muted-foreground mb-4">We're working on integrating Razorpay for secure payments</p>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>• Secure payment processing</p>
+                    <p>• Multiple payment methods</p>
+                    <p>• Transaction history</p>
+                    <p>• Refund management</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Settings tab */}
+          <TabsContent value="settings" className="mt-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Settings className="h-5 w-5 mr-2" />
+                    Account Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start glass-effect">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Profile Information
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect" onClick={() => document.getElementById('profile-photo-upload')?.click()} disabled={uploadingPhoto}>
+                    <Camera className="h-4 w-4 mr-2" />
+                    {uploadingPhoto ? 'Uploading...' : 'Change Profile Picture'}
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Privacy Settings
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Payment Methods
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect">
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Help & Support
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <LogOut className="h-5 w-5 mr-2" />
+                    Account Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start glass-effect">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Change Password
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect">
+                    <User className="h-4 w-4 mr-2" />
+                    Download Data
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect text-destructive">
+                    <X className="h-4 w-4 mr-2" />
+                    Delete Account
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start glass-effect text-destructive" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Support tab */}
+          <TabsContent value="support" className="mt-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <HelpCircle className="h-5 w-5 mr-2" />
+                    Contact Support
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email Support</p>
+                        <a href="mailto:rentshare11@gmail.com" className="font-medium text-primary hover:underline">rentshare11@gmail.com</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">Our support team is available to help you with any questions or issues. We typically respond within 24 hours.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <MessageCircle className="h-5 w-5 mr-2" />
+                    FAQ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I post an item?</h4>
+                      <p className="text-sm text-muted-foreground">Click "Post Item" in the header and fill out the form with your item details.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I contact item owners?</h4>
+                      <p className="text-sm text-muted-foreground">Click "Contact" on any item page to start a chat with the owner.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I update my profile?</h4>
+                      <p className="text-sm text-muted-foreground">Go to your Profile page and click "Edit Profile" to update your information.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">How do I upload a profile photo?</h4>
+                      <p className="text-sm text-muted-foreground">Click the camera icon on your avatar or go to Settings → "Change Profile Picture".</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
