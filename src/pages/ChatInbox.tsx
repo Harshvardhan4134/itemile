@@ -1,35 +1,50 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Header } from "@/components/Layout/Header";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   ArrowLeft, 
   Send, 
   Search,
   MessageCircle,
-  User,
+  Home,
+  Plus,
+  AlertTriangle,
   Package,
-  Clock
+  Phone,
+  Video,
+  Image as ImageIcon,
+  FileText,
+  Link as LinkIcon,
+  Pin,
+  MoreVertical,
+  Smile,
+  Paperclip,
+  List,
+  X,
+  ChevronRight
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { 
   subscribeToChats, 
-  getChat, 
   sendChatMessage, 
   subscribeToChatMessages,
+  getChatsByUser,
   getUser,
+  getListings,
   Chat,
   Message,
-  User as UserType
+  User as UserType,
+  Listing
 } from "@/lib/firestore";
+import { Unsubscribe } from "firebase/firestore";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 const ChatInbox = () => {
   const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -39,6 +54,43 @@ const ChatInbox = () => {
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [chatUsers, setChatUsers] = useState<Map<string, UserType>>(new Map());
+  const [showDetails, setShowDetails] = useState(true);
+  const [sharedListings, setSharedListings] = useState<Listing[]>([]);
+  // Track merged subscriptions when loading history across multiple chats
+  const messageUnsubscribersRef = useRef<Unsubscribe[]>([]);
+  // We may have multiple chat threads with the same user; use the most recent for sending
+  const [activeChatIdForSend, setActiveChatIdForSend] = useState<string | null>(null);
+  // Refs for hidden inputs
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handlePickAndUpload = async (file: File | null) => {
+    if (!file) return;
+    try {
+      setUploading(true);
+      const result = await uploadToCloudinary(file, "chat");
+      const url = result.secure_url;
+      setNewMessage((prev) => (prev ? `${prev} ${url}` : url));
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onImageInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    await handlePickAndUpload(file || null);
+    // Reset so the same file can be picked again
+    if (e.target) e.target.value = "";
+  };
+
+  const onFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    await handlePickAndUpload(file || null);
+    if (e.target) e.target.value = "";
+  };
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -47,12 +99,28 @@ const ChatInbox = () => {
     }
 
     const unsubscribe = subscribeToChats(auth.currentUser!.uid, async (userChats) => {
-      setChats(userChats);
+      // Deduplicate chats by the other participant to avoid repeated names.
+      const dedupedByUser = Array.from(
+        userChats.reduce((map, chat) => {
+          const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
+          if (!otherUserId) return map;
+          const existing = map.get(otherUserId);
+          const chatTime = chat.lastUpdated?.toDate?.().getTime?.() ?? 0;
+          const existingTime = existing?.lastUpdated?.toDate?.().getTime?.() ?? 0;
+          if (!existing || chatTime > existingTime) {
+            map.set(otherUserId, chat);
+          }
+          return map;
+        }, new Map<string, Chat>())
+        .values()
+      );
+
+      setChats(dedupedByUser);
       setLoading(false);
 
       // Load user data for all chats
       const userMap = new Map<string, UserType>();
-      for (const chat of userChats) {
+      for (const chat of dedupedByUser) {
         const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
         if (otherUserId && !userMap.has(otherUserId)) {
           try {
@@ -67,34 +135,90 @@ const ChatInbox = () => {
       }
       setChatUsers(userMap);
 
-      // If a specific chat is selected, load it
+      // If a specific chat is selected from URL, load it
       if (chatId) {
-        const chat = userChats.find(c => c.id === chatId);
+        const chat = dedupedByUser.find(c => c.id === chatId);
         if (chat) {
           setCurrentChat(chat);
           loadChatData(chat);
         }
+      } else if (dedupedByUser.length > 0 && !currentChat) {
+        // Auto-select first chat if none selected
+        setCurrentChat(dedupedByUser[0]);
+        loadChatData(dedupedByUser[0]);
       }
     });
 
     return () => unsubscribe();
   }, [navigate, chatId]);
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Clears any existing message subscriptions
+  const clearMessageSubscriptions = () => {
+    if (messageUnsubscribersRef.current.length > 0) {
+      messageUnsubscribersRef.current.forEach(unsub => {
+        try { unsub(); } catch {}
+      });
+      messageUnsubscribersRef.current = [];
+    }
+  };
+
   const loadChatData = async (chat: Chat) => {
     try {
       // Get the other participant
       const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
-      if (otherUserId) {
-        const otherUserData = await getUser(otherUserId);
-        setOtherUser(otherUserData);
-      }
+      if (!otherUserId) return;
 
-      // Subscribe to messages
-      const unsubscribe = subscribeToChatMessages(chat.id, (newMessages) => {
-        setMessages(newMessages);
+      const otherUserData = await getUser(otherUserId);
+      setOtherUser(otherUserData);
+
+      // We want complete history across all chats with this user.
+      // 1) Clear previous subscriptions
+      clearMessageSubscriptions();
+
+      // 2) Load all chats between current user and this other user
+      const allMyChats = await getChatsByUser(auth.currentUser!.uid);
+      const chatsWithUser = allMyChats.filter(c => c.participants.includes(otherUserId));
+
+      // Choose the most recent chat for sending
+      const mostRecentChat = chatsWithUser
+        .slice()
+        .sort((a, b) => {
+          const aTime = a.lastUpdated?.toDate?.().getTime?.() ?? 0;
+          const bTime = b.lastUpdated?.toDate?.().getTime?.() ?? 0;
+          return bTime - aTime;
+        })[0];
+      setActiveChatIdForSend(mostRecentChat?.id ?? chat.id);
+
+      // 3) Subscribe to messages for each chat and merge by timestamp
+      const chatIdToMessages = new Map<string, Message[]>();
+
+      const recomputeMerged = () => {
+        const merged = Array.from(chatIdToMessages.values()).flat();
+        merged.sort((a, b) => {
+          const aTime = a.createdAt?.toDate?.().getTime?.() ?? 0;
+          const bTime = b.createdAt?.toDate?.().getTime?.() ?? 0;
+          return aTime - bTime;
+        });
+        setMessages(merged);
+      };
+
+      chatsWithUser.forEach((c) => {
+        const unsub = subscribeToChatMessages(c.id, (newMessages) => {
+          chatIdToMessages.set(c.id, newMessages);
+          recomputeMerged();
+        });
+        messageUnsubscribersRef.current.push(unsub);
       });
 
-      return unsubscribe;
+      // Load shared listings (mock data for now)
+      const allListings = await getListings();
+      setSharedListings(allListings.slice(0, 12));
+
+      // Note: unsubscribe handled via clearMessageSubscriptions on next load/unmount
     } catch (error) {
       console.error('Error loading chat data:', error);
     }
@@ -103,11 +227,13 @@ const ChatInbox = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newMessage.trim() || !auth.currentUser || !currentChat) return;
+    if (!newMessage.trim() || !auth.currentUser) return;
 
     setSending(true);
     try {
-      await sendChatMessage(currentChat.id, auth.currentUser.uid, newMessage.trim());
+      const destinationChatId = activeChatIdForSend || currentChat?.id;
+      if (!destinationChatId) return;
+      await sendChatMessage(destinationChatId, auth.currentUser.uid, newMessage.trim());
       setNewMessage("");
     } catch (error) {
       console.error('Error sending message:', error);
@@ -118,134 +244,129 @@ const ChatInbox = () => {
 
   const handleChatSelect = async (chat: Chat) => {
     setCurrentChat(chat);
-    navigate(`/chat/${chat.id}`);
+    // Don't navigate, just load the chat data inline
     await loadChatData(chat);
+  };
+
+  // Clear subscriptions on unmount
+  useEffect(() => {
+    return () => {
+      clearMessageSubscriptions();
+    };
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const formatTime = (timestamp: any) => {
     if (!timestamp) return '';
     const date = timestamp.toDate();
     const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInMinutes = (now.getTime() - date.getTime()) / (1000 * 60);
     
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 168) { // 7 days
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
+    if (diffInMinutes < 1) return 'now';
+    if (diffInMinutes < 60) return `${Math.floor(diffInMinutes)} m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} h`;
+    return `${Math.floor(diffInMinutes / 1440)} d`;
+  };
+
+  const formatMessageTime = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate();
+    return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
   const filteredChats = chats.filter(chat => {
     if (!searchQuery) return true;
     const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
+    const otherUserData = otherUserId ? chatUsers.get(otherUserId) : null;
     return chat.listingTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           otherUserId?.toLowerCase().includes(searchQuery.toLowerCase());
+           otherUserData?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           chat.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container py-8">
-          <div className="flex items-center justify-center h-64">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p className="text-muted-foreground">Loading chats...</p>
-            </div>
-          </div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto mb-2"></div>
+          <p className="text-gray-500">Loading chats...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <div className="container py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate('/explore')}
-          >
-            <ArrowLeft className="h-4 w-4" />
+    <div className="h-screen flex bg-gray-50">
+      {/* Chat List Panel */}
+      <div className="w-80 bg-gray-100 flex flex-col border-r border-gray-200">
+        <div className="p-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Chats</h2>
+            <Button variant="ghost" size="icon" className="text-primary">
+              <MoreVertical className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-urbanist font-bold">
-              <span className="gradient-text">Messages</span>
-            </h1>
-            <p className="text-muted-foreground">Chat with other users about rentals</p>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search in messages"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-50 border-gray-200"
+            />
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
-          {/* Chat List */}
-          <div className="lg:col-span-1">
-            <Card className="glass-card h-full flex flex-col">
-              <CardHeader className="border-b">
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search chats..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="border-0 bg-transparent p-0 focus-visible:ring-0"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto p-0">
+        <div className="flex-1 overflow-y-auto">
                 {filteredChats.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <div className="text-center py-8 px-4">
+              <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No conversations yet</h3>
-                    <p className="text-muted-foreground text-sm">
+              <p className="text-gray-500 text-sm">
                       Start chatting by contacting item owners
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-1">
+            <div>
                     {filteredChats.map((chat) => {
                       const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
                       const otherUserData = otherUserId ? chatUsers.get(otherUserId) : null;
                       const isActive = chat.id === chatId;
+                const isOnline = Math.random() > 0.5; // Mock online status
                       
                       return (
                         <div
                           key={chat.id}
-                          className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors border-b ${
-                            isActive ? 'bg-primary/10 border-primary/20' : ''
+                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-200 ${
+                      isActive ? 'bg-primary/10 border-l-4 border-l-primary' : ''
                           }`}
                           onClick={() => handleChatSelect(chat)}
                         >
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              {otherUserData?.profilePhotoUrl ? (
-                                <img 
-                                  src={otherUserData.profilePhotoUrl} 
-                                  alt={otherUserData.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
+                      <div className="relative">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={otherUserData?.profilePhotoUrl} />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
                                   {otherUserData?.name?.charAt(0).toUpperCase() || otherUserId?.charAt(0).toUpperCase() || 'U'}
                                 </AvatarFallback>
+                        </Avatar>
+                        {isOnline && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full border-2 border-white"></div>
                               )}
-                            </Avatar>
+                      </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <p className="font-medium text-sm truncate">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-semibold text-sm truncate">
                                   {otherUserData?.name || `User ${otherUserId?.slice(0, 6)}`}
                                 </p>
-                                <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-gray-500">
                                   {formatTime(chat.lastUpdated)}
                                 </span>
                               </div>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {chat.listingTitle ? `About: ${chat.listingTitle}` : (chat.lastMessage || 'No messages yet')}
+                        <p className="text-xs text-gray-500 truncate">
+                          {chat.lastMessage || 'No messages yet'}
                               </p>
                             </div>
                           </div>
@@ -254,110 +375,309 @@ const ChatInbox = () => {
                     })}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+        </div>
           </div>
 
-          {/* Chat Area */}
-          <div className="lg:col-span-3">
+      {/* Chat Conversation Panel */}
+      <div className="flex-1 flex flex-col bg-gray-100">
             {currentChat && otherUser ? (
-              <Card className="glass-card h-full flex flex-col">
-                <CardHeader className="border-b">
+          <>
+            {/* Chat Header */}
+            <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      {otherUser.profilePhotoUrl ? (
-                        <img 
-                          src={otherUser.profilePhotoUrl} 
-                          alt={otherUser.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                          {otherUser.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={otherUser.profilePhotoUrl} />
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {otherUser.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
                     <div>
                       <h3 className="font-semibold">{otherUser.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Chat Conversation
-                      </p>
-                    </div>
+                  <p className="text-sm text-green-600">Online now</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
+                  <Search className="h-5 w-5" />
+                </Button>
+                {/* Removed call buttons as requested */}
+              </div>
                   </div>
-                </CardHeader>
 
-                <CardContent className="flex-1 flex flex-col p-0">
-                  {/* Messages */}
+            {/* Messages Area */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {messages.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">
+                <div className="text-center text-gray-500 py-8">
                         <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>No messages yet. Start the conversation!</p>
                       </div>
                     ) : (
-                      messages.map((message) => {
+                <>
+                  {messages.map((message, index) => {
                         const isOwn = message.senderId === auth.currentUser?.uid;
+                    const prevMessage = index > 0 ? messages[index - 1] : null;
+                    const showTimestamp = !prevMessage || 
+                      (message.createdAt?.toDate().getTime() - prevMessage.createdAt?.toDate().getTime()) > 300000; // 5 minutes
+                    
+                    // Check if message contains image URLs
+                    const imageUrl = message.text?.match(/https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)/i)?.[0];
+                    const textWithoutImage = imageUrl ? message.text.replace(imageUrl, '').trim() : message.text;
                         
                         return (
+                      <div key={message.id}>
+                        {showTimestamp && (
+                          <div className="text-center text-xs text-gray-500 my-4">
+                            {formatMessageTime(message.createdAt)}
+                          </div>
+                        )}
+                        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                           <div
-                            key={message.id}
-                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                            className={`max-w-md px-4 py-2 rounded-2xl ${
+                              isOwn
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-white text-gray-800 border border-gray-200'
+                            }`}
                           >
-                            <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                isOwn
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted text-foreground'
-                              }`}
-                            >
-                              <p className="text-sm">{message.text}</p>
-                              <p className={`text-xs mt-1 ${
-                                isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                              }`}>
-                                {formatTime(message.createdAt)}
+                            {imageUrl && (
+                              <div className="mb-2 rounded-lg overflow-hidden">
+                                <img
+                                  src={imageUrl}
+                                  alt="Shared image"
+                                  className="w-full max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(imageUrl, '_blank')}
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
+                            {textWithoutImage && (
+                              <p className="text-sm whitespace-pre-wrap break-words">{textWithoutImage}</p>
+                            )}
+                            <p className={`text-xs mt-1 ${
+                              isOwn ? 'text-primary-foreground/70' : 'text-gray-500'
+                            }`}>
+                              {message.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
+                          </div>
                             </div>
                           </div>
                         );
-                      })
+                  })}
+                  <div ref={messagesEndRef} />
+                </>
                     )}
                   </div>
 
                   {/* Message Input */}
-                  <div className="border-t p-4">
-                    <form onSubmit={handleSendMessage} className="flex gap-2">
-                      <Input
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type your message..."
-                        className="flex-1"
-                        disabled={sending}
-                      />
-                      <Button 
-                        type="submit" 
-                        disabled={!newMessage.trim() || sending}
-                        size="icon"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </form>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="bg-white border-t border-gray-200 p-4">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={onFileInputChange}
+                />
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*,.gif"
+                  className="hidden"
+                  onChange={onImageInputChange}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-500"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  <Paperclip className="h-5 w-5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-500"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  <ImageIcon className="h-5 w-5" />
+                </Button>
+                <Button type="button" variant="ghost" size="icon" className="text-gray-500" disabled>
+                  <List className="h-5 w-5" />
+                </Button>
+                <span
+                  className="text-xs text-gray-500 cursor-pointer select-none"
+                  onClick={() => imageInputRef.current?.click()}
+                >
+                  GIF
+                </span>
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={uploading ? "Uploading..." : "Type a message..."}
+                  className="flex-1 border-gray-200"
+                  disabled={sending || uploading}
+                />
+                <Button type="button" variant="ghost" size="icon" className="text-gray-500">
+                  <Smile className="h-5 w-5" />
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={!newMessage.trim() || sending || uploading}
+                  size="icon"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </form>
+            </div>
+          </>
             ) : (
-              <Card className="glass-card h-full flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
-                  <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <MessageCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Select a conversation</h3>
-                  <p className="text-muted-foreground">
+              <p className="text-gray-500">
                     Choose a chat from the sidebar to start messaging
                   </p>
                 </div>
-              </Card>
-            )}
+          </div>
+        )}
+      </div>
+
+      {/* Chat Details Panel */}
+      {currentChat && showDetails && (
+        <div className="w-80 bg-gray-100 border-l border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
+            <h3 className="font-semibold">Chat details</h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDetails(false)}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Quick Access Icons */}
+            <div className="flex gap-4 justify-center">
+              <Button variant="ghost" size="icon" className="text-gray-600">
+                <ImageIcon className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-gray-600">
+                <FileText className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-gray-600">
+                <LinkIcon className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-gray-600">
+                <Pin className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Featured Rentals */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-sm">Featured Rentals ({sharedListings.length})</h4>
+                <ChevronRight className="h-4 w-4 text-gray-400" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {sharedListings.slice(0, 6).map((listing) => (
+                  <div
+                    key={listing.id}
+                    className="aspect-square rounded-lg overflow-hidden bg-gray-200 cursor-pointer hover:opacity-80 group"
+                    onClick={() => window.open(`/item/${listing.id}`, '_blank')}
+                  >
+                    {listing.images && listing.images.length > 0 ? (
+                      <img
+                        src={listing.images[0]}
+                        alt={listing.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Available Items */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-sm">Available Items (8)</h4>
+                <ChevronRight className="h-4 w-4 text-gray-400" />
+              </div>
+              <div className="space-y-2">
+                {sharedListings.slice(0, 4).map((listing) => (
+                  <div
+                    key={listing.id}
+                    className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
+                    onClick={() => navigate(`/item/${listing.id}`)}
+                  >
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{listing.title}</p>
+                      <p className="text-xs text-gray-500">{(Math.random() * 1000).toFixed(0)} kB</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Shared Listings */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-sm">Shared Listings (5)</h4>
+                <ChevronRight className="h-4 w-4 text-gray-400" />
+              </div>
+              <div className="space-y-2">
+                {sharedListings.slice(0, 3).map((listing) => (
+                  <div
+                    key={listing.id}
+                    className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
+                    onClick={() => navigate(`/item/${listing.id}`)}
+                  >
+                    <LinkIcon className="h-4 w-4 text-gray-400" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{listing.title}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        https://lendlly.vercel.app/item/{listing.id}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Show Details Button when hidden */}
+      {currentChat && !showDetails && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white shadow-lg"
+          onClick={() => setShowDetails(true)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 };
