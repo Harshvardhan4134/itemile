@@ -456,10 +456,7 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-              <div className="hidden md:flex gap-2">
-                <Button variant="outline">Rent</Button>
-                <Button>Chat</Button>
-              </div>
+              {/* Removed Rent/Chat buttons as requested */}
             </div>
 
             {/* Real tabs */}
@@ -538,40 +535,12 @@ const Profile = () => {
                 <Card className="glass-card">
                   <CardHeader><CardTitle>User details</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
-                    <Button variant="secondary" className="w-full justify-center">Add bio</Button>
-                    <Button variant="secondary" className="w-full justify-center">Edit info</Button>
-                    <Button variant="secondary" className="w-full justify-center">Add interests</Button>
-                  </CardContent>
-                </Card>
-                <Card className="glass-card">
-                  <CardHeader><CardTitle>Images</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-2">
-                      {myListings.slice(0, 6).map((l) => (
-                        <img key={l.id} src={l.images?.[0] || '/placeholder.svg'} alt={l.title} className="w-full h-20 object-cover rounded-md"
-                          onError={(e) => { const t = e.currentTarget as HTMLImageElement; t.src = '/placeholder.svg'; }} />
-                      ))}
-                    </div>
+                    <Button variant="secondary" className="w-full justify-center" onClick={() => setEditing(true)}>Edit info</Button>
                   </CardContent>
                 </Card>
               </div>
               <div className="md:col-span-2 space-y-6">
-                <Card className="glass-card">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        {user.profilePhotoUrl ? <img src={user.profilePhotoUrl} alt={user.name} className="w-full h-full object-cover" /> : <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>}
-                      </Avatar>
-                      <div className="flex-1"><Input placeholder="What's your rental need?" /></div>
-                      <Button size="sm" variant="secondary">Upgrade plan</Button>
-                    </div>
-                    <div className="flex items-center gap-3 mt-3 text-muted-foreground">
-                      <Button variant="ghost" size="icon"><Image className="h-5 w-5" /></Button>
-                      <Button variant="ghost" size="icon"><MapPin className="h-5 w-5" /></Button>
-                      <Button variant="ghost" size="icon"><Smile className="h-5 w-5" /></Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Removed composer card with input and attachment icons as requested */}
                 <div className="space-y-4">
                   {myListings.slice(0, 5).map((listing) => (
                     <Card key={listing.id} className="glass-card">
