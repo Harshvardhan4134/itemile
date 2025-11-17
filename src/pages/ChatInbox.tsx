@@ -243,9 +243,12 @@ const ChatInbox = () => {
   };
 
   const handleChatSelect = async (chat: Chat) => {
-    setCurrentChat(chat);
-    // Don't navigate, just load the chat data inline
-    await loadChatData(chat);
+    // Always navigate to keep URL in sync and ensure mobile view works correctly
+    // If clicking the same chat, no need to navigate again
+    if (chat.id === chatId) {
+      return;
+    }
+    navigate(`/chat/${chat.id}`);
   };
 
   // Clear subscriptions on unmount
@@ -300,7 +303,7 @@ const ChatInbox = () => {
   return (
     <div className="h-screen flex bg-gray-50 flex-col sm:flex-row">
       {/* Chat List Panel */}
-      <div className={`${chatId ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 bg-gray-100 flex-col border-r border-gray-200`}>
+      <div className={`${currentChat && chatId ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 bg-gray-100 flex-col border-r border-gray-200`}>
         <div className="p-3 sm:p-4 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h2 className="text-lg sm:text-xl font-bold">Chats</h2>
@@ -379,7 +382,7 @@ const ChatInbox = () => {
           </div>
 
       {/* Chat Conversation Panel */}
-      <div className={`${!chatId ? 'hidden sm:flex' : 'flex'} flex-1 flex-col bg-gray-100 relative`}>
+      <div className={`${!currentChat ? 'hidden sm:flex' : 'flex'} flex-1 flex-col bg-gray-100 relative`}>
             {currentChat && otherUser ? (
           <>
             {/* Chat Header */}
@@ -389,7 +392,12 @@ const ChatInbox = () => {
                       variant="ghost" 
                       size="icon"
                       className="sm:hidden h-8 w-8"
-                      onClick={() => navigate('/chat')}
+                      onClick={() => {
+                        setCurrentChat(null);
+                        setOtherUser(null);
+                        setMessages([]);
+                        navigate('/chat');
+                      }}
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
