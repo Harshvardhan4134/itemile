@@ -115,27 +115,28 @@ const SimpleChat: React.FC = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container py-8">
+      <div className="container py-4 sm:py-6 md:py-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 px-2 sm:px-0">
           <Button 
             variant="ghost" 
             size="icon"
             onClick={() => navigate('/chat')}
+            className="h-8 w-8 sm:h-10 sm:w-10"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <Avatar className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xs sm:text-sm">
                 {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-xl font-semibold">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base sm:text-lg md:text-xl font-semibold truncate">
                 {otherUser?.name || 'Unknown User'}
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {otherUser?.verified ? 'Verified User' : 'Unverified User'}
               </p>
             </div>
@@ -143,10 +144,10 @@ const SimpleChat: React.FC = () => {
         </div>
 
         {/* Chat Container */}
-        <Card className="glass-card h-[calc(100vh-12rem)] flex flex-col">
+        <Card className="glass-card h-[calc(100vh-10rem)] sm:h-[calc(100vh-12rem)] flex flex-col">
           <CardContent className="flex-1 flex flex-col p-0">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2">
               {messages.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
                   <p>No messages yet. Start the conversation!</p>
@@ -158,14 +159,14 @@ const SimpleChat: React.FC = () => {
                     className={`flex ${msg.senderId === auth.currentUser?.uid ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`p-3 rounded-lg max-w-xs lg:max-w-md ${
+                      className={`p-2.5 sm:p-3 rounded-lg max-w-[85%] sm:max-w-xs lg:max-w-md ${
                         msg.senderId === auth.currentUser?.uid
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-foreground"
                       }`}
                     >
-                      <p className="text-sm">{msg.text}</p>
-                      <p className={`text-xs mt-1 ${
+                      <p className="text-xs sm:text-sm break-words">{msg.text}</p>
+                      <p className={`text-[10px] sm:text-xs mt-1 ${
                         msg.senderId === auth.currentUser?.uid 
                           ? 'text-primary-foreground/70' 
                           : 'text-muted-foreground'
@@ -179,16 +180,16 @@ const SimpleChat: React.FC = () => {
             </div>
 
             {/* Input */}
-            <form onSubmit={sendMessage} className="p-4 flex gap-2 border-t">
+            <form onSubmit={sendMessage} className="p-3 sm:p-4 flex gap-2 border-t">
               <Input
                 type="text"
-                className="flex-1"
+                className="flex-1 h-9 sm:h-10 text-sm sm:text-base"
                 placeholder="Type a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
               />
-              <Button type="submit" size="icon">
-                <Send className="h-4 w-4" />
+              <Button type="submit" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </form>
           </CardContent>
