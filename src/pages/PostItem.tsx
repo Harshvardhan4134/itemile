@@ -308,18 +308,18 @@ const PostItem = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container py-8">
+      <div className="container py-4 sm:py-6 md:py-8">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-urbanist font-bold mb-4">
+          <div className="text-center mb-6 sm:mb-8 px-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-urbanist font-bold mb-3 sm:mb-4">
               List Your <span className="gradient-text">Item</span>
             </h1>
-            <p className="text-xl text-muted-foreground">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
               Share your items with the community and start earning
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 px-4 sm:px-0">
             {/* Basic Information */}
             <Card className="glass-card">
               <CardHeader>
@@ -328,29 +328,29 @@ const PostItem = () => {
                   Basic Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Item Title *</Label>
+                    <Label htmlFor="title" className="text-sm sm:text-base">Item Title *</Label>
                     <Input
                       id="title"
                       placeholder="e.g., Canon EOS R5 Camera"
                       value={formData.title}
                       onChange={(e) => handleInputChange("title", e.target.value)}
-                      className="glass-effect border-0"
+                      className="glass-effect border-0 h-10 sm:h-11 text-sm sm:text-base"
                       required
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
+                    <Label htmlFor="category" className="text-sm sm:text-base">Category *</Label>
                     <Select onValueChange={(value) => handleInputChange("category", value)}>
-                      <SelectTrigger className="glass-effect border-0">
+                      <SelectTrigger className="glass-effect border-0 h-10 sm:h-11 text-sm sm:text-base">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
+                          <SelectItem key={category} value={category} className="text-sm sm:text-base">
                             {category}
                           </SelectItem>
                         ))}
@@ -360,44 +360,44 @@ const PostItem = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
+                  <Label htmlFor="description" className="text-sm sm:text-base">Description *</Label>
                   <Textarea
                     id="description"
                     placeholder="Describe your item, its condition, and what's included..."
                     value={formData.description}
                     onChange={(e) => handleInputChange("description", e.target.value)}
-                    className="glass-effect border-0 min-h-[120px]"
+                    className="glass-effect border-0 min-h-[100px] sm:min-h-[120px] text-sm sm:text-base"
                     required
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="rentPerDay">Daily Rate (₹) *</Label>
+                    <Label htmlFor="rentPerDay" className="text-sm sm:text-base">Daily Rate (₹) *</Label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       <Input
                         id="rentPerDay"
                         type="number"
                         placeholder="25"
                         value={formData.rentPerDay}
                         onChange={(e) => handleInputChange("rentPerDay", e.target.value)}
-                        className="pl-10 glass-effect border-0"
+                        className="pl-9 sm:pl-10 glass-effect border-0 h-10 sm:h-11 text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="location">Location *</Label>
+                    <Label htmlFor="location" className="text-sm sm:text-base">Location *</Label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       <Input
                         id="location"
                         placeholder="Downtown, City"
                         value={formData.location}
                         onChange={(e) => handleInputChange("location", e.target.value)}
-                        className="pl-10 glass-effect border-0"
+                        className="pl-9 sm:pl-10 glass-effect border-0 h-10 sm:h-11 text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -405,8 +405,8 @@ const PostItem = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <Label className="text-base font-medium">Location Coordinates</Label>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <Label className="text-sm sm:text-base font-medium">Location Coordinates</Label>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
@@ -414,31 +414,33 @@ const PostItem = () => {
                         size="sm"
                         onClick={getCurrentLocation}
                         disabled={gettingLocation}
-                        className="glass-effect"
+                        className="glass-effect h-9 sm:h-10 text-xs sm:text-sm"
                       >
                         {gettingLocation ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                         ) : (
-                          <Navigation className="h-4 w-4 mr-2" />
+                          <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                         )}
-                        {gettingLocation ? "Getting Location..." : "Get Current Location"}
+                        <span className="hidden sm:inline">{gettingLocation ? "Getting Location..." : "Get Current Location"}</span>
+                        <span className="sm:hidden">{gettingLocation ? "Getting..." : "Get Location"}</span>
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={openMapPicker}
-                        className="glass-effect"
+                        className="glass-effect h-9 sm:h-10 text-xs sm:text-sm"
                       >
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Pin on Map
+                        <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        <span className="hidden sm:inline">Pin on Map</span>
+                        <span className="sm:hidden">Pin Map</span>
                       </Button>
                     </div>
                   </div>
                   
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="lat">Latitude *</Label>
+                      <Label htmlFor="lat" className="text-sm sm:text-base">Latitude *</Label>
                       <Input
                         id="lat"
                         type="number"
@@ -446,13 +448,13 @@ const PostItem = () => {
                         placeholder="28.6139"
                         value={formData.lat}
                         onChange={(e) => handleInputChange("lat", e.target.value)}
-                        className="glass-effect border-0"
+                        className="glass-effect border-0 h-10 sm:h-11 text-sm sm:text-base"
                         required
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="lng">Longitude *</Label>
+                      <Label htmlFor="lng" className="text-sm sm:text-base">Longitude *</Label>
                       <Input
                         id="lng"
                         type="number"
@@ -460,13 +462,13 @@ const PostItem = () => {
                         placeholder="77.2090"
                         value={formData.lng}
                         onChange={(e) => handleInputChange("lng", e.target.value)}
-                        className="glass-effect border-0"
+                        className="glass-effect border-0 h-10 sm:h-11 text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
                   
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     <p>💡 Tip: Click "Get Current Location" to automatically fill in your coordinates, or enter them manually.</p>
                   </div>
                 </div>

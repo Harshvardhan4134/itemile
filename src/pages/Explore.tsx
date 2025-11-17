@@ -409,11 +409,11 @@ const Explore = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container py-6">
+      <div className="container py-4 sm:py-6">
         {/* Map Container - Replaces Hero Banner */}
-        <Card className="mb-8">
-          <CardContent className="p-4">
-            <div className="h-[500px] rounded-lg overflow-hidden border border-border">
+        <Card className="mb-6 sm:mb-8">
+          <CardContent className="p-2 sm:p-4">
+            <div className="h-[300px] sm:h-[400px] md:h-[500px] rounded-lg overflow-hidden border border-border">
               {loading ? (
                 <div className="h-full w-full bg-muted/20 flex items-center justify-center">
                   <div className="text-center p-8">
@@ -444,18 +444,18 @@ const Explore = () => {
         </Card>
 
         {/* Search and Filter Bar */}
-        <div className="mb-8 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="mb-6 sm:mb-8 space-y-3 sm:space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="What's your rental need?"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12"
+                className="pl-10 h-10 sm:h-12 text-sm sm:text-base"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 sm:gap-2">
               <Button
                 variant={viewMode === "grid" ? "default" : "outline"}
                 size="icon"
@@ -474,11 +474,12 @@ const Explore = () => {
           </div>
 
           {/* Categories */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
             <Button
               variant={selectedCategory === "" ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedCategory("")}
+              className="text-xs sm:text-sm whitespace-nowrap h-8 sm:h-9"
             >
               All Categories
             </Button>
@@ -488,12 +489,13 @@ const Explore = () => {
                 variant={selectedCategory === category.value ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCategory(category.value)}
-                className="gap-2"
+                className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap h-8 sm:h-9"
               >
-                <category.icon className="h-4 w-4" />
-                {category.name}
+                <category.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">{category.name}</span>
+                <span className="sm:hidden">{category.name.split(' ')[0]}</span>
                 {category.count > 0 && (
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs">
                     {category.count}
                   </Badge>
                 )}
@@ -505,14 +507,14 @@ const Explore = () => {
 
         {/* Featured Items Section */}
         {!searchTerm && !selectedCategory && (
-          <div className="mb-12">
-            <div className="flex items-center justify-between mb-6">
+          <div className="mb-8 sm:mb-12">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-bold">Featured Items</h2>
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <h2 className="text-xl sm:text-2xl font-bold">Featured Items</h2>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {featuredListings.map((listing) => (
                 <Card key={listing.id} className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
                   <div className="relative aspect-square overflow-hidden bg-muted">
@@ -527,15 +529,15 @@ const Explore = () => {
                       </Badge>
                     )}
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-lg mb-1 line-clamp-1">{listing.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{listing.description}</p>
-                    <div className="flex items-center justify-between mb-3">
+                  <CardContent className="p-3 sm:p-4">
+                    <h3 className="font-semibold text-base sm:text-lg mb-1 line-clamp-1">{listing.title}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-2">{listing.description}</p>
+                    <div className="flex items-center justify-between mb-2 sm:mb-3">
                       <div>
-                        <span className="text-2xl font-bold text-primary">₹{listing.rentPerDay}</span>
-                        <span className="text-sm text-muted-foreground">/day</span>
+                        <span className="text-xl sm:text-2xl font-bold text-primary">₹{listing.rentPerDay}</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground">/day</span>
                       </div>
-                      <Badge variant="secondary">{listing.category}</Badge>
+                      <Badge variant="secondary" className="text-xs">{listing.category}</Badge>
                     </div>
                     <Button
                       className="w-full"
@@ -552,11 +554,11 @@ const Explore = () => {
 
         {/* Community Posts Section - All Posts (Listings, Requests, Message Posts) */}
         <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">
               Community Posts
             </h2>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs sm:text-sm text-muted-foreground">
               {filteredPosts.length} posts
             </span>
           </div>
@@ -591,32 +593,32 @@ const Explore = () => {
                   
                   return (
                     <Card key={messagePost.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between mb-2 sm:mb-3">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                               <AvatarImage src={messagePost.userPhotoUrl} />
-                              <AvatarFallback>{messagePost.userName.charAt(0).toUpperCase()}</AvatarFallback>
+                              <AvatarFallback className="text-xs sm:text-sm">{messagePost.userName.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-semibold">{messagePost.userName}</p>
-                              <p className="text-xs text-muted-foreground">{formatDate(messagePost.createdAt)}</p>
+                              <p className="font-semibold text-sm sm:text-base">{messagePost.userName}</p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground">{formatDate(messagePost.createdAt)}</p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
+                            <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                         
-                        <p className="mb-3">{messagePost.message}</p>
+                        <p className="mb-2 sm:mb-3 text-sm sm:text-base">{messagePost.message}</p>
                         
                         {messagePost.images && messagePost.images.length > 0 && (
-                          <div className={`grid gap-2 mb-3 ${
+                          <div className={`grid gap-2 mb-2 sm:mb-3 ${
                             messagePost.images.length === 1 ? 'grid-cols-1' :
                             messagePost.images.length === 2 ? 'grid-cols-2' :
-                            messagePost.images.length === 3 ? 'grid-cols-3' :
+                            messagePost.images.length === 3 ? 'grid-cols-2 sm:grid-cols-3' :
                             messagePost.images.length === 4 ? 'grid-cols-2' :
-                            'grid-cols-3'
+                            'grid-cols-2 sm:grid-cols-3'
                           }`}>
                             {messagePost.images.slice(0, 6).map((img, idx) => (
                               <div 
@@ -645,14 +647,14 @@ const Explore = () => {
                           </div>
                         )}
                         
-                        <div className="flex items-center gap-4 pt-2 border-t">
+                        <div className="flex items-center gap-2 sm:gap-4 pt-2 border-t flex-wrap">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleLike(messagePost.id, 'message')}
-                            className={isLiked ? "text-red-500" : ""}
+                            className={`h-8 sm:h-9 text-xs sm:text-sm ${isLiked ? "text-red-500" : ""}`}
                           >
-                            <Heart className={`h-4 w-4 mr-2 ${isLiked ? "fill-red-500" : ""}`} />
+                            <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 ${isLiked ? "fill-red-500" : ""}`} />
                             {messagePost.likes?.length || 0}
                           </Button>
                           
@@ -663,8 +665,9 @@ const Explore = () => {
                               setCommentingPostId(commentingPostId === messagePost.id ? null : messagePost.id);
                               setCommentingPostType(commentingPostId === messagePost.id ? null : 'message');
                             }}
+                            className="h-8 sm:h-9 text-xs sm:text-sm"
                           >
-                            <MessageCircle className="h-4 w-4 mr-2" />
+                            <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                             {messagePost.comments?.length || 0}
                           </Button>
                           
@@ -673,6 +676,7 @@ const Explore = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => navigate(`/item/${messagePost.listingId}`)}
+                              className="h-8 sm:h-9 text-xs sm:text-sm"
                             >
                               View Item
                             </Button>
@@ -999,7 +1003,7 @@ const Explore = () => {
 
       {/* Post Creation Dialog */}
       <Dialog open={showPostDialog} onOpenChange={setShowPostDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create a Post</DialogTitle>
           </DialogHeader>

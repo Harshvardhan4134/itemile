@@ -386,23 +386,23 @@ const ProductDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container py-6">
+      <div className="container py-4 sm:py-6">
         {/* Back Button */}
         <Button
           variant="outline"
           asChild
-          className="mb-6"
+          className="mb-4 sm:mb-6 h-9 sm:h-10"
         >
-          <Link to="/explore" className="inline-flex items-center">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+          <Link to="/explore" className="inline-flex items-center text-sm sm:text-base">
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
             Back to Explore
           </Link>
         </Button>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Image Gallery */}
-          <div className="space-y-4">
-            <div className="relative aspect-square rounded-2xl overflow-hidden glass-card">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="relative aspect-square rounded-xl sm:rounded-2xl overflow-hidden glass-card">
               <img 
                 src={listing.images[currentImageIndex] || "/placeholder.svg"} 
                 alt={listing.title}
@@ -414,51 +414,51 @@ const ProductDetail = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 glass-effect"
+                    className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 glass-effect h-8 w-8 sm:h-10 sm:w-10"
                     onClick={prevImage}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 glass-effect"
+                    className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 glass-effect h-8 w-8 sm:h-10 sm:w-10"
                     onClick={nextImage}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </Button>
                 </>
               )}
               
-              <div className="absolute top-4 right-4 flex gap-2">
+              <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex gap-1.5 sm:gap-2">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="glass-effect hover-scale"
+                  className="glass-effect hover-scale h-8 w-8 sm:h-10 sm:w-10"
                   onClick={() => setIsLiked(!isLiked)}
                 >
-                  <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                  <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="glass-effect hover-scale"
+                  className="glass-effect hover-scale h-8 w-8 sm:h-10 sm:w-10"
                   onClick={handleShare}
                 >
-                  <Share2 className="h-4 w-4" />
+                  <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </div>
             
             {/* Video Display */}
             {listing.videoProof && (
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">360° Video Proof</h3>
+              <div className="mt-3 sm:mt-4">
+                <h3 className="text-base sm:text-lg font-semibold mb-2">360° Video Proof</h3>
                 <div className="relative rounded-lg overflow-hidden">
                   <video 
                     src={listing.videoProof} 
                     controls
-                    className="w-full h-64 object-cover rounded-lg"
+                    className="w-full h-48 sm:h-64 object-cover rounded-lg"
                     preload="metadata"
                   >
                     Your browser does not support the video tag.
@@ -469,11 +469,11 @@ const ProductDetail = () => {
             
             {/* Thumbnail Gallery */}
             {listing.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
                 {listing.images.map((image, index) => (
                   <button
                     key={index}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                    className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all ${
                       index === currentImageIndex 
                         ? 'border-primary shadow-lg' 
                         : 'border-transparent hover:border-border'
@@ -492,20 +492,20 @@ const ProductDetail = () => {
           </div>
 
           {/* Product Info */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <Badge className="mb-3" variant="secondary">{listing.category}</Badge>
-              <h1 className="text-3xl font-urbanist font-bold mb-3">{listing.title}</h1>
+              <Badge className="mb-2 sm:mb-3 text-xs sm:text-sm" variant="secondary">{listing.category}</Badge>
+              <h1 className="text-2xl sm:text-3xl font-urbanist font-bold mb-2 sm:mb-3">{listing.title}</h1>
               
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
                 <div className="flex items-center">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                  <span className="font-semibold">{owner.rating || 4.5}</span>
-                  <span className="text-muted-foreground ml-1">(reviews)</span>
+                  <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400 mr-1" />
+                  <span className="font-semibold text-sm sm:text-base">{owner.rating || 4.5}</span>
+                  <span className="text-muted-foreground ml-1 text-xs sm:text-sm">(reviews)</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center text-muted-foreground">
-                    <MapPin className="h-4 w-4 mr-1" />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex items-center text-muted-foreground text-xs sm:text-sm">
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                     {cityName || (listing.location ? 'Loading location...' : 'Location not available')}
                   </div>
                   {listing.location && (
@@ -516,17 +516,17 @@ const ProductDetail = () => {
                         const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${listing.location.latitude},${listing.location.longitude}`;
                         window.open(googleMapsUrl, '_blank');
                       }}
-                      className="bg-primary hover:bg-primary/90 text-white border-primary px-4 py-2 h-8"
+                      className="bg-primary hover:bg-primary/90 text-white border-primary px-3 sm:px-4 py-1.5 sm:py-2 h-8 sm:h-9 text-xs sm:text-sm w-fit"
                       title="Get Directions"
                     >
-                      <Navigation className="h-4 w-4 mr-2 text-white" />
+                      <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-white" />
                       Direction
                     </Button>
                   )}
                 </div>
               </div>
               
-              <div className="text-3xl font-urbanist font-bold text-primary mb-6">
+              <div className="text-2xl sm:text-3xl font-urbanist font-bold text-primary mb-4 sm:mb-6">
                 ₹{listing.rentPerDay}/day
               </div>
 
@@ -545,10 +545,10 @@ const ProductDetail = () => {
 
             {/* Owner Info */}
             <Card className="glass-card">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                       {owner.profilePhotoUrl ? (
                         <img 
                           src={owner.profilePhotoUrl} 
@@ -556,17 +556,17 @@ const ProductDetail = () => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User className="h-6 w-6 text-white" />
+                        <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                       )}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{owner.name}</h3>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <h3 className="font-semibold text-sm sm:text-base truncate">{owner.name}</h3>
                         {owner.verified && (
-                          <CheckCircle className="h-4 w-4 text-blue-500 fill-blue-500" title="Verified User" />
+                          <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500 fill-blue-500 flex-shrink-0" title="Verified User" />
                         )}
                       </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
+                      <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
                         {owner.rating.toFixed(1)} ({ownerReviews.length} {ownerReviews.length === 1 ? 'review' : 'reviews'})
                       </div>
@@ -575,11 +575,12 @@ const ProductDetail = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="glass-effect"
+                    className="glass-effect h-8 sm:h-9 flex-shrink-0"
                     onClick={handleContact}
                   >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Contact
+                    <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Contact</span>
+                    <span className="sm:hidden">Chat</span>
                   </Button>
                 </div>
               </CardContent>
@@ -587,8 +588,8 @@ const ProductDetail = () => {
 
             {/* Booking Section */}
             <Card className="glass-card">
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4">Select Rental Dates</h3>
+              <CardContent className="p-4 sm:p-6">
+                <h3 className="font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Select Rental Dates</h3>
                 
                 <Popover>
                   <PopoverTrigger asChild>
@@ -615,23 +616,23 @@ const ProductDetail = () => {
                   </PopoverContent>
                 </Popover>
                 
-                <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-                  <div className="flex justify-between text-sm mb-2">
+                <div className="mt-3 sm:mt-4 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex justify-between text-xs sm:text-sm mb-2">
                     <span>Daily rate</span>
                     <span>₹{listing.rentPerDay}</span>
                   </div>
-                  <div className="flex justify-between text-sm mb-2">
+                  <div className="flex justify-between text-xs sm:text-sm mb-2">
                     <span>Service fee</span>
                     <span>₹5</span>
                   </div>
-                  <div className="border-t pt-2 flex justify-between font-semibold">
+                  <div className="border-t pt-2 flex justify-between font-semibold text-sm sm:text-base">
                     <span>Total</span>
                     <span>₹{listing.rentPerDay + 5}</span>
                   </div>
                 </div>
                 
                 <Button 
-                  className="w-full mt-4 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                  className="w-full mt-3 sm:mt-4 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-10 sm:h-11"
                   onClick={handleRequestRent}
                   disabled={isInRent}
                 >
@@ -645,7 +646,7 @@ const ProductDetail = () => {
                 
                 <Button 
                   variant="outline" 
-                  className="w-full mt-2 glass-effect"
+                  className="w-full mt-2 glass-effect h-10 sm:h-11"
                   onClick={handleProposeSwap}
                   disabled={!listing.swapAllowed}
                 >
@@ -680,10 +681,10 @@ const ProductDetail = () => {
         </div>
 
         {/* Description */}
-        <div className="mt-8 grid lg:grid-cols-2 gap-8">
+        <div className="mt-6 sm:mt-8 grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           <Card className="glass-card">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Description</h3>
+            <CardContent className="p-4 sm:p-6">
+              <h3 className="font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Description</h3>
               <p className="text-muted-foreground leading-relaxed">
                 {listing.description}
               </p>
@@ -703,8 +704,8 @@ const ProductDetail = () => {
           </Card>
 
           <Card className="glass-card">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Rental Policies</h3>
+            <CardContent className="p-4 sm:p-6">
+              <h3 className="font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Rental Policies</h3>
               <ul className="space-y-3">
                 <li className="flex items-start text-sm">
                   <Shield className="h-4 w-4 mr-3 mt-0.5 text-primary flex-shrink-0" />
@@ -730,21 +731,21 @@ const ProductDetail = () => {
         </div>
 
         {/* Owner Reviews Section */}
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           <Card className="glass-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <div>
-                  <h3 className="font-semibold text-xl">Owner Reviews</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <h3 className="font-semibold text-lg sm:text-xl">Owner Reviews</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                     See what others are saying about {owner.name}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
                     <div className="flex items-center gap-1">
-                      <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                      <span className="text-2xl font-bold">{owner.rating.toFixed(1)}</span>
+                      <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xl sm:text-2xl font-bold">{owner.rating.toFixed(1)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {ownerReviews.length} {ownerReviews.length === 1 ? 'review' : 'reviews'}

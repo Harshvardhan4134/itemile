@@ -56,20 +56,20 @@ const Login: React.FC = () => {
         <div className="absolute left-1/4 top-1/4 w-32 h-32 bg-primary/10 rounded-full blur-2xl animate-float-slow" />
         <div className="absolute right-1/4 bottom-1/4 w-40 h-40 bg-secondary/10 rounded-full blur-2xl animate-float-slow" />
       </div>
-      <div className="flex-1 flex items-center justify-center z-10">
+      <div className="flex-1 flex items-center justify-center z-10 px-4 py-8">
         <Card className="glass-card w-full max-w-md border-0 shadow-2xl">
-          <CardHeader className="text-center pb-6">
+          <CardHeader className="text-center pb-4 sm:pb-6 px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex items-center justify-center mb-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mr-2">
-                <MapPin className="w-4 h-4 text-white" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mr-2">
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
               </div>
-              <span className="font-urbanist font-bold text-xl gradient-text">Lendlly</span>
+              <span className="font-urbanist font-bold text-lg sm:text-xl gradient-text">Lendlly</span>
             </div>
-            <Badge className="mb-2 glass-effect" variant="outline">✨ Welcome Back</Badge>
-            <CardTitle className="text-2xl font-urbanist font-bold">Sign In</CardTitle>
-            <p className="text-muted-foreground">Sign in to continue your sharing journey</p>
+            <Badge className="mb-2 glass-effect text-xs sm:text-sm" variant="outline">✨ Welcome Back</Badge>
+            <CardTitle className="text-xl sm:text-2xl font-urbanist font-bold">Sign In</CardTitle>
+            <p className="text-sm sm:text-base text-muted-foreground">Sign in to continue your sharing journey</p>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

@@ -121,18 +121,18 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container py-8">
+      <div className="container py-4 sm:py-6 md:py-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-urbanist font-bold mb-2">
+            <h1 className="text-2xl sm:text-3xl font-urbanist font-bold mb-1 sm:mb-2">
               Welcome back, <span className="gradient-text">Sarah</span>!
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Manage your listings and track your earnings
             </p>
           </div>
-          <div className="flex gap-3 mt-4 md:mt-0">
+          <div className="flex gap-2 sm:gap-3 mt-4 md:mt-0">
             <Button variant="outline" size="icon" className="glass-effect">
               <Bell className="h-4 w-4" />
             </Button>
@@ -149,67 +149,67 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Card className="glass-card hover-scale">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Earnings</p>
-                  <p className="text-2xl font-urbanist font-bold gradient-text">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Earnings</p>
+                  <p className="text-xl sm:text-2xl font-urbanist font-bold gradient-text">
                     ${stats.totalEarnings}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card hover-scale">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active Listings</p>
-                  <p className="text-2xl font-urbanist font-bold">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Active Listings</p>
+                  <p className="text-xl sm:text-2xl font-urbanist font-bold">
                     {stats.activeListings}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                  <Package className="h-6 w-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card hover-scale">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Average Rating</p>
-                  <p className="text-2xl font-urbanist font-bold flex items-center">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Average Rating</p>
+                  <p className="text-xl sm:text-2xl font-urbanist font-bold flex items-center">
                     {stats.averageRating}
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 ml-1" />
+                    <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400 ml-1" />
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
-                  <Star className="h-6 w-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                  <Star className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card hover-scale">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Bookings</p>
-                  <p className="text-2xl font-urbanist font-bold">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Bookings</p>
+                  <p className="text-xl sm:text-2xl font-urbanist font-bold">
                     {stats.totalBookings}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -218,11 +218,11 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="glass-effect border-0 mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="listings">My Listings</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsList className="glass-effect border-0 mb-4 sm:mb-6 flex-wrap h-auto">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">Overview</TabsTrigger>
+            <TabsTrigger value="listings" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">My Listings</TabsTrigger>
+            <TabsTrigger value="bookings" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">Bookings</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">Profile</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -234,17 +234,17 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {bookings.slice(0, 3).map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-3 glass-effect rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(booking.status)}
-                        <div>
-                          <p className="font-medium text-sm">{booking.item}</p>
-                          <p className="text-xs text-muted-foreground">{booking.renter}</p>
+                    <div key={booking.id} className="flex items-center justify-between p-2 sm:p-3 glass-effect rounded-lg gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div className="flex-shrink-0">{getStatusIcon(booking.status)}</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-xs sm:text-sm truncate">{booking.item}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{booking.renter}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-sm">${booking.earnings}</p>
-                        <Badge className={`text-xs ${getStatusColor(booking.status)} text-white`}>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-semibold text-xs sm:text-sm">${booking.earnings}</p>
+                        <Badge className={`text-[10px] sm:text-xs ${getStatusColor(booking.status)} text-white`}>
                           {booking.status}
                         </Badge>
                       </div>
@@ -260,15 +260,15 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {listings.slice(0, 3).map((listing) => (
-                    <div key={listing.id} className="flex items-center gap-3 p-3 glass-effect rounded-lg">
+                    <div key={listing.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 glass-effect rounded-lg">
                       <img 
                         src={listing.image} 
                         alt={listing.title}
-                        className="w-12 h-12 object-cover rounded-lg"
+                        className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg flex-shrink-0"
                       />
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{listing.title}</p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs sm:text-sm truncate">{listing.title}</p>
+                        <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground mt-1">
                           <span className="flex items-center">
                             <Eye className="h-3 w-3 mr-1" />
                             {listing.views}
@@ -279,10 +279,10 @@ const Dashboard = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-sm">${listing.price}/day</p>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-semibold text-xs sm:text-sm">${listing.price}/day</p>
                         {listing.rating > 0 && (
-                          <div className="flex items-center text-xs">
+                          <div className="flex items-center text-[10px] sm:text-xs">
                             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
                             {listing.rating}
                           </div>
@@ -303,17 +303,17 @@ const Dashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   {listings.map((listing) => (
-                    <div key={listing.id} className="flex items-center gap-4 p-4 glass-effect rounded-lg hover-scale">
+                    <div key={listing.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 glass-effect rounded-lg hover-scale">
                       <img 
                         src={listing.image} 
                         alt={listing.title}
-                        className="w-16 h-16 object-cover rounded-lg"
+                        className="w-full sm:w-16 sm:h-16 h-48 sm:h-auto object-cover rounded-lg sm:flex-shrink-0"
                       />
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{listing.title}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                      <div className="flex-1 min-w-0 w-full sm:w-auto">
+                        <h3 className="font-semibold text-sm sm:text-base">{listing.title}</h3>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-1">
                           <span>${listing.price}/day</span>
-                          <Badge className={`text-xs ${getStatusColor(listing.status)} text-white`}>
+                          <Badge className={`text-[10px] sm:text-xs ${getStatusColor(listing.status)} text-white`}>
                             {listing.status}
                           </Badge>
                           <span className="flex items-center">
@@ -328,7 +328,7 @@ const Dashboard = () => {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 w-full sm:w-auto sm:flex-shrink-0">
                         <Button variant="outline" size="icon" className="glass-effect">
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -354,35 +354,35 @@ const Dashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   {bookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-4 glass-effect rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
-                          <User className="h-6 w-6 text-white" />
+                    <div key={booking.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 glass-effect rounded-lg">
+                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
-                        <div>
-                          <h3 className="font-semibold">{booking.item}</h3>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-sm sm:text-base">{booking.item}</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Rented by {booking.renter}
                           </p>
-                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                          <div className="flex items-center text-[10px] sm:text-xs text-muted-foreground mt-1">
                             <Calendar className="h-3 w-3 mr-1" />
                             {booking.dates}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
                         <div className="text-right">
-                          <p className="font-semibold">${booking.earnings}</p>
-                          <Badge className={`text-xs ${getStatusColor(booking.status)} text-white`}>
+                          <p className="font-semibold text-sm sm:text-base">${booking.earnings}</p>
+                          <Badge className={`text-[10px] sm:text-xs ${getStatusColor(booking.status)} text-white`}>
                             {booking.status}
                           </Badge>
                         </div>
                         {booking.status === "pending" && (
                           <div className="flex gap-2">
-                            <Button size="sm" className="bg-gradient-to-r from-green-500 to-emerald-500">
+                            <Button size="sm" className="bg-gradient-to-r from-green-500 to-emerald-500 h-8 sm:h-9 text-xs sm:text-sm">
                               Accept
                             </Button>
-                            <Button size="sm" variant="outline" className="text-destructive">
+                            <Button size="sm" variant="outline" className="text-destructive h-8 sm:h-9 text-xs sm:text-sm">
                               Decline
                             </Button>
                           </div>

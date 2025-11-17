@@ -83,13 +83,13 @@ export const Header = () => {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 glass-card">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-            <MapPin className="w-4 h-4 text-white" />
+        <Link to="/" className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
-          <span className="font-urbanist font-bold text-xl gradient-text">
+          <span className="font-urbanist font-bold text-lg sm:text-xl gradient-text">
             Lendlly
           </span>
         </Link>
@@ -154,49 +154,51 @@ export const Header = () => {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-1.5 sm:space-x-3">
           {user ? (
             <>
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative hover-scale"
+                className="relative hover-scale h-8 w-8 sm:h-10 sm:w-10"
                 onClick={() => navigate('/notifications')}
               >
                 <Bell className="h-4 w-4" />
                 {notificationCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 bg-destructive text-xs flex items-center justify-center">
+                  <Badge className="absolute -top-0.5 -right-0.5 h-4 w-4 sm:h-5 sm:w-5 p-0 bg-destructive text-[10px] sm:text-xs flex items-center justify-center">
                     {notificationCount > 9 ? '9+' : notificationCount}
                   </Badge>
                 )}
               </Button>
               
-              <Link to="/post">
+              <Link to="/post" className="hidden md:block">
                 <Button 
                   size="sm" 
-                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-8 sm:h-9"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Post Item</span>
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden lg:inline">Post Item</span>
+                  <span className="lg:hidden">Post</span>
                 </Button>
               </Link>
               
-              <Link to="/post-request">
+              <Link to="/post-request" className="hidden lg:block">
                 <Button 
                   size="sm" 
                   variant="outline"
-                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors h-8 sm:h-9"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Post Request</span>
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden xl:inline">Post Request</span>
+                  <span className="xl:hidden">Request</span>
                 </Button>
               </Link>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hover-scale">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-sm">
+                  <Button variant="ghost" size="icon" className="hover-scale h-8 w-8 sm:h-10 sm:w-10">
+                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xs sm:text-sm">
                         {user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -240,15 +242,15 @@ export const Header = () => {
             </>
           ) : (
             <>
-              <Link to="/login">
-                <Button variant="ghost" size="sm">
+              <Link to="/login" className="hidden sm:block">
+                <Button variant="ghost" size="sm" className="h-8 sm:h-9">
                   Sign In
                 </Button>
               </Link>
-              <Link to="/signup">
+              <Link to="/signup" className="hidden sm:block">
                 <Button 
                   size="sm" 
-                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-8 sm:h-9"
                 >
                   Sign Up
                 </Button>
@@ -260,7 +262,7 @@ export const Header = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden h-8 w-8 sm:h-10 sm:w-10"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             <Menu className="h-4 w-4" />

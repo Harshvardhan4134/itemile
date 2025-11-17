@@ -72,22 +72,22 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container py-6">
+      <div className="container py-4 sm:py-6">
         {/* Hero Banner */}
-        <div className="relative rounded-2xl overflow-hidden mb-8 bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10">
+        <div className="relative rounded-xl sm:rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10">
           <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-          <div className="relative p-12 text-center">
-            <Badge className="mb-4" variant="outline">
-              <Sparkles className="w-3 h-3 mr-2" />
+          <div className="relative p-6 sm:p-8 md:p-12 text-center">
+            <Badge className="mb-3 sm:mb-4 text-xs sm:text-sm" variant="outline">
+              <Sparkles className="w-3 h-3 mr-1.5 sm:mr-2" />
               Rent Anything, Anytime
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 px-2">
               Discover Items to <span className="gradient-text">Rent</span>
             </h1>
-            <p className="text-xl text-muted-foreground mb-6 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-4 sm:mb-6 max-w-2xl mx-auto px-4">
               Find the perfect items for your needs. Rent from trusted community members.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
               <Link to="/explore">
                 <Button size="lg" className="bg-gradient-to-r from-primary to-secondary">
                   Browse All Items
@@ -104,26 +104,26 @@ const Index = () => {
         </div>
 
         {/* Categories Section */}
-        <section className="py-8 mb-12">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">
+        <section className="py-6 sm:py-8 mb-8 sm:mb-12">
+          <div className="text-center mb-4 sm:mb-6 px-4">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
               Browse by <span className="gradient-text">Category</span>
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Find exactly what you need from our wide range of categories
             </p>
           </div>
-          <div className="flex flex-wrap gap-3 justify-center">
+          <div className="flex flex-wrap gap-2 sm:gap-3 justify-center px-2 sm:px-0">
             {categories.map((category) => (
               <Button
                 key={category.value}
                 variant="outline"
                 size="lg"
-                className="gap-2 h-auto py-4 px-6"
+                className="gap-1.5 sm:gap-2 h-auto py-2.5 sm:py-3 md:py-4 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base"
                 asChild
               >
                 <Link to={`/explore?category=${category.value}`}>
-                  <category.icon className="h-5 w-5" />
+                  <category.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   {category.name}
                 </Link>
               </Button>
@@ -132,23 +132,23 @@ const Index = () => {
         </section>
 
         {/* Swap Feature Section */}
-        <section className="py-12 mb-12">
+        <section className="py-6 sm:py-8 md:py-12 mb-8 sm:mb-12">
           <Card className="bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10 border-0">
-            <CardContent className="p-8 md:p-12">
-              <div className="flex flex-col md:flex-row items-center gap-8">
+            <CardContent className="p-4 sm:p-6 md:p-8 lg:p-12">
+              <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
-                      <RefreshCw className="h-6 w-6 text-white" />
+                  <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+                      <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
-                    <Badge variant="outline" className="text-sm">
+                    <Badge variant="outline" className="text-xs sm:text-sm">
                       Smart Swapping
                     </Badge>
                   </div>
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
                     Swap Items, Not Just <span className="gradient-text">Rent</span>
                   </h2>
-                  <p className="text-lg text-muted-foreground mb-6">
+                  <p className="text-base sm:text-lg text-muted-foreground mb-4 sm:mb-6">
                     Exchange items with other community members! No money needed - just swap what you have for what you need. Perfect for trying new items without the commitment of buying.
                   </p>
                   <div className="space-y-3 mb-6">
@@ -187,8 +187,8 @@ const Index = () => {
                     </Button>
                   </Link>
                 </div>
-                <div className="flex-1">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="flex-1 w-full">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <Card className="hover:shadow-lg transition-shadow">
                       <CardContent className="p-4 text-center">
                         <Bike className="h-12 w-12 mx-auto mb-2 text-primary" />
@@ -225,17 +225,17 @@ const Index = () => {
         </section>
 
         {/* Features Section */}
-        <section className="py-12 mb-12">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+        <section className="py-6 sm:py-8 md:py-12 mb-8 sm:mb-12">
+          <div className="text-center mb-6 sm:mb-8 px-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
               Why Choose <span className="gradient-text">Lendlly</span>?
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               We've built the most intuitive and secure platform for the sharing economy
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 px-2 sm:px-0">
             {features.map((feature, index) => (
               <Card key={feature.title} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6 text-center">
@@ -251,16 +251,16 @@ const Index = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-12">
+        <section className="py-6 sm:py-8 md:py-12">
           <Card className="bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10 border-0">
-            <CardContent className="p-12 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <CardContent className="p-6 sm:p-8 md:p-12 text-center">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
                 Ready to Start <span className="gradient-text">Sharing</span>?
               </h2>
-              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
                 Join thousands of users who are already saving money and earning extra income through sharing.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
                 <Link to="/signup">
                   <Button size="lg" className="bg-gradient-to-r from-primary to-secondary">
                     Get Started Free
@@ -279,9 +279,9 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t bg-card mt-20">
-        <div className="container py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+      <footer className="border-t bg-card mt-12 sm:mt-16 md:mt-20">
+        <div className="container py-8 sm:py-10 md:py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
             {/* Brand Section */}
             <div className="space-y-4">
               <h3 className="text-2xl font-bold gradient-text">Lendlly</h3>
