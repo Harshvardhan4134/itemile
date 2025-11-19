@@ -8,11 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Link, useNavigate } from "react-router-dom";
 import LiveMap from "@/components/LiveMap";
+import LocationPickerMap from "@/components/LocationPickerMap";
 import { 
   getListings, 
   Listing, 
@@ -100,7 +102,11 @@ const Explore = () => {
   const [messagePosts, setMessagePosts] = useState<MessagePost[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [attemptedGeolocation, setAttemptedGeolocation] = useState(false);
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+  const [showManualLocationPicker, setShowManualLocationPicker] = useState(false);
+  const [manualLocation, setManualLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!auth.currentUser);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
   const [userData, setUserData] = useState<any>(null);
@@ -189,27 +195,271 @@ const Explore = () => {
   const handleLocationUpdate = () => {
     if (!navigator.geolocation) {
       console.warn('Geolocation is not supported by this browser.');
+      toast({
+        title: "Location Error",
+        description: "Geolocation is not supported by this browser.",
+        variant: "destructive"
+      });
       setAttemptedGeolocation(true);
+      setIsUpdatingLocation(false);
       return;
     }
-    navigator.geolocation.getCurrentPosition(
+    
+    setIsUpdatingLocation(true);
+    setLocationAccuracy(null);
+    
+    // Validate coordinates
+    const isValidCoordinate = (lat: number, lng: number): boolean => {
+      return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && 
+             !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng);
+    };
+    
+    // Use watchPosition for better GPS accuracy, but with a timeout
+    let watchId: number | null = null;
+    let bestLocation: { lat: number; lng: number } | null = null;
+    let bestAccuracy = Infinity;
+    let locationCount = 0;
+    const maxLocations = 5; // Get up to 5 location updates to find the best one
+    const maxWatchTime = 15000; // Stop watching after 15 seconds
+    
+    const stopWatching = () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+    };
+    
+    // Set a timeout to stop watching
+    const watchTimeout = setTimeout(() => {
+      stopWatching();
+      const MAX_ACCEPTABLE_ACCURACY = 10000; // 10km
+      
+      if (bestLocation && isValidCoordinate(bestLocation.lat, bestLocation.lng) && bestAccuracy <= MAX_ACCEPTABLE_ACCURACY) {
+        setUserLocation(bestLocation);
+        setLocationAccuracy(bestAccuracy);
+        setAttemptedGeolocation(true);
+        setIsUpdatingLocation(false);
+        console.log('✅ Final location after watch:', bestLocation, 'Accuracy: ±' + Math.round(bestAccuracy) + 'm');
+        console.log('📍 This is YOUR GPS location from your device, not from database');
+        toast({
+          title: "Location Updated",
+          description: `Your GPS location: ±${Math.round(bestAccuracy)}m accuracy`,
+        });
+      } else {
+        // No valid location found - GPS not available
+        console.warn('❌ No valid GPS location found. watchPosition failed or returned poor accuracy.');
+        setIsUpdatingLocation(false);
+        setAttemptedGeolocation(true);
+        toast({
+          title: "GPS Not Available",
+          description: "GPS location not available. Please use manual location picker.",
+          variant: "destructive",
+          duration: 10000,
+          action: (
+            <Button
+              size="sm"
+              onClick={() => setShowManualLocationPicker(true)}
+              className="ml-2"
+            >
+              Pick Location
+            </Button>
+          )
+        });
+        // Don't try fallback if we already know GPS isn't working
+        return;
+      }
+      
+      // Fallback to getCurrentPosition if watchPosition didn't work (only if we haven't tried yet)
+      if (!bestLocation) {
+        console.warn('watchPosition failed, trying getCurrentPosition as fallback');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            const accuracy = pos.coords.accuracy;
+            
+            const MAX_ACCEPTABLE_ACCURACY = 10000; // 10km
+            
+            if (isValidCoordinate(coords.lat, coords.lng) && accuracy <= MAX_ACCEPTABLE_ACCURACY) {
+              console.log('📍 Fallback location obtained (getCurrentPosition):', coords, 'Accuracy: ±' + accuracy + 'm');
+              setUserLocation(coords);
+              setLocationAccuracy(accuracy);
+              setAttemptedGeolocation(true);
+              setIsUpdatingLocation(false);
+              toast({
+                title: "Location Updated",
+                description: `Location: ±${Math.round(accuracy)}m accuracy`,
+              });
+            } else if (accuracy > MAX_ACCEPTABLE_ACCURACY) {
+              console.error('❌ GPS not available. Location accuracy too poor:', accuracy + 'm');
+              setIsUpdatingLocation(false);
+              toast({
+                title: "GPS Not Available",
+                description: "GPS location not available. Click 'Pick Location Manually' to set your location.",
+                variant: "destructive",
+                duration: 10000,
+                action: (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowManualLocationPicker(true)}
+                    className="ml-2"
+                  >
+                    Pick Location
+                  </Button>
+                )
+              });
+              setAttemptedGeolocation(true);
+            } else {
+              console.error('❌ Invalid coordinates received:', coords);
+              setIsUpdatingLocation(false);
+              toast({
+                title: "Location Error",
+                description: "Received invalid location coordinates. Please try again.",
+                variant: "destructive"
+              });
+            }
+          },
+          (err) => {
+            setIsUpdatingLocation(false);
+            let errorMessage = 'Failed to get location';
+            if (err.code === err.PERMISSION_DENIED) {
+              errorMessage = 'Location access denied. Please allow location access in your browser settings.';
+            } else if (err.code === err.POSITION_UNAVAILABLE) {
+              errorMessage = 'Location information unavailable.';
+            } else if (err.code === err.TIMEOUT) {
+              errorMessage = 'Location request timed out. Please try again.';
+            }
+            console.warn('Error getting current position:', errorMessage);
+            toast({
+              title: "Location Error",
+              description: errorMessage,
+              variant: "destructive"
+            });
+            setAttemptedGeolocation(true);
+          },
+          { 
+            enableHighAccuracy: true, 
+            timeout: 20000,
+            maximumAge: 0
+          }
+        );
+      }
+    }, maxWatchTime);
+    
+    // Start watching position for better accuracy
+    watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserLocation(coords);
-        setAttemptedGeolocation(true);
+        const accuracy = pos.coords.accuracy;
+        const timestamp = pos.timestamp;
+        const altitude = pos.coords.altitude;
+        const heading = pos.coords.heading;
+        const speed = pos.coords.speed;
+        
+        // Log detailed location info for debugging
+        console.log(`📍 Location update ${locationCount + 1}:`, {
+          coordinates: coords,
+          accuracy: `±${accuracy}m`,
+          timestamp: new Date(timestamp).toISOString(),
+          altitude: altitude ? `${altitude}m` : 'N/A',
+          heading: heading !== null ? `${heading}°` : 'N/A',
+          speed: speed !== null ? `${speed}m/s` : 'N/A',
+          source: 'GPS (watchPosition)'
+        });
+        
+        // Reject IP-based locations (accuracy > 10km = 10000m)
+        // GPS should have accuracy < 100m, IP-based is typically > 1000m
+        const MAX_ACCEPTABLE_ACCURACY = 10000; // 10km - reject anything worse than this
+        
+        if (accuracy > MAX_ACCEPTABLE_ACCURACY) {
+          console.warn('❌ Rejecting IP-based location. Accuracy too poor:', accuracy + 'm (>10km)');
+          console.warn('📍 GPS is not available. Please enable GPS permissions or use manual location picker.');
+          return; // Don't use this location
+        }
+        
+        // Verify this is a real GPS location (not cached or IP-based)
+        // GPS locations typically have altitude, heading, or speed data
+        const isLikelyGPS = altitude !== null || heading !== null || speed !== null || accuracy < 100;
+        if (!isLikelyGPS && accuracy > 1000) {
+          console.warn('⚠️ Location may be IP-based (low accuracy, no GPS data). Accuracy:', accuracy + 'm');
+        }
+        
+        if (!isValidCoordinate(coords.lat, coords.lng)) {
+          console.error('❌ Invalid coordinates received:', coords);
+          return;
+        }
+        
+        locationCount++;
+        
+        // Track the best location (most accurate)
+        if (accuracy < bestAccuracy) {
+          bestLocation = coords;
+          bestAccuracy = accuracy;
+          
+          // Update immediately if accuracy is good (< 50m) or if this is the first valid location
+          if (accuracy < 50 || locationCount === 1) {
+            setUserLocation(coords);
+            setLocationAccuracy(accuracy);
+            setAttemptedGeolocation(true);
+            setIsUpdatingLocation(false);
+            console.log('✅ Location updated immediately:', coords, 'Accuracy: ±' + accuracy + 'm');
+            toast({
+              title: "Location Updated",
+              description: `Your GPS location: ±${Math.round(accuracy)}m accuracy`,
+            });
+          }
+        }
+        
+        // Stop watching if we have a good location or enough updates
+        if (bestAccuracy < 20 || locationCount >= maxLocations) {
+          stopWatching();
+          clearTimeout(watchTimeout);
+          if (bestLocation && bestAccuracy <= MAX_ACCEPTABLE_ACCURACY) {
+            setUserLocation(bestLocation);
+            setLocationAccuracy(bestAccuracy);
+            setAttemptedGeolocation(true);
+            setIsUpdatingLocation(false);
+            console.log('Stopped watching - best location:', bestLocation, 'Accuracy: ±' + Math.round(bestAccuracy) + 'm');
+          }
+        }
       },
       (err) => {
-        if (err.code !== err.PERMISSION_DENIED) {
-          console.warn('Error getting current position:', err.message || err);
+        stopWatching();
+        clearTimeout(watchTimeout);
+        setIsUpdatingLocation(false);
+        let errorMessage = 'Failed to get location';
+        if (err.code === err.PERMISSION_DENIED) {
+          errorMessage = 'Location access denied. Please allow location access in your browser settings.';
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          errorMessage = 'Location information unavailable.';
+        } else if (err.code === err.TIMEOUT) {
+          errorMessage = 'Location request timed out. Please try again.';
         }
+        console.warn('Error watching position:', errorMessage);
+        toast({
+          title: "Location Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
         setAttemptedGeolocation(true);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { 
+        enableHighAccuracy: true, 
+        timeout: 20000,
+        maximumAge: 0
+      }
     );
   };
 
   useEffect(() => {
-    handleLocationUpdate();
+    // Only attempt location on initial mount
+    // IMPORTANT: Always get fresh GPS location, never use database location
+    if (!attemptedGeolocation) {
+      // Clear any existing location to ensure we get fresh GPS data
+      setUserLocation(null);
+      setLocationAccuracy(null);
+      handleLocationUpdate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAcceptTerms = () => {
@@ -422,15 +672,33 @@ const Explore = () => {
                   </div>
                 </div>
               ) : attemptedGeolocation ? (
-                <LiveMap 
-                  listings={listings}
-                  requests={requests}
-                  onListingSelect={setSelectedItem}
-                  center={userLocation || { lat: 37.7749, lng: -122.4194 }}
-                  zoom={12}
-                  userLocation={userLocation}
-                  onLocationUpdate={handleLocationUpdate}
-                />
+                <div className="relative h-full w-full">
+                  <LiveMap 
+                    listings={listings}
+                    requests={requests}
+                    onListingSelect={setSelectedItem}
+                    center={userLocation || { lat: 37.7749, lng: -122.4194 }}
+                    zoom={userLocation ? 15 : 12}
+                    userLocation={userLocation}
+                    onLocationUpdate={handleLocationUpdate}
+                    onManualLocationPick={() => setShowManualLocationPicker(true)}
+                    isUpdatingLocation={isUpdatingLocation}
+                  />
+                  {!userLocation && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+                      <div className="bg-white rounded-lg p-6 max-w-md mx-4 text-center">
+                        <MapPin className="h-12 w-12 text-primary mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">GPS Location Not Available</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          We couldn't get your GPS location. Please pick your location manually on the map.
+                        </p>
+                        <Button onClick={() => setShowManualLocationPicker(true)}>
+                          Pick Location Manually
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="h-full w-full bg-muted/20 flex items-center justify-center">
                   <div className="text-center p-8">
@@ -1074,6 +1342,50 @@ const Explore = () => {
           setShowTermsDialog(open);
         }}
       />
+
+      {/* Manual Location Picker Dialog */}
+      <Dialog open={showManualLocationPicker} onOpenChange={setShowManualLocationPicker}>
+        <DialogContent className="max-w-3xl w-[95vw] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Pick Your Location Manually</DialogTitle>
+            <DialogDescription>
+              Click on the map to set your location. You can also drag the marker to adjust it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <LocationPickerMap
+              value={manualLocation || null}
+              onChange={(coords) => setManualLocation(coords)}
+            />
+            {manualLocation && (
+              <div className="text-sm text-muted-foreground">
+                Selected: {manualLocation.lat.toFixed(6)}, {manualLocation.lng.toFixed(6)}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowManualLocationPicker(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (manualLocation) {
+                    setUserLocation(manualLocation);
+                    setLocationAccuracy(0); // Manual location has perfect accuracy
+                    setShowManualLocationPicker(false);
+                    toast({
+                      title: "Location Set",
+                      description: "Your location has been set manually.",
+                    });
+                  }
+                }}
+                disabled={!manualLocation}
+              >
+                Use This Location
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

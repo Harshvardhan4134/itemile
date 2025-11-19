@@ -1,0 +1,161 @@
+[1mdiff --git a/src/components/LiveMap.tsx b/src/components/LiveMap.tsx[m
+[1mindex 1829b7b..5c22db1 100644[m
+[1m--- a/src/components/LiveMap.tsx[m
+[1m+++ b/src/components/LiveMap.tsx[m
+[36m@@ -10,6 +10,8 @@[m [minterface LiveMapProps {[m
+   onRequestSelect?: (request: Request) => void;[m
+   userLocation?: { lat: number; lng: number } | null;[m
+   onLocationUpdate?: () => void;[m
+[32m+[m[32m  onManualLocationPick?: () => void;[m
+[32m+[m[32m  isUpdatingLocation?: boolean;[m
+   center?: google.maps.LatLngLiteral;[m
+   zoom?: number;[m
+ }[m
+[36m@@ -25,6 +27,8 @@[m [mconst LiveMapComponent: React.FC<LiveMapComponentProps> = ({[m
+   onRequestSelect,[m
+   userLocation,[m
+   onLocationUpdate,[m
+[32m+[m[32m  onManualLocationPick,[m
+[32m+[m[32m  isUpdatingLocation = false,[m
+   center = { lat: 37.7749, lng: -122.4194 }, [m
+   zoom = 12 [m
+ }) => {[m
+[36m@@ -35,9 +39,12 @@[m [mconst LiveMapComponent: React.FC<LiveMapComponentProps> = ({[m
+ [m
+   useEffect(() => {[m
+     if (ref.current && !map) {[m
+[32m+[m[32m      const initialCenter = userLocation || center;[m
+[32m+[m[32m      const initialZoom = userLocation ? 15 : zoom;[m
+[32m+[m[41m      [m
+       const newMap = new window.google.maps.Map(ref.current, {[m
+[31m-        center: userLocation || center,[m
+[31m-        zoom: userLocation ? 15 : zoom,[m
+[32m+[m[32m        center: initialCenter,[m
+[32m+[m[32m        zoom: initialZoom,[m
+         styles: [[m
+           {[m
+             featureType: 'poi',[m
+[36m@@ -50,13 +57,19 @@[m [mconst LiveMapComponent: React.FC<LiveMapComponentProps> = ({[m
+         streetViewControl: false,[m
+         fullscreenControl: false,[m
+         mapTypeControl: false,[m
+[31m-        zoomControl: false,[m
+[32m+[m[32m        zoomControl: true, // Enable zoom control for better UX[m
+         rotateControl: false,[m
+         // Ensure map is responsive on mobile[m
+         gestureHandling: 'greedy',[m
+       });[m
+       setMap(newMap);[m
+       setInfoWindow(new window.google.maps.InfoWindow());[m
+[32m+[m[41m      [m
+[32m+[m[32m      // If userLocation is available, center the map immediately[m
+[32m+[m[32m      if (userLocation) {[m
+[32m+[m[32m        newMap.setCenter(userLocation);[m
+[32m+[m[32m        newMap.setZoom(15);[m
+[32m+[m[32m      }[m
+     }[m
+   }, [ref, map, center, zoom, userLocation]);[m
+ [m
+[36m@@ -77,8 +90,16 @@[m [mconst LiveMapComponent: React.FC<LiveMapComponentProps> = ({[m
+   // Recenter the map when userLocation changes[m
+   useEffect(() => {[m
+     if (map && userLocation) {[m
+[31m-      map.setZoom(Math.max(map.getZoom() || 0, 15));[m
+[31m-      map.panTo(userLocation);[m
+[32m+[m[32m      const currentCenter = map.getCenter();[m
+[32m+[m[32m      const currentZoom = map.getZoom() || 0;[m
+[32m+[m[41m      [m
+[32m+[m[32m      // Only pan if the location has changed significantly (more than 100m)[m
+[32m+[m[32m      if (!currentCenter ||[m[41m [m
+[32m+[m[32m          Math.abs(currentCenter.lat() - userLocation.lat) > 0.001 ||[m[41m [m
+[32m+[m[32m          Math.abs(currentCenter.lng() - userLocation.lng) > 0.001) {[m
+[32m+[m[32m        map.setZoom(Math.max(currentZoom, 15));[m
+[32m+[m[32m        map.panTo(userLocation);[m
+[32m+[m[32m      }[m
+     }[m
+   }, [map, userLocation]);[m
+ [m
+[36m@@ -90,6 +111,7 @@[m [mconst LiveMapComponent: React.FC<LiveMapComponentProps> = ({[m
+ [m
+       // Add user's current location marker[m
+       if (userLocation) {[m
+[32m+[m[32m        console.log('Creating user location marker at:', userLocation);[m
+         const userMarker = new google.maps.Marker({[m
+           position: userLocation,[m
+           map,[m
+[36m@@ -103,18 +125,30 @@[m [mconst LiveMapComponent: React.FC<LiveMapComponentProps> = ({[m
+             `),[m
+             scaledSize: new google.maps.Size(40, 40),[m
+             anchor: new google.maps.Point(20, 20)[m
+[31m-          }[m
+[32m+[m[32m          },[m
+[32m+[m[32m          zIndex: 1000, // Ensure user marker is on top[m
+[32m+[m[32m          optimized: false // Ensure marker is always visible[m
+         });[m
+ [m
+         userMarker.addListener('click', () => {[m
+           const content = `[m
+[31m-            <div style="padding: 8px; min-width: 150px;">[m
+[31m-              <div style="display: flex; align-items: center; gap: 8px;">[m
+[32m+[m[32m            <div style="padding: 12px; min-width: 200px;">[m
+[32m+[m[32m              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">[m
+                 <div style="width: 12px; height: 12px; background: #10b981; border-radius: 50%;"></div>[m
+[31m-                <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">Your Location</h3>[m
+[32m+[m[32m                <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">📍 YOUR Current Location</h3>[m
+               </div>[m
+[31m-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">[m
+[31m-                Live location from GPS[m
+[32m+[m[32m              <div style="margin-bottom: 8px;">[m
+[32m+[m[32m                <p style="margin: 0 0 4px 0; font-size: 11px; color: #6b7280; font-weight: 600;">GPS Coordinates:</p>[m
+[32m+[m[32m                <p style="margin: 0; font-size: 12px; color: #1f2937; font-family: monospace;">[m
+[32m+[m[32m                  Lat: ${userLocation.lat.toFixed(8)}<br/>[m
+[32m+[m[32m                  Lng: ${userLocation.lng.toFixed(8)}[m
+[32m+[m[32m                </p>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <p style="margin: 0; font-size: 11px; color: #10b981; border-top: 1px solid #e5e7eb; padding-top: 8px; font-weight: 600;">[m
+[32m+[m[32m                ✓ This is YOUR location from your device's GPS[m
+[32m+[m[32m              </p>[m
+[32m+[m[32m              <p style="margin: 4px 0 0 0; font-size: 10px; color: #6b7280;">[m
+[32m+[m[32m                Not from database or other users[m
+               </p>[m
+             </div>[m
+           `;[m
+[36m@@ -265,25 +299,42 @@[m [mconst LiveMapComponent: React.FC<LiveMapComponentProps> = ({[m
+           </span>[m
+         </div>[m
+         {userLocation && ([m
+[31m-          <p className="text-xs text-gray-600">[m
+[31m-            Lat: {userLocation.lat.toFixed(6)}, Lng: {userLocation.lng.toFixed(6)}[m
+[31m-          </p>[m
+[32m+[m[32m          <div className="space-y-1">[m
+[32m+[m[32m            <p className="text-xs text-gray-600">[m
+[32m+[m[32m              Lat: {userLocation.lat.toFixed(6)}, Lng: {userLocation.lng.toFixed(6)}[m
+[32m+[m[32m            </p>[m
+[32m+[m[32m            <p className="text-xs text-gray-500 font-mono">[m
+[32m+[m[32m              Click marker to verify location[m
+[32m+[m[32m            </p>[m
+[32m+[m[32m          </div>[m
+         )}[m
+         {!userLocation && ([m
+           <p className="text-xs text-yellow-600">Click "Update Location" to enable</p>[m
+         )}[m
+       </div>[m
+ [m
+[31m-      {/* Refresh Button */}[m
+[31m-      {onLocationUpdate && ([m
+[31m-        <button[m
+[31m-          onClick={onLocationUpdate}[m
+[31m-          className="absolute top-4 right-4 bg-white hover:bg-gray-50 text-gray-700 p-2 rounded-full shadow-lg border border-gray-200 transition-colors z-10"[m
+[31m-          title="Update Location"[m
+[31m-        >[m
+[31m-          <RefreshCw className="h-4 w-4" />[m
+[31m-        </button>[m
+[31m-      )}[m
+[32m+[m[32m      {/* Action Buttons */}[m
+[32m+[m[32m      <div className="absolute top-4 right-4 flex gap-2 z-10">[m
+[32m+[m[32m        {onManualLocationPick && ([m
+[32m+[m[32m          <button[m
+[32m+[m[32m            onClick={onManualLocationPick}[m
+[32m+[m[32m            className="bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg shadow-lg border border-gray-200 transition-colors text-sm font-medium"[m
+[32m+[m[32m            title="Pick location manually"[m
+[32m+[

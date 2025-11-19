@@ -10,6 +10,8 @@ interface LiveMapProps {
   onRequestSelect?: (request: Request) => void;
   userLocation?: { lat: number; lng: number } | null;
   onLocationUpdate?: () => void;
+  onManualLocationPick?: () => void;
+  isUpdatingLocation?: boolean;
   center?: google.maps.LatLngLiteral;
   zoom?: number;
 }
@@ -25,6 +27,8 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
   onRequestSelect,
   userLocation,
   onLocationUpdate,
+  onManualLocationPick,
+  isUpdatingLocation = false,
   center = { lat: 37.7749, lng: -122.4194 }, 
   zoom = 12 
 }) => {
@@ -35,9 +39,12 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
 
   useEffect(() => {
     if (ref.current && !map) {
+      const initialCenter = userLocation || center;
+      const initialZoom = userLocation ? 15 : zoom;
+      
       const newMap = new window.google.maps.Map(ref.current, {
-        center: userLocation || center,
-        zoom: userLocation ? 15 : zoom,
+        center: initialCenter,
+        zoom: initialZoom,
         styles: [
           {
             featureType: 'poi',
@@ -50,13 +57,19 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
         streetViewControl: false,
         fullscreenControl: false,
         mapTypeControl: false,
-        zoomControl: false,
+        zoomControl: true, // Enable zoom control for better UX
         rotateControl: false,
         // Ensure map is responsive on mobile
         gestureHandling: 'greedy',
       });
       setMap(newMap);
       setInfoWindow(new window.google.maps.InfoWindow());
+      
+      // If userLocation is available, center the map immediately
+      if (userLocation) {
+        newMap.setCenter(userLocation);
+        newMap.setZoom(15);
+      }
     }
   }, [ref, map, center, zoom, userLocation]);
 
@@ -77,8 +90,16 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
   // Recenter the map when userLocation changes
   useEffect(() => {
     if (map && userLocation) {
-      map.setZoom(Math.max(map.getZoom() || 0, 15));
-      map.panTo(userLocation);
+      const currentCenter = map.getCenter();
+      const currentZoom = map.getZoom() || 0;
+      
+      // Only pan if the location has changed significantly (more than 100m)
+      if (!currentCenter || 
+          Math.abs(currentCenter.lat() - userLocation.lat) > 0.001 || 
+          Math.abs(currentCenter.lng() - userLocation.lng) > 0.001) {
+        map.setZoom(Math.max(currentZoom, 15));
+        map.panTo(userLocation);
+      }
     }
   }, [map, userLocation]);
 
@@ -90,6 +111,7 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
 
       // Add user's current location marker
       if (userLocation) {
+        console.log('Creating user location marker at:', userLocation);
         const userMarker = new google.maps.Marker({
           position: userLocation,
           map,
@@ -103,18 +125,30 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
             `),
             scaledSize: new google.maps.Size(40, 40),
             anchor: new google.maps.Point(20, 20)
-          }
+          },
+          zIndex: 1000, // Ensure user marker is on top
+          optimized: false // Ensure marker is always visible
         });
 
         userMarker.addListener('click', () => {
           const content = `
-            <div style="padding: 8px; min-width: 150px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="padding: 12px; min-width: 200px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                 <div style="width: 12px; height: 12px; background: #10b981; border-radius: 50%;"></div>
-                <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">Your Location</h3>
+                <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">📍 YOUR Current Location</h3>
               </div>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">
-                Live location from GPS
+              <div style="margin-bottom: 8px;">
+                <p style="margin: 0 0 4px 0; font-size: 11px; color: #6b7280; font-weight: 600;">GPS Coordinates:</p>
+                <p style="margin: 0; font-size: 12px; color: #1f2937; font-family: monospace;">
+                  Lat: ${userLocation.lat.toFixed(8)}<br/>
+                  Lng: ${userLocation.lng.toFixed(8)}
+                </p>
+              </div>
+              <p style="margin: 0; font-size: 11px; color: #10b981; border-top: 1px solid #e5e7eb; padding-top: 8px; font-weight: 600;">
+                ✓ This is YOUR location from your device's GPS
+              </p>
+              <p style="margin: 4px 0 0 0; font-size: 10px; color: #6b7280;">
+                Not from database or other users
               </p>
             </div>
           `;
@@ -265,25 +299,42 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
           </span>
         </div>
         {userLocation && (
-          <p className="text-xs text-gray-600">
-            Lat: {userLocation.lat.toFixed(6)}, Lng: {userLocation.lng.toFixed(6)}
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs text-gray-600">
+              Lat: {userLocation.lat.toFixed(6)}, Lng: {userLocation.lng.toFixed(6)}
+            </p>
+            <p className="text-xs text-gray-500 font-mono">
+              Click marker to verify location
+            </p>
+          </div>
         )}
         {!userLocation && (
           <p className="text-xs text-yellow-600">Click "Update Location" to enable</p>
         )}
       </div>
 
-      {/* Refresh Button */}
-      {onLocationUpdate && (
-        <button
-          onClick={onLocationUpdate}
-          className="absolute top-4 right-4 bg-white hover:bg-gray-50 text-gray-700 p-2 rounded-full shadow-lg border border-gray-200 transition-colors z-10"
-          title="Update Location"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
-      )}
+      {/* Action Buttons */}
+      <div className="absolute top-4 right-4 flex gap-2 z-10">
+        {onManualLocationPick && (
+          <button
+            onClick={onManualLocationPick}
+            className="bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg shadow-lg border border-gray-200 transition-colors text-sm font-medium"
+            title="Pick location manually"
+          >
+            📍 Pick Location
+          </button>
+        )}
+        {onLocationUpdate && (
+          <button
+            onClick={onLocationUpdate}
+            disabled={isUpdatingLocation}
+            className="bg-white hover:bg-gray-50 text-gray-700 p-2 rounded-full shadow-lg border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title={isUpdatingLocation ? "Updating location..." : "Update Location"}
+          >
+            <RefreshCw className={`h-4 w-4 ${isUpdatingLocation ? 'animate-spin' : ''}`} />
+          </button>
+        )}
+      </div>
     </div>
   );
 };
