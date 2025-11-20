@@ -173,6 +173,11 @@ const Dashboard = () => {
             <Button variant="outline" size="icon" className="glass-effect">
               <Settings className="h-4 w-4" />
             </Button>
+            <Link to="/owner-bookings">
+              <Button variant="outline" className="glass-effect whitespace-nowrap">
+                Manage Bookings
+              </Button>
+            </Link>
             <Link to="/post">
               <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity">
                 <Plus className="h-4 w-4 mr-2" />

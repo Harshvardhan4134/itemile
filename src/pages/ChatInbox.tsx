@@ -243,12 +243,20 @@ const ChatInbox = () => {
   };
 
   const handleChatSelect = async (chat: Chat) => {
-    // Always navigate to keep URL in sync and ensure mobile view works correctly
-    // If clicking the same chat, no need to navigate again
+    // Keep URL in sync for deep linking
     if (chat.id === chatId) {
       return;
     }
     navigate(`/chat/${chat.id}`);
+  };
+
+  const handleBackToChatList = () => {
+    setCurrentChat(null);
+    setOtherUser(null);
+    setMessages([]);
+    setActiveChatIdForSend(null);
+    clearMessageSubscriptions();
+    navigate('/chat');
   };
 
   // Clear subscriptions on unmount
@@ -390,16 +398,13 @@ const ChatInbox = () => {
                   <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     <Button 
                       variant="ghost" 
-                      size="icon"
-                      className="sm:hidden h-8 w-8"
-                      onClick={() => {
-                        setCurrentChat(null);
-                        setOtherUser(null);
-                        setMessages([]);
-                        navigate('/chat');
-                      }}
+                      size="sm"
+                      className="h-8 sm:h-9 px-2 sm:px-3 flex items-center gap-1 text-xs sm:text-sm"
+                      onClick={handleBackToChatList}
                     >
                       <ArrowLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">Back to chats</span>
+                      <span className="sm:hidden">Back</span>
                     </Button>
                 <Avatar className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
                   <AvatarImage src={otherUser.profilePhotoUrl} />

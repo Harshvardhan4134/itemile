@@ -13,7 +13,6 @@ import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Chat from "./pages/Chat";
 import ChatInbox from "./pages/ChatInbox";
-import SimpleChat from "./pages/SimpleChat";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 import Signup from "./pages/Signup";
@@ -120,7 +119,7 @@ const App = () => (
             path="/chat/:chatId"
             element={
               <ProtectedRoute>
-                <SimpleChat />
+                <ChatInbox />
               </ProtectedRoute>
             }
           />
