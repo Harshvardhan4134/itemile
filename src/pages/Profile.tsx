@@ -456,14 +456,13 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-              {/* Removed Rent/Chat buttons as requested */}
-              <div className="flex flex-col sm:flex-row gap-2 mt-3 w-full">
+              <div className="flex flex-col sm:flex-row gap-2 mt-3 w-full sm:w-auto sm:justify-end">
                 <Button 
                   variant="outline" 
-                  className="w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-base glass-effect"
-                  onClick={() => navigate('/owner-bookings')}
+                  className="w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-base glass-effect justify-center"
+                  onClick={() => navigate('/dashboard')}
                 >
-                  Manage Bookings
+                  Go to Dashboard
                 </Button>
               </div>
             </div>
