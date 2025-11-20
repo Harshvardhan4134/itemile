@@ -31,6 +31,7 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
+import OwnerBookings from "./pages/OwnerBookings";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Transactions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner-bookings"
+            element={
+              <ProtectedRoute>
+                <OwnerBookings />
               </ProtectedRoute>
             }
           />

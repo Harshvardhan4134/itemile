@@ -30,6 +30,7 @@ import {
   likeRequest,
   addCommentToRequest,
   getUser,
+  updateUserLocation,
 } from "@/lib/firestore";
 import { 
   MapPin, 
@@ -218,9 +219,13 @@ const Explore = () => {
     let watchId: number | null = null;
     let bestLocation: { lat: number; lng: number } | null = null;
     let bestAccuracy = Infinity;
+    let acceptedAccuracy = Infinity; // Track the accuracy of the location we've already accepted
     let locationCount = 0;
-    const maxLocations = 5; // Get up to 5 location updates to find the best one
-    const maxWatchTime = 15000; // Stop watching after 15 seconds
+    let hasAcceptedLocation = false; // Track if we've already accepted and displayed a location
+    const maxLocations = 10; // Get up to 10 location updates to find the best one (increased for better accuracy)
+    const maxWatchTime = 30000; // Stop watching after 30 seconds (increased to give GPS more time to improve)
+    const TARGET_ACCURACY = 50; // Target accuracy in meters - we'll wait for this if possible
+    const MIN_ACCEPTABLE_ACCURACY = 500; // Minimum accuracy to accept immediately (500m)
     
     const stopWatching = () => {
       if (watchId !== null) {
@@ -246,32 +251,14 @@ const Explore = () => {
           description: `Your GPS location: ±${Math.round(bestAccuracy)}m accuracy`,
         });
       } else {
-        // No valid location found - GPS not available
-        console.warn('❌ No valid GPS location found. watchPosition failed or returned poor accuracy.');
-        setIsUpdatingLocation(false);
-        setAttemptedGeolocation(true);
-        toast({
-          title: "GPS Not Available",
-          description: "GPS location not available. Please use manual location picker.",
-          variant: "destructive",
-          duration: 10000,
-          action: (
-            <Button
-              size="sm"
-              onClick={() => setShowManualLocationPicker(true)}
-              className="ml-2"
-            >
-              Pick Location
-            </Button>
-          )
-        });
-        // Don't try fallback if we already know GPS isn't working
-        return;
+        // No valid location found after timeout - try fallback
+        // Don't show error yet, let fallback try first
+        console.log('⏱️ Timeout reached, trying fallback getCurrentPosition...');
       }
       
-      // Fallback to getCurrentPosition if watchPosition didn't work (only if we haven't tried yet)
+      // Fallback to getCurrentPosition if watchPosition didn't get a location
       if (!bestLocation) {
-        console.warn('watchPosition failed, trying getCurrentPosition as fallback');
+        console.log('📍 Trying getCurrentPosition as fallback...');
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -280,23 +267,32 @@ const Explore = () => {
             const MAX_ACCEPTABLE_ACCURACY = 10000; // 10km
             
             if (isValidCoordinate(coords.lat, coords.lng) && accuracy <= MAX_ACCEPTABLE_ACCURACY) {
-              console.log('📍 Fallback location obtained (getCurrentPosition):', coords, 'Accuracy: ±' + accuracy + 'm');
+              console.log('✅ Fallback location obtained (getCurrentPosition):', coords, 'Accuracy: ±' + Math.round(accuracy) + 'm');
               setUserLocation(coords);
               setLocationAccuracy(accuracy);
               setAttemptedGeolocation(true);
               setIsUpdatingLocation(false);
+              
+              // Save to database
+              if (auth.currentUser) {
+                updateUserLocation(auth.currentUser.uid, coords.lat, coords.lng).catch(err => {
+                  console.warn('Failed to save location to database:', err);
+                });
+              }
+              
               toast({
                 title: "Location Updated",
-                description: `Location: ±${Math.round(accuracy)}m accuracy`,
+                description: `Your GPS location: ±${Math.round(accuracy)}m accuracy`,
               });
             } else if (accuracy > MAX_ACCEPTABLE_ACCURACY) {
-              console.error('❌ GPS not available. Location accuracy too poor:', accuracy + 'm');
+              console.warn('⚠️ Location accuracy too poor:', accuracy + 'm');
               setIsUpdatingLocation(false);
+              setAttemptedGeolocation(true);
               toast({
-                title: "GPS Not Available",
-                description: "GPS location not available. Click 'Pick Location Manually' to set your location.",
-                variant: "destructive",
-                duration: 10000,
+                title: "Location Accuracy Low",
+                description: `GPS accuracy is ±${Math.round(accuracy/1000)}km. You can use manual location picker for better accuracy.`,
+                variant: "default",
+                duration: 8000,
                 action: (
                   <Button
                     size="sm"
@@ -307,41 +303,63 @@ const Explore = () => {
                   </Button>
                 )
               });
-              setAttemptedGeolocation(true);
             } else {
               console.error('❌ Invalid coordinates received:', coords);
               setIsUpdatingLocation(false);
+              setAttemptedGeolocation(true);
               toast({
                 title: "Location Error",
-                description: "Received invalid location coordinates. Please try again.",
-                variant: "destructive"
+                description: "Received invalid location coordinates. Please try again or use manual picker.",
+                variant: "destructive",
+                action: (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowManualLocationPicker(true)}
+                    className="ml-2"
+                  >
+                    Pick Location
+                  </Button>
+                )
               });
             }
           },
           (err) => {
             setIsUpdatingLocation(false);
+            setAttemptedGeolocation(true);
             let errorMessage = 'Failed to get location';
             if (err.code === err.PERMISSION_DENIED) {
               errorMessage = 'Location access denied. Please allow location access in your browser settings.';
             } else if (err.code === err.POSITION_UNAVAILABLE) {
-              errorMessage = 'Location information unavailable.';
+              errorMessage = 'Location information unavailable. Please use manual location picker.';
             } else if (err.code === err.TIMEOUT) {
-              errorMessage = 'Location request timed out. Please try again.';
+              errorMessage = 'Location request timed out. Please try again or use manual location picker.';
             }
-            console.warn('Error getting current position:', errorMessage);
+            console.warn('❌ Error getting current position:', errorMessage);
             toast({
-              title: "Location Error",
+              title: "GPS Not Available",
               description: errorMessage,
-              variant: "destructive"
+              variant: "destructive",
+              duration: 10000,
+              action: (
+                <Button
+                  size="sm"
+                  onClick={() => setShowManualLocationPicker(true)}
+                  className="ml-2"
+                >
+                  Pick Location
+                </Button>
+              )
             });
-            setAttemptedGeolocation(true);
           },
           { 
             enableHighAccuracy: true, 
-            timeout: 20000,
+            timeout: 25000, // Increased timeout
             maximumAge: 0
           }
         );
+      } else {
+        // We already have a location from watchPosition, no need for fallback
+        console.log('✅ Location already obtained from watchPosition, skipping fallback');
       }
     }, maxWatchTime);
     
@@ -366,22 +384,19 @@ const Explore = () => {
           source: 'GPS (watchPosition)'
         });
         
-        // Reject IP-based locations (accuracy > 10km = 10000m)
-        // GPS should have accuracy < 100m, IP-based is typically > 1000m
+        // Reject only very poor locations (accuracy > 10km = 10000m)
+        // Note: If we're getting data from watchPosition/getCurrentPosition, it's GPS, not IP-based
+        // IP-based geolocation doesn't use these browser APIs
         const MAX_ACCEPTABLE_ACCURACY = 10000; // 10km - reject anything worse than this
         
         if (accuracy > MAX_ACCEPTABLE_ACCURACY) {
-          console.warn('❌ Rejecting IP-based location. Accuracy too poor:', accuracy + 'm (>10km)');
-          console.warn('📍 GPS is not available. Please enable GPS permissions or use manual location picker.');
+          console.warn('❌ Rejecting location with very poor accuracy:', accuracy + 'm (>10km)');
           return; // Don't use this location
         }
         
-        // Verify this is a real GPS location (not cached or IP-based)
-        // GPS locations typically have altitude, heading, or speed data
-        const isLikelyGPS = altitude !== null || heading !== null || speed !== null || accuracy < 100;
-        if (!isLikelyGPS && accuracy > 1000) {
-          console.warn('⚠️ Location may be IP-based (low accuracy, no GPS data). Accuracy:', accuracy + 'm');
-        }
+        // This is GPS data (from watchPosition), so it's valid GPS even if accuracy is moderate
+        // GPS accuracy can vary: excellent (<20m), good (20-100m), moderate (100-1000m), poor (>1000m)
+        // We accept all GPS locations up to 10km accuracy
         
         if (!isValidCoordinate(coords.lat, coords.lng)) {
           console.error('❌ Invalid coordinates received:', coords);
@@ -395,30 +410,95 @@ const Explore = () => {
           bestLocation = coords;
           bestAccuracy = accuracy;
           
-          // Update immediately if accuracy is good (< 50m) or if this is the first valid location
-          if (accuracy < 50 || locationCount === 1) {
+          // Strategy: Wait for better accuracy, but accept good enough locations
+          // - If accuracy is excellent (< TARGET_ACCURACY), accept immediately
+          // - If accuracy is good (< MIN_ACCEPTABLE_ACCURACY), accept after a few updates
+          // - If accuracy is moderate, wait longer to see if it improves
+          // - Always accept the best location we've seen so far
+          
+          const shouldAcceptNow = 
+            accuracy < TARGET_ACCURACY || // Excellent accuracy - accept immediately
+            (accuracy < MIN_ACCEPTABLE_ACCURACY && locationCount >= 3) || // Good accuracy after a few updates
+            (locationCount >= 5 && !hasAcceptedLocation); // After 5 updates, accept best so far
+          
+          if (shouldAcceptNow && !hasAcceptedLocation) {
+            hasAcceptedLocation = true;
+            acceptedAccuracy = accuracy;
             setUserLocation(coords);
             setLocationAccuracy(accuracy);
             setAttemptedGeolocation(true);
             setIsUpdatingLocation(false);
-            console.log('✅ Location updated immediately:', coords, 'Accuracy: ±' + accuracy + 'm');
+            
+            // Save to database if user is authenticated
+            if (auth.currentUser) {
+              updateUserLocation(auth.currentUser.uid, coords.lat, coords.lng).catch(err => {
+                console.warn('Failed to save location to database:', err);
+              });
+            }
+            
+            console.log('✅ Location accepted:', coords, 'Accuracy: ±' + Math.round(accuracy) + 'm');
             toast({
               title: "Location Updated",
-              description: `Your GPS location: ±${Math.round(accuracy)}m accuracy`,
+              description: `GPS location: ±${Math.round(accuracy)}m accuracy`,
             });
+          } else if (accuracy < acceptedAccuracy && hasAcceptedLocation) {
+            // Update if we got a better location than what we already accepted
+            acceptedAccuracy = accuracy;
+            setUserLocation(coords);
+            setLocationAccuracy(accuracy);
+            
+            // Update database with better location
+            if (auth.currentUser) {
+              updateUserLocation(auth.currentUser.uid, coords.lat, coords.lng).catch(err => {
+                console.warn('Failed to update location in database:', err);
+              });
+            }
+            
+            console.log('✅ Location improved:', coords, 'Accuracy: ±' + Math.round(accuracy) + 'm');
           }
         }
         
-        // Stop watching if we have a good location or enough updates
-        if (bestAccuracy < 20 || locationCount >= maxLocations) {
+        // Stop watching if we have an excellent location or enough updates
+        // Continue watching to improve accuracy if we haven't reached target yet
+        const shouldStop = 
+          bestAccuracy < TARGET_ACCURACY || // Got excellent accuracy
+          (bestAccuracy < MIN_ACCEPTABLE_ACCURACY && locationCount >= 5) || // Good accuracy after several updates
+          locationCount >= maxLocations; // Reached max updates
+        
+        if (shouldStop) {
           stopWatching();
           clearTimeout(watchTimeout);
-          if (bestLocation && bestAccuracy <= MAX_ACCEPTABLE_ACCURACY) {
+          
+          // Ensure we've set the best location
+          if (bestLocation && bestAccuracy <= MAX_ACCEPTABLE_ACCURACY && !hasAcceptedLocation) {
+            hasAcceptedLocation = true;
+            acceptedAccuracy = bestAccuracy;
             setUserLocation(bestLocation);
             setLocationAccuracy(bestAccuracy);
             setAttemptedGeolocation(true);
             setIsUpdatingLocation(false);
-            console.log('Stopped watching - best location:', bestLocation, 'Accuracy: ±' + Math.round(bestAccuracy) + 'm');
+            
+            // Save to database
+            if (auth.currentUser) {
+              updateUserLocation(auth.currentUser.uid, bestLocation.lat, bestLocation.lng).catch(err => {
+                console.warn('Failed to save location to database:', err);
+              });
+            }
+            
+            console.log('✅ Final best location:', bestLocation, 'Accuracy: ±' + Math.round(bestAccuracy) + 'm');
+          } else if (bestLocation && bestAccuracy < acceptedAccuracy && hasAcceptedLocation) {
+            // Update if final best is better than what we accepted
+            acceptedAccuracy = bestAccuracy;
+            setUserLocation(bestLocation);
+            setLocationAccuracy(bestAccuracy);
+            
+            if (auth.currentUser) {
+              updateUserLocation(auth.currentUser.uid, bestLocation.lat, bestLocation.lng).catch(err => {
+                console.warn('Failed to update location in database:', err);
+              });
+            }
+            
+            console.log('✅ Updated to final best location:', bestLocation, 'Accuracy: ±' + Math.round(bestAccuracy) + 'm');
           }
         }
       },
@@ -444,8 +524,8 @@ const Explore = () => {
       },
       { 
         enableHighAccuracy: true, 
-        timeout: 20000,
-        maximumAge: 0
+        timeout: 30000, // Increased timeout to match maxWatchTime
+        maximumAge: 0 // Always get fresh GPS data, never use cached
       }
     );
   };

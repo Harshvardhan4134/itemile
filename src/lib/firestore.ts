@@ -12,6 +12,7 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  Timestamp,
   GeoPoint,
   DocumentData,
   QuerySnapshot,
@@ -78,6 +79,13 @@ export interface Listing {
     reviewedAt?: any;
   };
   softDeleted?: boolean;
+  // New pricing structure
+  price?: {
+    rentPerDay?: number;
+    rentPerMonth?: number;
+    itemValue?: number; // Used to calculate deposit (if >= 5000, deposit required)
+  };
+  bookingsCount?: number;
 }
 
 export interface ListingComment {
@@ -97,13 +105,26 @@ export interface Transaction {
   ownerId: string;
   renterId: string;
   type: 'rent' | 'swap';
-  status: 'pending' | 'active' | 'completed' | 'disputed' | 'PENDING';
+  status: 'pending' | 'active' | 'completed' | 'disputed' | 'cancelled' | 'PENDING';
   startDate: any;
   endDate: any;
   amount: number;
-  paymentMode: 'online' | 'offline';
+  paymentMode: 'online' | 'offline' | 'SecurePay';
   createdAt: any;
   updatedAt?: any;
+  // New booking fields
+  durationType?: 'days' | 'months';
+  days?: number;
+  months?: number;
+  rentPerUnit?: number; // rentPerDay or rentPerMonth used
+  totalRent?: number;
+  deposit?: number;
+  serviceFee?: number;
+  insuranceFee?: number;
+  // Cancellation/Refund fields
+  cancelledAt?: any;
+  refundAmount?: number;
+  refundStatus?: 'pending' | 'processed' | 'failed';
 }
 
 export interface Message {
@@ -609,6 +630,52 @@ export const getActiveTransactionsForListing = async (listingId: string): Promis
   }
 };
 
+// Get all bookings (pending, active) for a listing to check date conflicts
+export const getBookingsForListing = async (listingId: string): Promise<Transaction[]> => {
+  try {
+    const transactionsRef = collection(db, 'transactions');
+    const q = query(
+      transactionsRef,
+      where('listingId', '==', listingId),
+      where('status', 'in', ['pending', 'active'])
+    );
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Transaction[];
+  } catch (error: any) {
+    if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+      console.warn('Cannot check bookings - user may not be authenticated');
+      return [];
+    }
+    throw error;
+  }
+};
+
+// Check if booking dates conflict with existing bookings
+export const checkBookingConflict = (
+  newStartDate: Date,
+  newEndDate: Date,
+  existingBookings: Transaction[]
+): { hasConflict: boolean; conflictingBooking?: Transaction } => {
+  for (const booking of existingBookings) {
+    if (!booking.startDate || !booking.endDate) continue;
+    
+    const existingStart = booking.startDate.toDate ? booking.startDate.toDate() : new Date(booking.startDate);
+    const existingEnd = booking.endDate.toDate ? booking.endDate.toDate() : new Date(booking.endDate);
+    
+    // Check for overlap: new booking overlaps if:
+    // newStartDate < existingEndDate AND newEndDate > existingStartDate
+    if (newStartDate < existingEnd && newEndDate > existingStart) {
+      return { hasConflict: true, conflictingBooking: booking };
+    }
+  }
+  
+  return { hasConflict: false };
+};
+
 export const updateTransaction = async (transactionId: string, updates: Partial<Transaction>): Promise<void> => {
   const transactionRef = doc(db, 'transactions', transactionId);
   await updateDoc(transactionRef, updates);
@@ -950,7 +1017,35 @@ const findExistingChat = async (ownerId: string, renterId: string, listingId: st
 };
 
 // Transaction + Chat creation function
-export const createTransactionAndChat = async (listing: any, renterId: string): Promise<{transactionId: string, chatId: string}> => {
+export const createTransactionAndChat = async (
+  listing: any, 
+  renterId: string,
+  bookingData?: {
+    durationType: 'days' | 'months';
+    startDate: Date;
+    endDate: Date;
+    units: number;
+    rentPerUnit: number;
+    totalRent: number;
+    deposit: number;
+    serviceFee: number;
+    requiresSecurePay: boolean;
+  }
+): Promise<{transactionId: string, chatId: string}> => {
+  // Check for date conflicts if booking data is provided
+  if (bookingData) {
+    const existingBookings = await getBookingsForListing(listing.id);
+    const conflict = checkBookingConflict(
+      bookingData.startDate,
+      bookingData.endDate,
+      existingBookings
+    );
+    
+    if (conflict.hasConflict) {
+      throw new Error('Selected dates are already booked. Please choose different dates.');
+    }
+  }
+
   // First, check if there's already a chat between these users for this listing
   const existingChatId = await findExistingChat(listing.ownerId, renterId, listing.id);
   
@@ -987,11 +1082,12 @@ export const createTransactionAndChat = async (listing: any, renterId: string): 
     ownerId: listing.ownerId,
     renterId,
     listingTitle: listing.title,
-    isNewChat: !existingChatId
+    isNewChat: !existingChatId,
+    bookingData
   });
 
-  // Step 1: Create Transaction
-  const transactionData = {
+  // Step 1: Create Transaction with new booking structure
+  const transactionData: any = {
     transactionId,
     listingId: listing.id,
     listingTitle: listing.title,
@@ -999,12 +1095,29 @@ export const createTransactionAndChat = async (listing: any, renterId: string): 
     renterId,
     status: "pending",
     type: 'rent',
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
-    amount: listing.rentPerDay || 0,
-    paymentMode: 'online',
+    paymentMode: bookingData?.requiresSecurePay ? 'SecurePay' : 'online',
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
+
+  // Add booking data if provided
+  if (bookingData) {
+    transactionData.durationType = bookingData.durationType;
+    // Convert Date objects to Firestore Timestamps
+    transactionData.startDate = Timestamp.fromDate(bookingData.startDate);
+    transactionData.endDate = Timestamp.fromDate(bookingData.endDate);
+    transactionData[bookingData.durationType] = bookingData.units;
+    transactionData.rentPerUnit = bookingData.rentPerUnit;
+    transactionData.totalRent = bookingData.totalRent;
+    transactionData.deposit = bookingData.deposit;
+    transactionData.serviceFee = bookingData.serviceFee;
+    transactionData.amount = bookingData.totalRent + bookingData.deposit + bookingData.serviceFee;
+  } else {
+    // Fallback to old structure for backward compatibility
+    transactionData.startDate = Timestamp.fromDate(new Date());
+    transactionData.endDate = Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // 7 days later
+    transactionData.amount = listing.rentPerDay || 0;
+  }
 
   console.log('Transaction data to be saved:', transactionData);
   await setDoc(doc(db, "transactions", transactionId), transactionData);

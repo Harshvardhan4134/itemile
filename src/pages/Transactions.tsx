@@ -18,8 +18,20 @@ import {
   getListings,
   Listing,
   User,
-  canUserReview
+  canUserReview,
+  sendEmailNotification
 } from "@/lib/firestore";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import TransactionMap from "@/components/TransactionMap";
 import LiveMap from "@/components/LiveMap";
 import { auth } from "@/lib/firebase";
@@ -40,6 +52,7 @@ import ReviewDialog from "@/components/ReviewDialog";
 
 const Transactions = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("active");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +65,9 @@ const Transactions = () => {
   const [selectedTransactionForReview, setSelectedTransactionForReview] = useState<Transaction | null>(null);
   const [revieweeInfo, setRevieweeInfo] = useState<{ id: string; name: string } | null>(null);
   const [canReview, setCanReview] = useState<Record<string, boolean>>({});
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [transactionToCancel, setTransactionToCancel] = useState<Transaction | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchTransactions = async () => {
     if (!auth.currentUser) return;
@@ -225,15 +241,60 @@ const Transactions = () => {
   };
 
   const handleDeleteTransaction = async (transaction: Transaction) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
-      try {
-        await deleteTransaction(transaction.id, auth.currentUser!.uid);
-        // Refresh transactions by refetching
-        await fetchTransactions();
-      } catch (error) {
-        console.error('Error deleting transaction:', error);
-        alert('Error deleting transaction. Please try again.');
+    setTransactionToCancel(transaction);
+    setCancelDialogOpen(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!transactionToCancel || !auth.currentUser) return;
+
+    setCancelling(true);
+    try {
+      // Calculate refund amount
+      const refundAmount = (transactionToCancel.totalRent || transactionToCancel.amount || 0) + (transactionToCancel.deposit || 0);
+      
+      // Update transaction status to cancelled
+      await updateTransaction(transactionToCancel.id, {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        refundAmount: refundAmount,
+        refundStatus: 'pending',
+      });
+
+      // Send email notification to owner
+      const owner = users[transactionToCancel.ownerId];
+      if (owner?.email) {
+        try {
+          await sendEmailNotification({
+            email: owner.email,
+            subject: "Booking Cancelled by Renter - Rent Share",
+            message: `Hi ${owner.name},\n\nThe booking for "${transactionToCancel.listingTitle}" has been cancelled by the renter.\n\nRefund Amount: ₹${refundAmount}\n\nView Details: ${window.location.origin}/owner-bookings\n\nBest regards,\nRent Share Team`,
+            type: 'rental_request',
+            read: false,
+            createdAt: new Date(),
+          });
+        } catch (error) {
+          console.error('Error sending cancellation email:', error);
+        }
       }
+
+      toast({
+        title: "Booking Cancelled",
+        description: `Your booking has been cancelled. Refund of ₹${refundAmount} will be processed within 5-7 business days.`,
+      });
+
+      setCancelDialogOpen(false);
+      setTransactionToCancel(null);
+      await fetchTransactions();
+    } catch (error) {
+      console.error('Error cancelling transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel booking. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -624,6 +685,38 @@ const Transactions = () => {
           onReviewSubmitted={handleReviewSubmitted}
         />
       )}
+
+      {/* Cancel Booking Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this booking? 
+              {transactionToCancel && (
+                <>
+                  <br /><br />
+                  <strong>Listing:</strong> {transactionToCancel.listingTitle}
+                  <br />
+                  <strong>Refund Amount:</strong> ₹{((transactionToCancel.totalRent || transactionToCancel.amount || 0) + (transactionToCancel.deposit || 0)).toLocaleString()}
+                  <br /><br />
+                  Your refund will be processed within 5-7 business days.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Keep Booking</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              disabled={cancelling}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {cancelling ? "Cancelling..." : "Cancel Booking"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

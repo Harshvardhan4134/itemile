@@ -23,6 +23,8 @@ import {
   getAllUsers,
   logAdminAction,
   setListingModeration,
+  getUser,
+  sendEmailNotification,
   type Listing,
   type User,
 } from "@/lib/firestore";
@@ -240,6 +242,43 @@ const AdminListings = () => {
         await adjustUserTrustMetrics(selectedListing.ownerId, -10, 1);
       }
 
+      // Send email notification to owner (always send, especially for safety concerns)
+      try {
+        const owner = await getUser(selectedListing.ownerId);
+        if (owner?.email) {
+          const reasonLabel = reasonOptions.find(r => r.value === selectedReason)?.label || selectedReason;
+          
+          // Special handling for safety concerns
+          let reasonText = reasonLabel;
+          let subjectPrefix = 'Listing Removed';
+          if (selectedReason === 'safety') {
+            reasonText = 'Safety Concern - Your listing has been removed due to safety concerns to protect our community.';
+            subjectPrefix = '⚠️ URGENT: Listing Removed - Safety Concern';
+          }
+          
+          const emailMessage = `Hi ${owner.name},\n\nYour listing "${selectedListing.title}" has been removed by our admin team.\n\nReason: ${reasonText}${additionalNotes.trim() ? `\n\nAdditional Notes: ${additionalNotes.trim()}` : ''}${strikeUser ? '\n\n⚠️ Important: Your account has received a strike due to this violation. Repeated violations may result in account suspension.' : ''}\n\nIf you believe this was done in error, please contact our support team at rentshare11@gmail.com or call +91 8547652100.\n\nView your listings: ${window.location.origin}/profile\n\nBest regards,\nRent Share Admin Team`;
+          
+          await sendEmailNotification({
+            email: owner.email,
+            subject: `${subjectPrefix}: ${selectedListing.title} - Rent Share`,
+            message: emailMessage,
+            type: 'admin_action',
+            read: false,
+            createdAt: new Date(),
+          });
+        } else {
+          console.warn(`Owner email not found for listing ${selectedListing.id}`);
+        }
+      } catch (error) {
+        console.error('Error sending email notification to owner:', error);
+        // Don't fail the takedown if email fails, but log it
+        toast({
+          title: "Warning",
+          description: "Listing removed but email notification failed. Please notify the owner manually.",
+          variant: "destructive",
+        });
+      }
+
       await logAdminAction({
         actorId: user.uid,
         action: "TAKEDOWN",
@@ -250,12 +289,13 @@ const AdminListings = () => {
           additionalNotes: additionalNotes.trim() || undefined,
           notifyOwner,
           strikeUser,
+          emailSent: true,
         },
       });
 
       toast({
         title: "Listing removed",
-        description: `${selectedListing.title} has been taken down.`,
+        description: `${selectedListing.title} has been taken down. Owner has been notified via email.`,
       });
       setTakedownOpen(false);
       await loadData();

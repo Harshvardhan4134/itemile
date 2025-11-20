@@ -134,6 +134,14 @@ export const Header = () => {
                 Transactions
               </Link>
               <Link 
+                to="/owner-bookings" 
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  isActive('/owner-bookings') ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                My Bookings
+              </Link>
+              <Link 
                 to="/chat" 
                 className={`text-sm font-medium transition-colors hover:text-primary ${
                   isActive('/chat') ? 'text-primary' : 'text-muted-foreground'
@@ -326,6 +334,13 @@ export const Header = () => {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Transactions
+                    </Link>
+                    <Link 
+                      to="/owner-bookings" 
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      My Bookings
                     </Link>
                     
                     {/* Mobile Post Buttons */}

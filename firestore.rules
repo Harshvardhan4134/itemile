@@ -69,13 +69,20 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
     
-    // Transactions
+    // Transactions (Bookings)
     match /transactions/{transactionId} {
+      // Allow reading if user is a participant
       allow read: if request.auth != null && 
         (resource.data.ownerId == request.auth.uid || 
          resource.data.renterId == request.auth.uid);
+      // Allow querying transactions by listingId to check availability and date conflicts
+      // This allows checking if an item is currently rented or has booking conflicts
+      // Users can query to check date availability before booking
+      allow list: if request.auth != null;
+      // Allow creating bookings - renter must match authenticated user
       allow create: if request.auth != null &&
         (request.auth.uid == request.resource.data.renterId);
+      // Allow updating bookings - owner or renter can update
       allow update: if request.auth != null && 
         (resource.data.ownerId == request.auth.uid || 
          resource.data.renterId == request.auth.uid);

@@ -108,11 +108,30 @@ exports.onTransactionCreated = functions.firestore
 
           const renter = renterDoc.data();
 
+          // Format booking dates if available
+          let dateInfo = "";
+          if (transaction.startDate && transaction.endDate) {
+            const startDate = transaction.startDate.toDate ? transaction.startDate.toDate() : new Date(transaction.startDate);
+            const endDate = transaction.endDate.toDate ? transaction.endDate.toDate() : new Date(transaction.endDate);
+            const startFormatted = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const endFormatted = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            dateInfo = `\nDuration: ${transaction.days || transaction.months || 'N/A'} ${transaction.durationType || 'days'}\nStart Date: ${startFormatted}\nEnd Date: ${endFormatted}`;
+          }
+
+          // Format amount details
+          let amountInfo = `Amount: ₹${transaction.amount || 0}`;
+          if (transaction.totalRent) {
+            amountInfo = `Total Rent: ₹${transaction.totalRent}`;
+            if (transaction.deposit) {
+              amountInfo += `\nDeposit: ₹${transaction.deposit}\nTotal Payable: ₹${(transaction.totalRent + transaction.deposit + (transaction.serviceFee || 0))}`;
+            }
+          }
+
           // Send email notification to owner
           await admin.firestore().collection("email_notifications").add({
             email: owner.email,
-            subject: "New Rental Request! 🎉 - Rent Share",
-            message: `Hi ${owner.name},\n\nYou've received a new rental request!\n\nListing: ${transaction.listingTitle}\nRequested by: ${renter?.name || "A user"}\nAmount: ₹${transaction.amount}/day\n\nPlease review and respond to this request in your Rent Share dashboard.\n\nView Request: ${functions.config().app?.url || "https://yourapp.com"}/transactions\n\nBest regards,\nRent Share Team`,
+            subject: "New Booking Request! 🎉 - Rent Share",
+            message: `Hi ${owner.name},\n\nYou've received a new booking request!\n\nListing: ${transaction.listingTitle}\nRequested by: ${renter?.name || "A user"}${dateInfo}\n${amountInfo}\n\nPlease review and respond to this request in your Rent Share dashboard.\n\nView Booking: ${functions.config().app?.url || "https://yourapp.com"}/owner-bookings\n\nBest regards,\nRent Share Team`,
             type: "rental_request",
             read: false,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),

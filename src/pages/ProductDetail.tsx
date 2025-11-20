@@ -24,9 +24,13 @@ import {
   CheckCircle
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review, getActiveTransactionsForListing } from "@/lib/firestore";
+import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review, getActiveTransactionsForListing, updateTransaction, getBookingsForListing, Transaction, sendEmailNotification } from "@/lib/firestore";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { getCityNameFromCoordinates } from "@/lib/utils";
+import TenureSelector, { BookingData } from "@/components/TenureSelector";
+import PaymentDialog from "@/components/PaymentDialog";
+import BookingCalendar from "@/components/BookingCalendar";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -41,6 +45,13 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [cityName, setCityName] = useState<string>('');
   const [isInRent, setIsInRent] = useState(false);
+  const [bookingData, setBookingData] = useState<BookingData | null>(null);
+  const [isRequestingRent, setIsRequestingRent] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
+  const [pendingChatId, setPendingChatId] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<Transaction[]>([]);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     const fetchListingData = async () => {
@@ -89,11 +100,16 @@ const ProductDetail = () => {
         try {
           const activeTransactions = await getActiveTransactionsForListing(listingData.id);
           setIsInRent(activeTransactions.length > 0);
+          
+          // Also fetch all bookings for calendar view
+          const allBookings = await getBookingsForListing(listingData.id);
+          setBookings(allBookings);
         } catch (error) {
           // If we can't check transaction status (user not authenticated or permission issue),
           // just assume it's not in rent - this won't break the page
           console.warn('Could not check if item is in rent:', error);
           setIsInRent(false);
+          setBookings([]);
         }
       } catch (error) {
         console.error('Error fetching listing:', error);
@@ -191,40 +207,122 @@ const ProductDetail = () => {
       return;
     }
 
-    if (!selectedDate) {
+    // Validate booking data
+    if (!bookingData || !bookingData.startDate || !bookingData.endDate) {
       toast({
-        title: "Please select a date",
-        description: "You need to select a rental date before requesting.",
+        title: "Please select rental dates",
+        description: "You need to select start date and duration before requesting.",
         variant: "destructive"
       });
       return;
     }
 
-    try {
-      // Create transaction and chat together
-      const { transactionId, chatId } = await createTransactionAndChat(listing, auth.currentUser.uid);
-
-      // Create notification for the owner
-      await createNotification({
-        userId: listing.ownerId,
-        type: 'rental_request',
-        transactionId: transactionId,
-        message: `${auth.currentUser.displayName || 'Someone'} requested to rent "${listing.title}"`,
-        read: false
-      });
-
+    // Validate SecurePay requirement
+    if (bookingData.requiresSecurePay && bookingData.deposit === 0) {
       toast({
-        title: "Rental request sent!",
-        description: "Your rental request has been sent to the owner."
+        title: "Deposit Required",
+        description: "This item requires a deposit. SecurePay payment is mandatory for items valued ₹5,000 or more.",
+        variant: "destructive"
       });
+      return;
+    }
 
-      // Navigate to chat page
-      navigate(`/chat/${chatId}`);
-    } catch (error) {
+    setIsRequestingRent(true);
+
+    try {
+      // Create transaction and chat together with booking data
+      const { transactionId, chatId } = await createTransactionAndChat(
+        listing, 
+        auth.currentUser.uid,
+        {
+          durationType: bookingData.durationType,
+          startDate: bookingData.startDate,
+          endDate: bookingData.endDate,
+          units: bookingData.units,
+          rentPerUnit: bookingData.rentPerUnit,
+          totalRent: bookingData.totalRent,
+          deposit: bookingData.deposit,
+          serviceFee: bookingData.serviceFee,
+          requiresSecurePay: bookingData.requiresSecurePay,
+        }
+      );
+
+      setPendingTransactionId(transactionId);
+      setPendingChatId(chatId);
+      setIsRequestingRent(false);
+      
+      // Show payment dialog
+      setShowPaymentDialog(true);
+    } catch (error: any) {
       console.error('Error creating rental request:', error);
       toast({
         title: "Error",
-        description: "Failed to send rental request. Please try again.",
+        description: error.message || "Failed to send rental request. Please try again.",
+        variant: "destructive"
+      });
+      setIsRequestingRent(false);
+    }
+  };
+
+  const handlePaymentComplete = async (paymentMethod: 'SecurePay' | 'online' | 'offline' | 'phonepe') => {
+    if (!pendingTransactionId) return;
+
+    try {
+      // Update transaction with payment information
+      await updateTransaction(pendingTransactionId, {
+        paymentMode: paymentMethod === 'phonepe' ? 'online' : paymentMethod, // PhonePe is treated as online payment
+        status: paymentMethod === 'offline' ? 'pending' : 'active', // Offline payments stay pending until confirmed
+      });
+
+      // Create notification for the owner
+      if (listing) {
+        await createNotification({
+          userId: listing.ownerId,
+          type: 'rental_request',
+          transactionId: pendingTransactionId,
+          message: `${auth.currentUser?.displayName || 'Someone'} ${paymentMethod === 'offline' ? 'requested to rent' : 'rented'} "${listing.title}"`,
+          read: false
+        });
+
+        // Send email notification to owner
+        try {
+          const owner = await getUser(listing.ownerId);
+          if (owner?.email && bookingData) {
+            await sendEmailNotification({
+              email: owner.email,
+              subject: `New Booking ${paymentMethod === 'offline' ? 'Request' : 'Confirmed'}! 🎉 - Rent Share`,
+              message: `Hi ${owner.name},\n\nYou've received a ${paymentMethod === 'offline' ? 'new booking request' : 'new booking'}!\n\nListing: ${listing.title}\nBooked by: ${auth.currentUser?.displayName || 'A user'}\nDuration: ${bookingData.units} ${bookingData.durationType}\nAmount: ₹${bookingData.totalRent}\nDeposit: ₹${bookingData.deposit}\nTotal: ₹${bookingData.payableNow}\n\n${bookingData.startDate ? `Start Date: ${format(bookingData.startDate, 'MMM dd, yyyy')}\nEnd Date: ${format(bookingData.endDate || bookingData.startDate, 'MMM dd, yyyy')}\n` : ''}\nPlease review and manage this booking in your dashboard.\n\nView Booking: ${window.location.origin}/owner-bookings\n\nBest regards,\nRent Share Team`,
+              type: 'rental_request',
+              read: false,
+              createdAt: new Date(),
+            });
+          }
+        } catch (error) {
+          console.error('Error sending email notification:', error);
+          // Don't fail the booking if email fails
+        }
+      }
+
+      toast({
+        title: paymentMethod === 'offline' ? "Booking Request Sent!" : "Payment Successful!",
+        description: paymentMethod === 'offline' 
+          ? "Your booking request has been sent. Payment will be collected on delivery."
+          : `Your payment of ₹${bookingData?.payableNow.toLocaleString()} has been processed successfully.`
+      });
+
+      setShowPaymentDialog(false);
+      
+      // Navigate to chat page to communicate with owner
+      if (pendingChatId) {
+        navigate(`/chat/${pendingChatId}`);
+      } else {
+        navigate('/transactions');
+      }
+    } catch (error: any) {
+      console.error('Error processing payment:', error);
+      toast({
+        title: "Payment Error",
+        description: "Failed to process payment. Please try again.",
         variant: "destructive"
       });
     }
@@ -586,74 +684,69 @@ const ProductDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Booking Section */}
+            {/* Booking Section with TenureSelector */}
             <Card className="glass-card">
               <CardContent className="p-4 sm:p-6">
-                <h3 className="font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Select Rental Dates</h3>
-                
-                <Popover>
-                  <PopoverTrigger asChild>
+                {listing && (
+                  <>
+                    <TenureSelector 
+                      listing={listing} 
+                      onBookingDataChange={setBookingData}
+                      disabled={isInRent || isRequestingRent}
+                    />
+                    
+                    <Button 
+                      className="w-full mt-4 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-10 sm:h-11"
+                      onClick={handleRequestRent}
+                      disabled={isInRent || isRequestingRent || !bookingData || !bookingData.startDate}
+                    >
+                      {isRequestingRent ? 'Processing...' : isInRent ? 'Currently In Rent' : 'Continue to Payment'}
+                    </Button>
+                    {isInRent && (
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Contact the vendor for future availability
+                      </p>
+                    )}
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-2 glass-effect h-10 sm:h-11"
+                      onClick={handleProposeSwap}
+                      disabled={!listing.swapAllowed || isRequestingRent}
+                    >
+                      Propose a Swap
+                    </Button>
+
+                    {/* Calendar View Toggle */}
                     <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal glass-effect"
+                      variant="ghost"
+                      className="w-full mt-2"
+                      onClick={() => setShowCalendar(!showCalendar)}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? (
-                        selectedDate.toDateString()
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
+                      {showCalendar ? 'Hide' : 'Show'} Booking Calendar
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                
-                <div className="mt-3 sm:mt-4 p-3 bg-muted/30 rounded-lg">
-                  <div className="flex justify-between text-xs sm:text-sm mb-2">
-                    <span>Daily rate</span>
-                    <span>₹{listing.rentPerDay}</span>
-                  </div>
-                  <div className="flex justify-between text-xs sm:text-sm mb-2">
-                    <span>Service fee</span>
-                    <span>₹5</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between font-semibold text-sm sm:text-base">
-                    <span>Total</span>
-                    <span>₹{listing.rentPerDay + 5}</span>
-                  </div>
-                </div>
-                
-                <Button 
-                  className="w-full mt-3 sm:mt-4 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-10 sm:h-11"
-                  onClick={handleRequestRent}
-                  disabled={isInRent}
-                >
-                  {isInRent ? 'Currently In Rent' : 'Request to Rent'}
-                </Button>
-                {isInRent && (
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Contact the vendor for future availability
-                  </p>
+                  </>
                 )}
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-2 glass-effect h-10 sm:h-11"
-                  onClick={handleProposeSwap}
-                  disabled={!listing.swapAllowed}
-                >
-                  Propose a Swap
-                </Button>
               </CardContent>
             </Card>
+
+            {/* Booking Calendar */}
+            {showCalendar && listing && (
+              <BookingCalendar
+                bookings={bookings}
+                onDateSelect={(date) => {
+                  if (bookingData) {
+                    setBookingData({
+                      ...bookingData,
+                      startDate: date,
+                    });
+                  }
+                }}
+                selectedDate={bookingData?.startDate || undefined}
+                disabled={isInRent || isRequestingRent}
+              />
+            )}
 
             {/* Features */}
             <Card className="glass-card">
@@ -830,6 +923,18 @@ const ProductDetail = () => {
           </Card>
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      {listing && (
+        <PaymentDialog
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          bookingData={bookingData}
+          listingTitle={listing.title}
+          onPaymentComplete={handlePaymentComplete}
+          isProcessing={isRequestingRent}
+        />
+      )}
     </div>
   );
 };
