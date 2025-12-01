@@ -253,12 +253,12 @@ const Explore = () => {
       } else {
         // No valid location found after timeout - try fallback
         // Don't show error yet, let fallback try first
-        console.log('⏱️ Timeout reached, trying fallback getCurrentPosition...');
+        // Silently try fallback without logging
       }
       
       // Fallback to getCurrentPosition if watchPosition didn't get a location
       if (!bestLocation) {
-        console.log('📍 Trying getCurrentPosition as fallback...');
+        // Silently try fallback method
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -352,9 +352,9 @@ const Explore = () => {
             });
           },
           { 
-            enableHighAccuracy: true, 
-            timeout: 25000, // Increased timeout
-            maximumAge: 0
+            enableHighAccuracy: true, // Force GPS instead of IP-based location
+            timeout: 20000, // 20 seconds timeout
+            maximumAge: 0 // Always get fresh GPS data, never use cached
           }
         );
       } else {
@@ -364,6 +364,8 @@ const Explore = () => {
     }, maxWatchTime);
     
     // Start watching position for better accuracy
+    // This will wait until GPS chip locks and provides good accuracy (<10km)
+    // Browsers sometimes return IP-based location first (poor accuracy), so we wait for GPS
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -373,25 +375,27 @@ const Explore = () => {
         const heading = pos.coords.heading;
         const speed = pos.coords.speed;
         
-        // Log detailed location info for debugging
-        console.log(`📍 Location update ${locationCount + 1}:`, {
-          coordinates: coords,
-          accuracy: `±${accuracy}m`,
-          timestamp: new Date(timestamp).toISOString(),
-          altitude: altitude ? `${altitude}m` : 'N/A',
-          heading: heading !== null ? `${heading}°` : 'N/A',
-          speed: speed !== null ? `${speed}m/s` : 'N/A',
-          source: 'GPS (watchPosition)'
-        });
-        
         // Reject only very poor locations (accuracy > 10km = 10000m)
-        // Note: If we're getting data from watchPosition/getCurrentPosition, it's GPS, not IP-based
-        // IP-based geolocation doesn't use these browser APIs
+        // Note: Browsers sometimes return IP-based location first (10km-150km accuracy)
+        // before GPS chip locks. We wait for better accuracy.
         const MAX_ACCEPTABLE_ACCURACY = 10000; // 10km - reject anything worse than this
         
         if (accuracy > MAX_ACCEPTABLE_ACCURACY) {
-          console.warn('❌ Rejecting location with very poor accuracy:', accuracy + 'm (>10km)');
-          return; // Don't use this location
+          // Only log once per session to reduce console noise
+          // This is expected - browser may return IP-based location first before GPS locks
+          if (locationCount === 0) {
+            console.warn(`⚠️ Initial location has poor accuracy (${Math.round(accuracy)}m), waiting for GPS to lock...`);
+          }
+          return; // Don't use this location, wait for better GPS signal
+        }
+        
+        // Log detailed location info only for accepted locations (reduced verbosity)
+        if (locationCount === 0 || accuracy < 100) {
+          console.log(`📍 Location update ${locationCount + 1}:`, {
+            coordinates: coords,
+            accuracy: `±${Math.round(accuracy)}m`,
+            source: 'GPS (watchPosition)'
+          });
         }
         
         // This is GPS data (from watchPosition), so it's valid GPS even if accuracy is moderate
@@ -523,8 +527,8 @@ const Explore = () => {
         setAttemptedGeolocation(true);
       },
       { 
-        enableHighAccuracy: true, 
-        timeout: 30000, // Increased timeout to match maxWatchTime
+        enableHighAccuracy: true, // Force GPS instead of IP-based location
+        timeout: 20000, // 20 seconds timeout
         maximumAge: 0 // Always get fresh GPS data, never use cached
       }
     );
@@ -910,6 +914,38 @@ const Explore = () => {
               {filteredPosts.length} posts
             </span>
           </div>
+
+          {/* Info Cards explaining different post types */}
+          {!searchTerm && filteredPosts.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">Items for Rent/Swap</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Browse items available to rent or swap. Click to view details and book!
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 rounded-lg border border-blue-500/20 bg-blue-500/5">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">Item Requests</h3>
+                    <p className="text-sm text-muted-foreground">
+                      People looking for items. If you have what they need, click "I Have This Item" to respond!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="space-y-6">

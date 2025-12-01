@@ -18,8 +18,11 @@ import {
   Tag,
   Loader2,
   Navigation,
-  Search
+  Search,
+  Info,
+  AlertCircle
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const PostRequest = () => {
   const navigate = useNavigate();
@@ -224,7 +227,7 @@ const PostRequest = () => {
       
       <div className="container py-8">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-3xl md:text-4xl font-urbanist font-bold mb-4">
               Request an <span className="gradient-text">Item</span>
             </h1>
@@ -232,6 +235,23 @@ const PostRequest = () => {
               Looking for something? Let others know what you need
             </p>
           </div>
+
+          {/* Info Card explaining Requests */}
+          <Alert className="mb-6 border-primary/20 bg-primary/5">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-base font-semibold mb-2">How Requests Work</AlertTitle>
+            <AlertDescription className="text-sm space-y-2">
+              <p>
+                <strong>Post a Request:</strong> Tell the community what item you need. Others who have that item can respond to your request.
+              </p>
+              <p>
+                <strong>Get Responses:</strong> Users who have the item you're looking for can contact you to offer it for rent or swap.
+              </p>
+              <p>
+                <strong>Connect & Rent:</strong> Chat with responders, agree on terms, and complete your rental or swap!
+              </p>
+            </AlertDescription>
+          </Alert>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}

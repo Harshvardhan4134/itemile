@@ -10,22 +10,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, CheckCircle, CreditCard, Wallet, Banknote, QrCode, Smartphone } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { AlertCircle, CheckCircle, CreditCard, Wallet, Banknote } from "lucide-react";
 import { BookingData } from "./TenureSelector";
+import { createRazorpayPayment, RazorpayResponse } from "@/lib/razorpay";
+import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
 
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bookingData: BookingData | null;
   listingTitle: string;
-  onPaymentComplete: (paymentMethod: 'SecurePay' | 'online' | 'offline' | 'phonepe') => Promise<void>;
+  onPaymentComplete: (paymentMethod: 'SecurePay' | 'online' | 'offline', razorpayResponse?: RazorpayResponse) => Promise<void>;
   isProcessing?: boolean;
 }
-
-// PhonePe UPI ID - Replace with your actual PhonePe UPI ID
-// Format: yourname@ybl or yourname@paytm
-const PHONEPE_UPI_ID = import.meta.env.VITE_PHONEPE_UPI_ID || "gharsha238@ybl";
 
 export default function PaymentDialog({
   open,
@@ -35,43 +33,81 @@ export default function PaymentDialog({
   onPaymentComplete,
   isProcessing = false,
 }: PaymentDialogProps) {
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'SecurePay' | 'online' | 'offline' | 'phonepe'>('phonepe');
-  const [showQRCode, setShowQRCode] = useState(true); // Default to true since phonepe is default
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const [qrSize, setQrSize] = useState(200);
-
-  useEffect(() => {
-    const updateQrSize = () => {
-      setQrSize(window.innerWidth < 640 ? 180 : 200);
-    };
-    updateQrSize();
-    window.addEventListener('resize', updateQrSize);
-    return () => window.removeEventListener('resize', updateQrSize);
-  }, []);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'SecurePay' | 'online' | 'offline'>('online');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const { toast } = useToast();
 
   if (!bookingData) return null;
 
-  // Generate UPI payment string for PhonePe
-  const upiPaymentString = `upi://pay?pa=${PHONEPE_UPI_ID}&pn=RentShare&am=${bookingData.payableNow}&cu=INR&tn=Payment for ${listingTitle}`;
-
-  const handlePaymentMethodSelect = (method: 'SecurePay' | 'online' | 'offline' | 'phonepe') => {
+  const handlePaymentMethodSelect = (method: 'SecurePay' | 'online' | 'offline') => {
     setSelectedPaymentMethod(method);
-    setShowQRCode(method === 'phonepe');
-    setPaymentConfirmed(false);
   };
 
   const handlePayment = async () => {
     // If SecurePay is required, only allow SecurePay
     const paymentMethod = bookingData.requiresSecurePay ? 'SecurePay' : selectedPaymentMethod;
-    await onPaymentComplete(paymentMethod);
-  };
+    
+    // For offline payments, process directly without Razorpay
+    if (paymentMethod === 'offline') {
+      await onPaymentComplete(paymentMethod);
+      return;
+    }
 
-  const handlePaymentConfirmation = async () => {
-    setPaymentConfirmed(true);
-    // Wait a moment for user to see confirmation, then process
-    setTimeout(() => {
-      handlePayment();
-    }, 500);
+    // For online/SecurePay, use Razorpay
+    setIsProcessingPayment(true);
+    
+    try {
+      const currentUser = auth.currentUser;
+      const userEmail = currentUser?.email || '';
+      const userName = currentUser?.displayName || 'User';
+      
+      await createRazorpayPayment(
+        bookingData.payableNow,
+        'INR',
+        `Payment for ${listingTitle} - ${bookingData.units} ${bookingData.durationType}`,
+        {
+          name: userName,
+          email: userEmail,
+        },
+        async (response: RazorpayResponse) => {
+          // Payment successful
+          setIsProcessingPayment(false);
+          toast({
+            title: "Payment Successful!",
+            description: `Payment ID: ${response.razorpay_payment_id}`,
+          });
+          
+          // Call the payment complete handler with Razorpay response
+          await onPaymentComplete(paymentMethod, response);
+        },
+        (error: any) => {
+          // Payment failed or cancelled
+          setIsProcessingPayment(false);
+          
+          if (error.message && error.message.includes('cancelled')) {
+            toast({
+              title: "Payment Cancelled",
+              description: "Payment was cancelled. You can try again.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Payment Failed",
+              description: error.message || "Failed to process payment. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }
+      );
+    } catch (error: any) {
+      setIsProcessingPayment(false);
+      console.error('Error initiating payment:', error);
+      toast({
+        title: "Payment Error",
+        description: error.message || "Failed to initiate payment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -129,25 +165,25 @@ export default function PaymentDialog({
               <label className="text-xs sm:text-sm font-medium">Select Payment Method</label>
               <div className="grid grid-cols-1 gap-2">
                 <Button
-                  variant={selectedPaymentMethod === 'phonepe' ? 'default' : 'outline'}
+                  variant={selectedPaymentMethod === 'online' ? 'default' : 'outline'}
                   className="w-full justify-start h-auto p-3 sm:p-4"
-                  onClick={() => handlePaymentMethodSelect('phonepe')}
-                  disabled={isProcessing}
+                  onClick={() => handlePaymentMethodSelect('online')}
+                  disabled={isProcessing || isProcessingPayment}
                 >
                   <div className="flex items-center gap-2 sm:gap-3 w-full">
-                    <QrCode className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                    <Wallet className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                     <div className="flex-1 text-left min-w-0">
-                      <div className="font-medium text-xs sm:text-sm">PhonePe QR Code</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground truncate">Scan QR code to pay instantly</div>
+                      <div className="font-medium text-xs sm:text-sm">Razorpay Payment</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground truncate">UPI, Cards, Net Banking, Wallets</div>
                     </div>
-                    {selectedPaymentMethod === 'phonepe' && <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
+                    {selectedPaymentMethod === 'online' && <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
                   </div>
                 </Button>
                 <Button
                   variant={selectedPaymentMethod === 'SecurePay' ? 'default' : 'outline'}
                   className="w-full justify-start h-auto p-3 sm:p-4"
                   onClick={() => handlePaymentMethodSelect('SecurePay')}
-                  disabled={isProcessing}
+                  disabled={isProcessing || isProcessingPayment}
                 >
                   <div className="flex items-center gap-2 sm:gap-3 w-full">
                     <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
@@ -159,25 +195,10 @@ export default function PaymentDialog({
                   </div>
                 </Button>
                 <Button
-                  variant={selectedPaymentMethod === 'online' ? 'default' : 'outline'}
-                  className="w-full justify-start h-auto p-3 sm:p-4"
-                  onClick={() => handlePaymentMethodSelect('online')}
-                  disabled={isProcessing}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 w-full">
-                    <Wallet className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="font-medium text-xs sm:text-sm">Online Payment</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground truncate">UPI, Cards, Net Banking</div>
-                    </div>
-                    {selectedPaymentMethod === 'online' && <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
-                  </div>
-                </Button>
-                <Button
                   variant={selectedPaymentMethod === 'offline' ? 'default' : 'outline'}
                   className="w-full justify-start h-auto p-3 sm:p-4"
                   onClick={() => handlePaymentMethodSelect('offline')}
-                  disabled={isProcessing}
+                  disabled={isProcessing || isProcessingPayment}
                 >
                   <div className="flex items-center gap-2 sm:gap-3 w-full">
                     <Banknote className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
@@ -192,82 +213,6 @@ export default function PaymentDialog({
             </div>
           )}
 
-          {/* PhonePe QR Code Display */}
-          {showQRCode && selectedPaymentMethod === 'phonepe' && (
-            <Card className="border-2 border-primary">
-              <CardContent className="p-3 sm:p-6 space-y-3 sm:space-y-4">
-                <div className="text-center space-y-1 sm:space-y-2">
-                  <div className="flex items-center justify-center gap-2">
-                    <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    <h3 className="font-semibold text-base sm:text-lg">Scan to Pay with PhonePe</h3>
-                  </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Open PhonePe app and scan this QR code
-                  </p>
-                </div>
-                
-                <div className="flex justify-center p-2 sm:p-4 bg-white rounded-lg">
-                  <QRCodeSVG
-                    value={upiPaymentString}
-                    size={qrSize}
-                    level="H"
-                    includeMargin={true}
-                  />
-                </div>
-
-                <div className="space-y-1 sm:space-y-2 text-center">
-                  <div className="text-xs sm:text-sm font-medium">
-                    Amount: ₹{bookingData.payableNow.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground break-all">
-                    UPI ID: {PHONEPE_UPI_ID}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2 p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-[10px] sm:text-xs">
-                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div className="text-blue-800 dark:text-blue-200">
-                      <div className="font-medium mb-1">Payment Instructions:</div>
-                      <ol className="list-decimal list-inside space-y-0.5 sm:space-y-1">
-                        <li>Open PhonePe app on your phone</li>
-                        <li>Tap on "Scan & Pay"</li>
-                        <li>Scan this QR code</li>
-                        <li>Enter the amount: ₹{bookingData.payableNow.toLocaleString()}</li>
-                        <li>Complete the payment</li>
-                        <li>Click "I've Paid" below after successful payment</li>
-                      </ol>
-                    </div>
-                  </div>
-                </div>
-
-                {!paymentConfirmed ? (
-                  <Button
-                    className="w-full text-xs sm:text-sm"
-                    onClick={handlePaymentConfirmation}
-                    disabled={isProcessing}
-                    size="lg"
-                  >
-                    <CheckCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    I've Paid - Confirm Payment
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full text-xs sm:text-sm"
-                    disabled
-                    size="lg"
-                    variant="outline"
-                  >
-                    <CheckCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    Processing Payment...
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
           {bookingData.requiresSecurePay && (
             <div className="flex items-start gap-2 p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs sm:text-sm">
               <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
@@ -280,23 +225,33 @@ export default function PaymentDialog({
             </div>
           )}
 
-          {/* Payment Button - Only show if not PhonePe (PhonePe has its own button) */}
-          {selectedPaymentMethod !== 'phonepe' && (
-            <Button
-              className="w-full text-xs sm:text-sm"
-              onClick={handlePayment}
-              disabled={isProcessing}
-              size="lg"
-            >
-              {isProcessing ? (
-                'Processing Payment...'
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                  Pay ₹{bookingData.payableNow.toLocaleString()}
-                </>
-              )}
-            </Button>
+          {/* Payment Button */}
+          <Button
+            className="w-full text-xs sm:text-sm"
+            onClick={handlePayment}
+            disabled={isProcessing || isProcessingPayment}
+            size="lg"
+          >
+            {isProcessing || isProcessingPayment ? (
+              'Processing Payment...'
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                {selectedPaymentMethod === 'offline' 
+                  ? 'Confirm Booking Request' 
+                  : `Pay ₹${bookingData.payableNow.toLocaleString()}`}
+              </>
+            )}
+          </Button>
+          
+          {selectedPaymentMethod === 'online' && !bookingData.requiresSecurePay && (
+            <div className="flex items-start gap-2 p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-[10px] sm:text-xs">
+              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="text-blue-800 dark:text-blue-200">
+                <div className="font-medium mb-1">Secure Payment:</div>
+                <div>Your payment will be processed securely through Razorpay. You can pay using UPI, Credit/Debit Cards, Net Banking, or Wallets.</div>
+              </div>
+            </div>
           )}
 
           <p className="text-[10px] sm:text-xs text-center text-muted-foreground px-2">

@@ -21,8 +21,16 @@ import {
   ChevronRight,
   Navigation,
   ExternalLink,
-  CheckCircle
+  CheckCircle,
+  RefreshCw,
+  HelpCircle
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { auth } from "@/lib/firebase";
 import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review, getActiveTransactionsForListing, updateTransaction, getBookingsForListing, Transaction, sendEmailNotification } from "@/lib/firestore";
 import { format } from "date-fns";
@@ -264,15 +272,29 @@ const ProductDetail = () => {
     }
   };
 
-  const handlePaymentComplete = async (paymentMethod: 'SecurePay' | 'online' | 'offline' | 'phonepe') => {
+  const handlePaymentComplete = async (
+    paymentMethod: 'SecurePay' | 'online' | 'offline',
+    razorpayResponse?: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }
+  ) => {
     if (!pendingTransactionId) return;
 
     try {
       // Update transaction with payment information
-      await updateTransaction(pendingTransactionId, {
-        paymentMode: paymentMethod === 'phonepe' ? 'online' : paymentMethod, // PhonePe is treated as online payment
+      const transactionUpdate: any = {
+        paymentMode: paymentMethod,
         status: paymentMethod === 'offline' ? 'pending' : 'active', // Offline payments stay pending until confirmed
-      });
+      };
+
+      // Add Razorpay payment details if available
+      if (razorpayResponse) {
+        transactionUpdate.razorpayPaymentId = razorpayResponse.razorpay_payment_id;
+        transactionUpdate.razorpayOrderId = razorpayResponse.razorpay_order_id;
+        transactionUpdate.razorpaySignature = razorpayResponse.razorpay_signature;
+        transactionUpdate.paymentStatus = 'completed';
+        transactionUpdate.paidAt = new Date();
+      }
+
+      await updateTransaction(pendingTransactionId, transactionUpdate);
 
       // Create notification for the owner
       if (listing) {
@@ -708,14 +730,46 @@ const ProductDetail = () => {
                       </p>
                     )}
                     
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-2 glass-effect h-10 sm:h-11"
-                      onClick={handleProposeSwap}
-                      disabled={!listing.swapAllowed || isRequestingRent}
-                    >
-                      Propose a Swap
-                    </Button>
+                    <div className="w-full mt-2">
+                      <TooltipProvider>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 glass-effect h-10 sm:h-11"
+                            onClick={handleProposeSwap}
+                            disabled={!listing.swapAllowed || isRequestingRent}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Propose a Swap
+                          </Button>
+                          {listing.swapAllowed && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-10 w-10">
+                                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="font-semibold mb-1">What is Swapping?</p>
+                                <p className="text-xs">
+                                  Exchange items with the owner instead of paying money. You offer an item you have, and they offer this item. Perfect for trying new things!
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </TooltipProvider>
+                      {listing.swapAllowed && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          💡 Exchange items instead of paying - no money needed!
+                        </p>
+                      )}
+                      {!listing.swapAllowed && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          This item is not available for swapping
+                        </p>
+                      )}
+                    </div>
 
                     {/* Calendar View Toggle */}
                     <Button

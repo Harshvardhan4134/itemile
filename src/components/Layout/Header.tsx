@@ -20,8 +20,15 @@ import {
   MapPin,
   MessageCircle,
   LogOut,
-  Settings
+  Settings,
+  HelpCircle
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -106,52 +113,89 @@ export const Header = () => {
         </div>
 
         {/* Navigation - Desktop */}
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link 
-            to="/explore" 
-            className={`text-sm font-medium transition-colors hover:text-primary ${
-              isActive('/explore') ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            Explore
-          </Link>
-          {user && (
-            <>
-              <Link 
-                to="/requests" 
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive('/requests') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Requests
-              </Link>
-              <Link 
-                to="/transactions" 
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive('/transactions') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Transactions
-              </Link>
-              <Link 
-                to="/chat" 
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive('/chat') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Chat
-              </Link>
-              <Link 
-                to="/profile" 
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive('/profile') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Profile
-              </Link>
-            </>
-          )}
-        </nav>
+        <TooltipProvider>
+          <nav className="hidden md:flex items-center space-x-6">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link 
+                  to="/explore" 
+                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                    isActive('/explore') ? 'text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  Explore
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Browse items available for rent or swap</p>
+              </TooltipContent>
+            </Tooltip>
+            {user && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link 
+                      to="/requests" 
+                      className={`text-sm font-medium transition-colors hover:text-primary ${
+                        isActive('/requests') ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      Requests
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View item requests from other users. Post what you need!</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link 
+                      to="/transactions" 
+                      className={`text-sm font-medium transition-colors hover:text-primary ${
+                        isActive('/transactions') ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      Transactions
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View your rental and swap transactions</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link 
+                      to="/chat" 
+                      className={`text-sm font-medium transition-colors hover:text-primary ${
+                        isActive('/chat') ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      Chat
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Messages with item owners and renters</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link 
+                      to="/profile" 
+                      className={`text-sm font-medium transition-colors hover:text-primary ${
+                        isActive('/profile') ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      Profile
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Your account settings and information</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </nav>
+        </TooltipProvider>
 
         {/* Actions */}
         <div className="flex items-center space-x-1.5 sm:space-x-3">
@@ -171,28 +215,44 @@ export const Header = () => {
                 )}
               </Button>
               
-              <Link to="/post" className="hidden md:block">
-                <Button 
-                  size="sm" 
-                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-8 sm:h-9"
-                >
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden lg:inline">Post Item</span>
-                  <span className="lg:hidden">Post</span>
-                </Button>
-              </Link>
-              
-              <Link to="/post-request" className="hidden lg:block">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors h-8 sm:h-9"
-                >
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden xl:inline">Post Request</span>
-                  <span className="xl:hidden">Request</span>
-                </Button>
-              </Link>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/post" className="hidden md:block">
+                      <Button 
+                        size="sm" 
+                        className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-8 sm:h-9"
+                      >
+                        <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        <span className="hidden lg:inline">Post Item</span>
+                        <span className="lg:hidden">Post</span>
+                      </Button>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>List an item you want to rent out or swap</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/post-request" className="hidden lg:block">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors h-8 sm:h-9"
+                      >
+                        <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        <span className="hidden xl:inline">Post Request</span>
+                        <span className="xl:hidden">Request</span>
+                      </Button>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Request an item you need - others can offer to rent or swap</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -288,7 +348,10 @@ export const Header = () => {
                   className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Explore
+                  <div>
+                    <div className="font-semibold">Explore</div>
+                    <div className="text-xs text-muted-foreground">Browse items to rent or swap</div>
+                  </div>
                 </Link>
                 {user && (
                   <>
@@ -297,35 +360,50 @@ export const Header = () => {
                       className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Requests
+                      <div>
+                        <div className="font-semibold">Requests</div>
+                        <div className="text-xs text-muted-foreground">See what others are looking for</div>
+                      </div>
                     </Link>
                     <Link 
                       to="/chat" 
                       className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Chat
+                      <div>
+                        <div className="font-semibold">Chat</div>
+                        <div className="text-xs text-muted-foreground">Messages with users</div>
+                      </div>
                     </Link>
                     <Link 
                       to="/profile" 
                       className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Profile
+                      <div>
+                        <div className="font-semibold">Profile</div>
+                        <div className="text-xs text-muted-foreground">Your account settings</div>
+                      </div>
                     </Link>
                     <Link 
                       to="/dashboard" 
                       className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Dashboard
+                      <div>
+                        <div className="font-semibold">Dashboard</div>
+                        <div className="text-xs text-muted-foreground">Manage your listings</div>
+                      </div>
                     </Link>
                     <Link 
                       to="/transactions" 
                       className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Transactions
+                      <div>
+                        <div className="font-semibold">Transactions</div>
+                        <div className="text-xs text-muted-foreground">Your rentals and swaps</div>
+                      </div>
                     </Link>
                     
                     {/* Mobile Post Buttons */}
@@ -338,6 +416,7 @@ export const Header = () => {
                           <Plus className="h-4 w-4 mr-2" />
                           Post Item
                         </Button>
+                        <p className="text-xs text-muted-foreground mt-1 ml-1">List an item to rent or swap</p>
                       </Link>
                       <Link to="/post-request" onClick={() => setIsMenuOpen(false)}>
                         <Button 
@@ -348,6 +427,7 @@ export const Header = () => {
                           <Plus className="h-4 w-4 mr-2" />
                           Post Request
                         </Button>
+                        <p className="text-xs text-muted-foreground mt-1 ml-1">Request an item you need</p>
                       </Link>
                     </div>
                   </>

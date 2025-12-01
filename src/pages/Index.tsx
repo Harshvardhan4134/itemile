@@ -131,6 +131,71 @@ const Index = () => {
           </div>
         </section>
 
+        {/* How It Works Section */}
+        <section className="py-6 sm:py-8 md:py-12 mb-8 sm:mb-12">
+          <div className="text-center mb-6 sm:mb-8 px-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
+              How <span className="gradient-text">Lendlly</span> Works
+            </h2>
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
+              Three simple ways to get what you need
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 px-2 sm:px-0 mb-8">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">1. Rent Items</h3>
+                <p className="text-muted-foreground text-sm mb-3">
+                  Browse available items and rent them for a few days or weeks. Pay securely through our platform.
+                </p>
+                <Link to="/explore">
+                  <Button variant="outline" size="sm" className="w-full">
+                    Browse Items
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">2. Request Items</h3>
+                <p className="text-muted-foreground text-sm mb-3">
+                  Can't find what you need? Post a request! Others who have it can respond and offer to rent or swap.
+                </p>
+                <Link to="/post-request">
+                  <Button variant="outline" size="sm" className="w-full">
+                    Post Request
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <RefreshCw className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">3. Swap Items</h3>
+                <p className="text-muted-foreground text-sm mb-3">
+                  Exchange items with others - no money needed! Perfect for trying new things without buying.
+                </p>
+                <Link to="/explore">
+                  <Button variant="outline" size="sm" className="w-full">
+                    Find Swaps
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
         {/* Swap Feature Section */}
         <section className="py-6 sm:py-8 md:py-12 mb-8 sm:mb-12">
           <Card className="bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10 border-0">

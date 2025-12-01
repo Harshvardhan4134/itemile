@@ -110,6 +110,9 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
       const newMarkers: google.maps.Marker[] = [];
 
       // Add user's current location marker
+      // Note: google.maps.Marker is deprecated (Feb 2024) but still functional.
+      // Migration to google.maps.marker.AdvancedMarkerElement can be done later.
+      // Google provides 12 months notice before discontinuation.
       if (userLocation) {
         console.log('Creating user location marker at:', userLocation);
         const userMarker = new google.maps.Marker({

@@ -284,13 +284,13 @@ const RequestsFeed = () => {
       <div className="container py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
               <h1 className="text-3xl md:text-4xl font-urbanist font-bold mb-2">
                 <span className="gradient-text">Requests</span> Feed
               </h1>
               <p className="text-xl text-muted-foreground">
-                All requests from people nearby - respond to unmatched ones or track your own
+                See what others are looking for - respond if you have it!
               </p>
             </div>
             
@@ -300,6 +300,26 @@ const RequestsFeed = () => {
                 Post Request
               </Button>
             </Link>
+          </div>
+
+          {/* Info Card */}
+          <div className="mb-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <MessageCircle className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-2">What are Requests?</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Requests are posts from users looking for specific items. If you have what they need, you can respond and offer to rent or swap!
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Click "I Have This Item" to respond to a request</li>
+                  <li>Chat with the requester to discuss terms</li>
+                  <li>Complete the rental or swap transaction</li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           {/* Search and Filters */}
