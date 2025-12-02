@@ -28,6 +28,7 @@ import {
   Instagram,
   Linkedin,
   CheckCircle,
+  MessageCircle,
 } from "lucide-react";
 
 const Index = () => {
