@@ -52,6 +52,9 @@ export interface User {
   rejectionReason?: string;
   submittedAt?: any;
   verifiedAt?: any;
+  // Access code fields
+  hasAccess?: boolean;
+  accessGrantedAt?: any;
 }
 
 export type ModerationStatus = 'active' | 'flagged' | 'removed' | 'pending_review';
@@ -1894,5 +1897,124 @@ export const addCommentToRequest = async (
   });
   
   return newComment.id;
+};
+
+// Access Code Functions
+export interface AccessCode {
+  code: string;
+  active: boolean;
+  maxUses?: number;
+  currentUses: number;
+  createdAt: any;
+  expiresAt?: any;
+}
+
+/**
+ * Verify if an access code is valid
+ */
+export const verifyAccessCode = async (code: string): Promise<boolean> => {
+  try {
+    const accessCodesRef = collection(db, 'accessCodes');
+    const q = query(
+      accessCodesRef,
+      where('code', '==', code.toUpperCase().trim()),
+      where('active', '==', true)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return false;
+    }
+    
+    const accessCodeDoc = querySnapshot.docs[0];
+    const accessCodeData = accessCodeDoc.data() as AccessCode;
+    
+    // Check if code has expired
+    if (accessCodeData.expiresAt) {
+      const expiresAt = accessCodeData.expiresAt.toDate();
+      if (expiresAt < new Date()) {
+        return false;
+      }
+    }
+    
+    // Check if max uses reached
+    if (accessCodeData.maxUses && accessCodeData.currentUses >= accessCodeData.maxUses) {
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error verifying access code:', error);
+    return false;
+  }
+};
+
+/**
+ * Grant access to a user after they've verified their access code
+ */
+export const grantUserAccess = async (uid: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      hasAccess: true,
+      accessGrantedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error granting user access:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if a user has been granted access
+ */
+export const checkUserAccess = async (uid: string): Promise<boolean> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) {
+      return false;
+    }
+    
+    const userData = userSnap.data() as User;
+    
+    // Admins and moderators always have access
+    if (userData.systemRole === 'admin' || userData.systemRole === 'moderator') {
+      return true;
+    }
+    
+    return userData.hasAccess === true;
+  } catch (error) {
+    console.error('Error checking user access:', error);
+    return false;
+  }
+};
+
+/**
+ * Increment the usage count of an access code
+ */
+export const incrementAccessCodeUsage = async (code: string): Promise<void> => {
+  try {
+    const accessCodesRef = collection(db, 'accessCodes');
+    const q = query(
+      accessCodesRef,
+      where('code', '==', code.toUpperCase().trim())
+    );
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const accessCodeDoc = querySnapshot.docs[0];
+      const accessCodeRef = doc(db, 'accessCodes', accessCodeDoc.id);
+      const currentData = accessCodeDoc.data() as AccessCode;
+      
+      await updateDoc(accessCodeRef, {
+        currentUses: (currentData.currentUses || 0) + 1
+      });
+    }
+  } catch (error) {
+    console.error('Error incrementing access code usage:', error);
+    // Don't throw - this is not critical
+  }
 };
 

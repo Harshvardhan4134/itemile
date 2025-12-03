@@ -37,6 +37,21 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['aadharFrontUrl', 'aadharBackUrl', 'panUrl', 'selfieUrl', 
                     'verificationStatus', 'submittedAt', 'rejectionReason']);
+      
+      // Users can update their own access status when granted access
+      allow update: if request.auth != null && 
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['hasAccess', 'accessGrantedAt']);
+    }
+    
+    // Access Codes collection - for waitlist management
+    match /accessCodes/{codeId} {
+      // Authenticated users can read access codes to verify them
+      allow read: if request.auth != null;
+      
+      // Only admins can create, update, or delete access codes
+      allow create, update, delete: if isAdmin();
     }
     
     // Email notifications

@@ -3,6 +3,8 @@ import { Navigate, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import LocationPermissionDialog from "./LocationPermissionDialog";
+import AccessCodeDialog from "./AccessCodeDialog";
+import { checkUserAccess } from "@/lib/firestore";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -11,6 +13,9 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!auth.currentUser);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [showAccessCodeDialog, setShowAccessCodeDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const location = useLocation();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,8 +36,54 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       setIsAuthenticated(!!user);
       setLoading(false);
 
-      // Show location permission dialog after login if not already shown
+      // Check access code if user is authenticated
       if (user) {
+        setCheckingAccess(true);
+        
+        // First check localStorage for quick access
+        const cachedAccess = localStorage.getItem(`access_granted_${user.uid}`);
+        if (cachedAccess === 'true') {
+          setHasAccess(true);
+          setCheckingAccess(false);
+        } else {
+          // Check Firestore for access status
+          checkUserAccess(user.uid)
+            .then((access) => {
+              if (!isMountedRef.current) return;
+              
+              setHasAccess(access);
+              setCheckingAccess(false);
+              
+              if (access) {
+                // Cache the access status
+                localStorage.setItem(`access_granted_${user.uid}`, 'true');
+              } else {
+                // Show access code dialog if user doesn't have access
+                timeoutRef.current = setTimeout(() => {
+                  if (isMountedRef.current) {
+                    setShowAccessCodeDialog(true);
+                  }
+                  timeoutRef.current = null;
+                }, 500);
+              }
+            })
+            .catch((error) => {
+              console.error('Error checking user access:', error);
+              if (!isMountedRef.current) return;
+              
+              // On error, show access code dialog to be safe
+              setHasAccess(false);
+              setCheckingAccess(false);
+              timeoutRef.current = setTimeout(() => {
+                if (isMountedRef.current) {
+                  setShowAccessCodeDialog(true);
+                }
+                timeoutRef.current = null;
+              }, 500);
+            });
+        }
+
+        // Show location permission dialog after login if not already shown
         const hasRequestedLocation = localStorage.getItem(`location_permission_requested_${user.uid}`);
         
         // Check if geolocation permission is already granted
@@ -83,6 +134,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           }
         }
       } else {
+        setHasAccess(null);
+        setCheckingAccess(false);
+        setShowAccessCodeDialog(false);
         setShowLocationDialog(false);
       }
     });
@@ -97,7 +151,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     };
   }, []);
 
-  if (loading) {
+  if (loading || checkingAccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -108,6 +162,31 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   if (!isAuthenticated) {
     const redirectPath = `${location.pathname}${location.search}${location.hash}`;
     return <Navigate to="/login" state={{ from: redirectPath }} replace />;
+  }
+
+  // If user doesn't have access, show access code dialog
+  // Don't render children until access is granted
+  if (hasAccess === false) {
+    return (
+      <>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Verifying access...</p>
+          </div>
+        </div>
+        <AccessCodeDialog
+          open={showAccessCodeDialog}
+          onOpenChange={setShowAccessCodeDialog}
+          onAccessGranted={() => {
+            setHasAccess(true);
+            setShowAccessCodeDialog(false);
+            // Refresh the page to ensure all components load properly
+            window.location.reload();
+          }}
+        />
+      </>
+    );
   }
 
   return (
