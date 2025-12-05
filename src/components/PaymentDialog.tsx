@@ -15,14 +15,18 @@ import { BookingData } from "./TenureSelector";
 import { createRazorpayPayment, RazorpayResponse } from "@/lib/razorpay";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bookingData: BookingData | null;
   listingTitle: string;
-  onPaymentComplete: (paymentMethod: 'SecurePay' | 'online' | 'offline', razorpayResponse?: RazorpayResponse) => Promise<void>;
+  onPaymentComplete: (paymentMethod: 'SecurePay' | 'online' | 'offline', razorpayResponse?: RazorpayResponse, agreementAccepted?: boolean) => Promise<void>;
+  onPaymentCancelled?: () => Promise<void>;
   isProcessing?: boolean;
+  agreementAccepted?: boolean;
 }
 
 export default function PaymentDialog({
@@ -31,11 +35,17 @@ export default function PaymentDialog({
   bookingData,
   listingTitle,
   onPaymentComplete,
+  onPaymentCancelled,
   isProcessing = false,
+  agreementAccepted: agreementAcceptedProp = false,
 }: PaymentDialogProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'SecurePay' | 'online' | 'offline'>('online');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { toast } = useToast();
+  
+  // Use agreement from prop (set by parent after UserAgreementDialog)
+  const agreementAccepted = agreementAcceptedProp;
+
 
   if (!bookingData) return null;
 
@@ -49,7 +59,7 @@ export default function PaymentDialog({
     
     // For offline payments, process directly without Razorpay
     if (paymentMethod === 'offline') {
-      await onPaymentComplete(paymentMethod);
+      await onPaymentComplete(paymentMethod, undefined, agreementAccepted);
       return;
     }
 
@@ -78,16 +88,24 @@ export default function PaymentDialog({
           });
           
           // Call the payment complete handler with Razorpay response
-          await onPaymentComplete(paymentMethod, response);
+          await onPaymentComplete(paymentMethod, response, agreementAccepted);
         },
-        (error: any) => {
+        async (error: any) => {
           // Payment failed or cancelled
           setIsProcessingPayment(false);
           
           if (error.message && error.message.includes('cancelled')) {
+            // Call the cancellation handler if provided
+            if (onPaymentCancelled) {
+              try {
+                await onPaymentCancelled();
+              } catch (err) {
+                console.error('Error handling payment cancellation:', err);
+              }
+            }
             toast({
               title: "Payment Cancelled",
-              description: "Payment was cancelled. You can try again.",
+              description: "Payment was cancelled. The booking request has been removed.",
               variant: "default",
             });
           } else {
@@ -209,6 +227,15 @@ export default function PaymentDialog({
                     {selectedPaymentMethod === 'offline' && <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
                   </div>
                 </Button>
+                {selectedPaymentMethod === 'offline' && (
+                  <div className="flex items-start gap-2 p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-[10px] sm:text-xs">
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-blue-800 dark:text-blue-200">
+                      <div className="font-medium mb-1">Note:</div>
+                      <div>After owner approval, you will receive a pickup OTP via email. Show this OTP to the owner when collecting the item.</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -254,9 +281,15 @@ export default function PaymentDialog({
             </div>
           )}
 
-          <p className="text-[10px] sm:text-xs text-center text-muted-foreground px-2">
-            By completing payment, you agree to our terms and conditions
-          </p>
+          {/* Agreement Confirmation - Already accepted in previous dialog */}
+          {agreementAccepted && (
+            <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs sm:text-sm text-green-800 dark:text-green-200">
+                You have accepted the user agreement. You are responsible for any damage, breakage, or loss of the rented item.
+              </p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

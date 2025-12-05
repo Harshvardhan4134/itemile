@@ -12,34 +12,81 @@ export const uploadToCloudinary = async (
   file: File,
   folder?: string
 ): Promise<CloudinaryUploadResult> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', UPLOAD_PRESET);
-  
-  if (folder) {
-    formData.append('folder', folder);
-  }
+  try {
+    console.log('Uploading file to Cloudinary:', {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      folder,
+      cloudName: CLOUD_NAME,
+      uploadPreset: UPLOAD_PRESET
+    });
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`,
-    {
-      method: 'POST',
-      body: formData,
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    
+    // Set resource_type for videos
+    if (file.type.startsWith('video/')) {
+      formData.append('resource_type', 'video');
+    } else {
+      formData.append('resource_type', 'auto');
     }
-  );
+    
+    if (folder) {
+      formData.append('folder', folder);
+    }
 
-  if (!response.ok) {
-    throw new Error('Upload failed');
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Cloudinary upload failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`Upload failed: ${response.statusText}. ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Cloudinary upload successful:', {
+      secure_url: result.secure_url,
+      public_id: result.public_id,
+      resource_type: result.resource_type
+    });
+
+    return result;
+  } catch (error: any) {
+    console.error('Error in uploadToCloudinary:', error);
+    throw new Error(`Failed to upload ${file.name}: ${error.message}`);
   }
-
-  return response.json();
 };
 
 export const uploadMultipleImages = async (
   files: File[],
   folder?: string
 ): Promise<string[]> => {
-  const uploadPromises = files.map(file => uploadToCloudinary(file, folder));
-  const results = await Promise.all(uploadPromises);
-  return results.map(result => result.secure_url);
+  try {
+    console.log(`Uploading ${files.length} file(s) to Cloudinary...`);
+    const uploadPromises = files.map((file, index) => {
+      console.log(`Starting upload ${index + 1}/${files.length}: ${file.name}`);
+      return uploadToCloudinary(file, folder);
+    });
+    
+    const results = await Promise.all(uploadPromises);
+    const urls = results.map(result => result.secure_url);
+    
+    console.log(`Successfully uploaded ${urls.length} file(s):`, urls);
+    return urls;
+  } catch (error: any) {
+    console.error('Error in uploadMultipleImages:', error);
+    throw error;
+  }
 };

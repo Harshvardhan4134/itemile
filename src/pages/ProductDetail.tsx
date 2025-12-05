@@ -32,13 +32,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { auth } from "@/lib/firebase";
-import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review, getActiveTransactionsForListing, updateTransaction, getBookingsForListing, Transaction, sendEmailNotification } from "@/lib/firestore";
+import { getListing, getUser, createTransactionAndChat, createNotification, Listing, User as UserType, getReviewsByUser, Review, getActiveTransactionsForListing, updateTransaction, getBookingsForListing, Transaction, sendEmailNotification, getTransaction } from "@/lib/firestore";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { getCityNameFromCoordinates } from "@/lib/utils";
 import TenureSelector, { BookingData } from "@/components/TenureSelector";
 import PaymentDialog from "@/components/PaymentDialog";
 import BookingCalendar from "@/components/BookingCalendar";
+import UserAgreementDialog from "@/components/UserAgreementDialog";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -56,6 +57,8 @@ const ProductDetail = () => {
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [isRequestingRent, setIsRequestingRent] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showAgreementDialog, setShowAgreementDialog] = useState(false);
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
   const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Transaction[]>([]);
@@ -257,10 +260,9 @@ const ProductDetail = () => {
 
       setPendingTransactionId(transactionId);
       setPendingChatId(chatId);
-      setIsRequestingRent(false);
       
-      // Show payment dialog
-      setShowPaymentDialog(true);
+      // Show agreement dialog and complete booking without payment
+      setShowAgreementDialog(true);
     } catch (error: any) {
       console.error('Error creating rental request:', error);
       toast({
@@ -272,17 +274,50 @@ const ProductDetail = () => {
     }
   };
 
+  const handlePaymentCancelled = async () => {
+    if (!pendingTransactionId) return;
+
+    try {
+      // Mark the transaction as cancelled
+      await updateTransaction(pendingTransactionId, {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      });
+
+      // Refresh bookings to update calendar
+      if (listing) {
+        const allBookings = await getBookingsForListing(listing.id);
+        setBookings(allBookings);
+        
+        const activeTransactions = await getActiveTransactionsForListing(listing.id);
+        setIsInRent(activeTransactions.length > 0);
+      }
+
+      // Clear pending transaction
+      setPendingTransactionId(null);
+      setPendingChatId(null);
+    } catch (error) {
+      console.error('Error cancelling transaction:', error);
+    }
+  };
+
   const handlePaymentComplete = async (
     paymentMethod: 'SecurePay' | 'online' | 'offline',
-    razorpayResponse?: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }
+    razorpayResponse?: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string },
+    agreementAcceptedFromDialog?: boolean
   ) => {
     if (!pendingTransactionId) return;
 
     try {
+      // Use the agreement acceptance from the agreement dialog
+      const finalAgreementAccepted = agreementAccepted || agreementAcceptedFromDialog || false;
+      
       // Update transaction with payment information
       const transactionUpdate: any = {
         paymentMode: paymentMethod,
-        status: paymentMethod === 'offline' ? 'pending' : 'active', // Offline payments stay pending until confirmed
+        status: paymentMethod === 'offline' ? 'pending' : 'pending', // Keep as pending until owner approves (OTP will be generated)
+        agreementAccepted: finalAgreementAccepted,
+        agreementAcceptedAt: finalAgreementAccepted ? new Date() : null,
       };
 
       // Add Razorpay payment details if available
@@ -328,8 +363,8 @@ const ProductDetail = () => {
       toast({
         title: paymentMethod === 'offline' ? "Booking Request Sent!" : "Payment Successful!",
         description: paymentMethod === 'offline' 
-          ? "Your booking request has been sent. Payment will be collected on delivery."
-          : `Your payment of ₹${bookingData?.payableNow.toLocaleString()} has been processed successfully.`
+          ? "Your booking request has been sent. Payment will be collected on delivery. Please wait for owner approval to receive your pickup OTP."
+          : `Your payment of ₹${bookingData?.payableNow.toLocaleString()} has been processed successfully. Please wait for owner approval to receive your pickup OTP.`
       });
 
       setShowPaymentDialog(false);
@@ -722,7 +757,7 @@ const ProductDetail = () => {
                       onClick={handleRequestRent}
                       disabled={isInRent || isRequestingRent || !bookingData || !bookingData.startDate}
                     >
-                      {isRequestingRent ? 'Processing...' : isInRent ? 'Currently In Rent' : 'Continue to Payment'}
+                      {isRequestingRent ? 'Processing...' : isInRent ? 'Currently In Rent' : 'Send Booking Request'}
                     </Button>
                     {isInRent && (
                       <p className="text-xs text-muted-foreground mt-2 text-center">
@@ -979,14 +1014,77 @@ const ProductDetail = () => {
       </div>
 
       {/* Payment Dialog */}
+      {/* User Agreement Dialog */}
+      <UserAgreementDialog
+        open={showAgreementDialog}
+        onOpenChange={(open) => {
+          setShowAgreementDialog(open);
+          // If agreement is closed without acceptance, cancel the transaction
+          if (!open && !agreementAccepted && pendingTransactionId) {
+            handlePaymentCancelled();
+          }
+        }}
+        onAccept={async () => {
+          setAgreementAccepted(true);
+          setShowAgreementDialog(false);
+          
+          // Complete booking without payment - payment will happen after OTP verification
+          if (pendingTransactionId) {
+            try {
+              await updateTransaction(pendingTransactionId, {
+                agreementAccepted: true,
+                agreementAcceptedAt: new Date(),
+                status: 'pending', // Stays pending until owner approves
+              });
+
+              toast({
+                title: "Booking Request Sent!",
+                description: "Your booking request has been sent to the owner. You will receive an OTP after approval. Payment will be collected after you verify the OTP at pickup.",
+              });
+
+              setIsRequestingRent(false);
+              setPendingTransactionId(null);
+              setPendingChatId(null);
+              
+              // Navigate to transactions page
+              navigate('/transactions');
+            } catch (error: any) {
+              console.error('Error completing booking:', error);
+              toast({
+                title: "Error",
+                description: error.message || "Failed to complete booking. Please try again.",
+                variant: "destructive"
+              });
+            }
+          }
+        }}
+      />
+
       {listing && (
         <PaymentDialog
           open={showPaymentDialog}
-          onOpenChange={setShowPaymentDialog}
+          onOpenChange={async (open) => {
+            setShowPaymentDialog(open);
+            // If dialog is closed without payment completion, cancel the transaction
+            if (!open && pendingTransactionId) {
+              // Check if transaction was actually completed (has payment info)
+              // If not, cancel it
+              try {
+                const transaction = await getTransaction(pendingTransactionId);
+                if (transaction && !transaction.paymentStatus && transaction.status === 'pending') {
+                  await handlePaymentCancelled();
+                }
+              } catch (error) {
+                console.error('Error checking transaction status:', error);
+              }
+            }
+          }}
           bookingData={bookingData}
           listingTitle={listing.title}
           onPaymentComplete={handlePaymentComplete}
+          onPaymentCancelled={handlePaymentCancelled}
           isProcessing={isRequestingRent}
+          agreementAccepted={agreementAccepted}
         />
       )}
     </div>

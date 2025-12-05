@@ -86,13 +86,12 @@ service cloud.firestore {
     
     // Transactions (Bookings)
     match /transactions/{transactionId} {
-      // Allow reading if user is a participant
+      // Allow reading if user is a participant OR admin
       allow read: if request.auth != null && 
-        (resource.data.ownerId == request.auth.uid || 
+        (isAdmin() ||
+         resource.data.ownerId == request.auth.uid || 
          resource.data.renterId == request.auth.uid);
-      // Allow querying transactions by listingId to check availability and date conflicts
-      // This allows checking if an item is currently rented or has booking conflicts
-      // Users can query to check date availability before booking
+      // Allow querying transactions - admins can list all, others can list for availability checks
       allow list: if request.auth != null;
       // Allow creating bookings - renter must match authenticated user
       allow create: if request.auth != null &&
@@ -101,13 +100,31 @@ service cloud.firestore {
       allow update: if request.auth != null && 
         (resource.data.ownerId == request.auth.uid || 
          resource.data.renterId == request.auth.uid);
+      
+      // Handover Media subcollection - admin only for reading, participants can upload
+      match /handoverMedia/{mediaId} {
+        // Only admins can read handover media (for dispute resolution)
+        allow read: if isAdmin();
+        // Owner and renter can upload media during pickup/return
+        // We check the parent transaction to verify user is a participant
+        allow create: if request.auth != null && 
+          (get(/databases/$(database)/documents/transactions/$(transactionId)).data.ownerId == request.auth.uid || 
+           get(/databases/$(database)/documents/transactions/$(transactionId)).data.renterId == request.auth.uid) &&
+          request.resource.data.uploadedBy == request.auth.uid;
+      }
     }
     
     // Chats
     match /chats/{chatId} {
       // Allow read access if user is a participant in the chat
-      allow read: if request.auth != null && 
-        request.auth.uid in resource.data.participants;
+      // OR if user is owner/renter of the associated transaction
+      allow read: if request.auth != null && (
+        request.auth.uid in resource.data.participants ||
+        (resource.data.transactionId != null && (
+          get(/databases/$(database)/documents/transactions/$(resource.data.transactionId)).data.ownerId == request.auth.uid ||
+          get(/databases/$(database)/documents/transactions/$(resource.data.transactionId)).data.renterId == request.auth.uid
+        ))
+      );
       
       // Allow create if user is one of the participants being added
       allow create: if request.auth != null && 

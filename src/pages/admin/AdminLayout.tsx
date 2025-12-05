@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { Map, Shield, Users, FileWarning, Settings, LogOut } from "lucide-react";
+import { Map, Shield, Users, FileWarning, Settings, LogOut, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 
@@ -7,6 +7,7 @@ const navItems = [
   { to: "/admin", label: "Dashboard", icon: Shield, end: true },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/listings", label: "Listings", icon: Map },
+  { to: "/admin/bookings", label: "Bookings", icon: Package },
   { to: "/admin/reports", label: "Reports", icon: FileWarning },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];

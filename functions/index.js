@@ -1,19 +1,30 @@
-const functions = require("firebase-functions");
+// Use the v1 compatibility API so that functions.firestore.document(...) works with firebase-functions v7
+const functions = require("firebase-functions/v1");
+const { defineString } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
 
 admin.initializeApp();
 
+// Define environment parameters
+const emailUser = defineString("EMAIL_USER", { default: "lendlly2025@gmail.com" });
+// NOTE: For simplicity, we use defineString for EMAIL_PASSWORD instead of a Secret,
+// so we don't need functions.runWith(). This avoids the runWith() error you're seeing.
+const emailPassword = defineString("EMAIL_PASSWORD");
+const appUrl = defineString("APP_URL", { default: "https://lendlly.vercel.app" });
+
 // Configure your email transport
 // IMPORTANT: Replace with your actual email credentials
 // For Gmail, you need to create an "App Password" at https://myaccount.google.com/apppasswords
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: functions.config().email?.user || "rentshare11@gmail.com",
-    pass: functions.config().email?.password || "your-app-password-here", // Use App Password, not regular password
-  },
-});
+const getTransporter = () => {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: emailUser.value(),
+      pass: emailPassword.value(),
+    },
+  });
+};
 
 /**
  * Cloud Function: Send Email Notifications
@@ -23,9 +34,10 @@ exports.sendEmailNotification = functions.firestore
     .document("email_notifications/{notificationId}")
     .onCreate(async (snap, context) => {
       const data = snap.data();
+      const transporter = getTransporter();
 
       const mailOptions = {
-        from: "Rent Share <rentshare11@gmail.com>",
+        from: `Lendlly <${emailUser.value()}>`,
         to: data.email,
         subject: data.subject,
         text: data.message,
@@ -42,8 +54,7 @@ exports.sendEmailNotification = functions.firestore
               </div>
               
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px;">
-                <p style="margin: 5px 0;">Need help? Contact us at <a href="mailto:rentshare11@gmail.com" style="color: #4f46e5; text-decoration: none;">rentshare11@gmail.com</a></p>
-                <p style="margin: 5px 0;">Phone: +91 8547652100</p>
+                <p style="margin: 5px 0;">Need help? Contact us at <a href="mailto:${emailUser.value()}" style="color: #4f46e5; text-decoration: none;">${emailUser.value()}</a></p>
                 <p style="margin-top: 15px; color: #9ca3af; font-size: 12px;">© 2025 Rent Share. All rights reserved.</p>
               </div>
             </div>
@@ -131,7 +142,7 @@ exports.onTransactionCreated = functions.firestore
           await admin.firestore().collection("email_notifications").add({
             email: owner.email,
             subject: "New Booking Request! 🎉 - Rent Share",
-            message: `Hi ${owner.name},\n\nYou've received a new booking request!\n\nListing: ${transaction.listingTitle}\nRequested by: ${renter?.name || "A user"}${dateInfo}\n${amountInfo}\n\nPlease review and respond to this request in your Rent Share dashboard.\n\nView Booking: ${functions.config().app?.url || "https://yourapp.com"}/owner-bookings\n\nBest regards,\nRent Share Team`,
+            message: `Hi ${owner.name},\n\nYou've received a new booking request!\n\nListing: ${transaction.listingTitle}\nRequested by: ${renter?.name || "A user"}${dateInfo}\n${amountInfo}\n\nPlease review and respond to this request in your Rent Share dashboard.\n\nView Booking: ${appUrl.value()}/owner-bookings\n\nBest regards,\nRent Share Team`,
             type: "rental_request",
             read: false,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -200,7 +211,7 @@ exports.onNewMessage = functions.firestore
         await admin.firestore().collection("email_notifications").add({
           email: recipient.email,
           subject: `New message from ${sender?.name || "a user"} - Rent Share`,
-          message: `Hi ${recipient.name},\n\nYou have a new message on Rent Share!\n\nFrom: ${sender?.name || "A user"}\nRegarding: ${chat.listingTitle || "Your listing"}\n\nMessage: "${message.text}"\n\nReply now: ${functions.config().app?.url || "https://yourapp.com"}/chat\n\nBest regards,\nRent Share Team`,
+          message: `Hi ${recipient.name},\n\nYou have a new message on Rent Share!\n\nFrom: ${sender?.name || "A user"}\nRegarding: ${chat.listingTitle || "Your listing"}\n\nMessage: "${message.text}"\n\nReply now: ${appUrl.value()}/chat\n\nBest regards,\nRent Share Team`,
           type: "message",
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -209,6 +220,116 @@ exports.onNewMessage = functions.firestore
         console.log(`Message notification email created for ${recipient.email}`);
       } catch (error) {
         console.error("Error creating message notification:", error);
+      }
+
+      return null;
+    });
+
+/**
+ * Cloud Function: Send OTP emails when pickup OTP is generated
+ * Triggers when a transaction status changes to 'pickup_otp_generated'
+ */
+exports.onPickupOtpGenerated = functions.firestore
+    .document("transactions/{transactionId}")
+    .onUpdate(async (change, context) => {
+      const before = change.before.data();
+      const after = change.after.data();
+
+      // Check if status changed to pickup_otp_generated
+      if (before.status !== 'pickup_otp_generated' && after.status === 'pickup_otp_generated' && after.pickupOtp) {
+        try {
+          // Get renter and owner details
+          const [renterDoc, ownerDoc] = await Promise.all([
+            admin.firestore().collection("users").doc(after.renterId).get(),
+            admin.firestore().collection("users").doc(after.ownerId).get()
+          ]);
+
+          const renter = renterDoc.data();
+          const owner = ownerDoc.data();
+
+          // Send email to renter
+          if (renter?.email) {
+            await admin.firestore().collection("email_notifications").add({
+              email: renter.email,
+              subject: `Your Pickup OTP - ${after.listingTitle || 'Booking'}`,
+              message: `Hi ${renter.name || 'there'},\n\nYour booking for "${after.listingTitle || 'the item'}" has been confirmed!\n\n📍 Your Pickup OTP: ${after.pickupOtp}\n\nPlease show this code to the owner when you collect the item.\n\nThis OTP is valid for 24 hours.\n\nBest regards,\nLendlly Team`,
+              type: "rental_request",
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          // Send email to owner
+          if (owner?.email) {
+            await admin.firestore().collection("email_notifications").add({
+              email: owner.email,
+              subject: `Pickup OTP Generated - ${after.listingTitle || 'Booking'}`,
+              message: `Hi ${owner.name},\n\nThe renter will show you this code at pickup: ${after.pickupOtp}\n\nOnly confirm the pickup after:\n1. Verifying the OTP matches\n2. Checking the item condition\n3. Capturing photos/videos of the item\n\nBest regards,\nLendlly Team`,
+              type: "rental_request",
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          console.log(`Pickup OTP emails sent for transaction ${context.params.transactionId}`);
+        } catch (error) {
+          console.error("Error sending pickup OTP emails:", error);
+        }
+      }
+
+      return null;
+    });
+
+/**
+ * Cloud Function: Send OTP emails when return OTP is generated
+ * Triggers when a transaction status changes to 'return_otp_generated'
+ */
+exports.onReturnOtpGenerated = functions.firestore
+    .document("transactions/{transactionId}")
+    .onUpdate(async (change, context) => {
+      const before = change.before.data();
+      const after = change.after.data();
+
+      // Check if status changed to return_otp_generated
+      if (before.status !== 'return_otp_generated' && after.status === 'return_otp_generated' && after.returnOtp) {
+        try {
+          // Get renter and owner details
+          const [renterDoc, ownerDoc] = await Promise.all([
+            admin.firestore().collection("users").doc(after.renterId).get(),
+            admin.firestore().collection("users").doc(after.ownerId).get()
+          ]);
+
+          const renter = renterDoc.data();
+          const owner = ownerDoc.data();
+
+          // Send email to renter
+          if (renter?.email) {
+            await admin.firestore().collection("email_notifications").add({
+              email: renter.email,
+              subject: `Your Return OTP - ${after.listingTitle || 'Booking'}`,
+              message: `Hi ${renter.name || 'there'},\n\nThe rental period for "${after.listingTitle || 'the item'}" is ending soon.\n\n📍 Your Return OTP: ${after.returnOtp}\n\nPlease share this code with the owner when you return the item. Only share it after you're satisfied with the item condition.\n\nThis OTP is valid for 7 days.\n\nBest regards,\nLendlly Team`,
+              type: "rental_request",
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          // Send email to owner
+          if (owner?.email) {
+            await admin.firestore().collection("email_notifications").add({
+              email: owner.email,
+              subject: `Return OTP for ${after.listingTitle || 'Booking'}`,
+              message: `Hi ${owner.name},\n\nThe rental period for "${after.listingTitle || 'your item'}" is ending soon.\n\n📍 Return OTP: ${after.returnOtp}\n\nAsk the renter for this code when they return the item. Only confirm after verifying the item condition and capturing photos.\n\nBest regards,\nLendlly Team`,
+              type: "rental_request",
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          console.log(`Return OTP emails sent for transaction ${context.params.transactionId}`);
+        } catch (error) {
+          console.error("Error sending return OTP emails:", error);
+        }
       }
 
       return null;

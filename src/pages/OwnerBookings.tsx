@@ -33,10 +33,12 @@ import {
   getListing,
   User as UserType,
   Listing,
+  getTransaction,
 } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { sendEmailNotification } from "@/lib/firestore";
+import { sendEmailNotification, generatePickupOtp } from "@/lib/firestore";
+import { BookingDetail } from "@/components/BookingDetail";
 
 export default function OwnerBookings() {
   const navigate = useNavigate();
@@ -48,6 +50,7 @@ export default function OwnerBookings() {
   const [cancelling, setCancelling] = useState(false);
   const [renterInfo, setRenterInfo] = useState<Record<string, UserType>>({});
   const [listingInfo, setListingInfo] = useState<Record<string, Listing>>({});
+  const [selectedBookingDetail, setSelectedBookingDetail] = useState<Transaction | null>(null);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -111,6 +114,9 @@ export default function OwnerBookings() {
 
     setCancelling(true);
     try {
+      // Determine if this is a decline (pending) or cancellation (active)
+      const isDecline = selectedBooking.status === 'pending';
+      
       // Calculate refund amount (full refund for cancelled bookings)
       const refundAmount = (selectedBooking.totalRent || selectedBooking.amount || 0) + (selectedBooking.deposit || 0);
       
@@ -126,10 +132,18 @@ export default function OwnerBookings() {
       const renter = renterInfo[selectedBooking.renterId];
       if (renter?.email) {
         try {
+          const subject = isDecline 
+            ? "Booking Request Declined - Rent Share" 
+            : "Booking Cancelled - Refund Initiated - Rent Share";
+          
+          const message = isDecline
+            ? `Hi ${renter.name},\n\nWe're sorry to inform you that your booking request has been declined by the owner.\n\nListing: ${selectedBooking.listingTitle}\nDeclined Date: ${format(new Date(), 'MMM dd, yyyy')}\n\n${selectedBooking.paymentStatus === 'completed' ? `Refund Details:\nTotal Rent: ₹${selectedBooking.totalRent || selectedBooking.amount || 0}\nDeposit: ₹${selectedBooking.deposit || 0}\nTotal Refund: ₹${refundAmount}\n\nYour refund will be processed within 5-7 business days.\n\n` : ''}You can browse other available items on our platform.\n\nView Details: ${window.location.origin}/transactions\n\nIf you have any questions, please contact us.\n\nBest regards,\nLendlly Team`
+            : `Hi ${renter.name},\n\nYour booking has been cancelled by the owner.\n\nListing: ${selectedBooking.listingTitle}\nCancelled Date: ${format(new Date(), 'MMM dd, yyyy')}\n\nRefund Details:\nTotal Rent: ₹${selectedBooking.totalRent || selectedBooking.amount || 0}\nDeposit: ₹${selectedBooking.deposit || 0}\nTotal Refund: ₹${refundAmount}\n\nYour refund will be processed within 5-7 business days.\n\nView Details: ${window.location.origin}/transactions\n\nIf you have any questions, please contact us.\n\nBest regards,\nLendlly Team`;
+          
           await sendEmailNotification({
             email: renter.email,
-            subject: "Booking Cancelled - Refund Initiated - Rent Share",
-            message: `Hi ${renter.name},\n\nYour booking has been cancelled by the owner.\n\nListing: ${selectedBooking.listingTitle}\nCancelled Date: ${format(new Date(), 'MMM dd, yyyy')}\n\nRefund Details:\nTotal Rent: ₹${selectedBooking.totalRent || selectedBooking.amount || 0}\nDeposit: ₹${selectedBooking.deposit || 0}\nTotal Refund: ₹${refundAmount}\n\nYour refund will be processed within 5-7 business days.\n\nView Details: ${window.location.origin}/transactions\n\nIf you have any questions, please contact us.\n\nBest regards,\nRent Share Team`,
+            subject: subject,
+            message: message,
             type: 'rental_request',
             read: false,
             createdAt: new Date(),
@@ -161,41 +175,52 @@ export default function OwnerBookings() {
 
   const handleApproveBooking = async (booking: Transaction) => {
     try {
-      await updateTransaction(booking.id, {
-        status: "active",
-      });
+      console.log('Starting approval for booking:', booking.id);
+      console.log('Current booking status:', booking.status);
+      
+      // Generate pickup OTP when owner approves
+      // This will automatically trigger email notifications via Cloud Function
+      const otp = await generatePickupOtp(booking.id);
+      
+      console.log('OTP generated successfully:', otp);
+      console.log('Transaction should now have status: pickup_otp_generated');
 
-      // Send email notification to renter
-      const renter = renterInfo[booking.renterId];
-      if (renter?.email) {
-        try {
-          const startDate = booking.startDate?.toDate ? booking.startDate.toDate() : new Date(booking.startDate || 0);
-          const endDate = booking.endDate?.toDate ? booking.endDate.toDate() : new Date(booking.endDate || 0);
-          
-          await sendEmailNotification({
-            email: renter.email,
-            subject: "Booking Approved! ✅ - Rent Share",
-            message: `Hi ${renter.name},\n\nGreat news! Your booking has been approved by the owner.\n\nListing: ${booking.listingTitle}\nDuration: ${booking.days || booking.months || 'N/A'} ${booking.durationType || 'days'}\nStart Date: ${format(startDate, 'MMM dd, yyyy')}\nEnd Date: ${format(endDate, 'MMM dd, yyyy')}\nTotal Amount: ₹${booking.totalRent || booking.amount || 0}\n\nYou can now coordinate with the owner for pickup.\n\nView Booking: ${window.location.origin}/transactions\n\nBest regards,\nRent Share Team`,
-            type: 'rental_request',
-            read: false,
-            createdAt: new Date(),
-          });
-        } catch (error) {
-          console.error('Error sending approval email:', error);
-        }
-      }
+      // Wait a moment for Firestore to propagate the change
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       toast({
         title: "Booking Approved",
-        description: "The booking has been approved. Renter has been notified.",
+        description: "Pickup OTP has been generated and sent via email. The OTP will appear below automatically.",
       });
 
-      fetchBookings();
-    } catch (error) {
+      // Refresh bookings to show updated status
+      await fetchBookings();
+      
+      // The real-time listener in BookingDetail will automatically update the UI
+      // But we can also manually refresh if the dialog is open
+      if (selectedBookingDetail?.id === booking.id) {
+        // Refresh immediately and again after a short delay to ensure we get the update
+        setTimeout(async () => {
+          try {
+            const updatedBooking = await getTransaction(booking.id);
+            console.log('Refreshed booking after approval:', {
+              id: updatedBooking?.id,
+              status: updatedBooking?.status,
+              hasOtp: !!updatedBooking?.pickupOtp
+            });
+            if (updatedBooking) {
+              setSelectedBookingDetail(updatedBooking);
+            }
+          } catch (error) {
+            console.error('Error refreshing booking detail:', error);
+          }
+        }, 500);
+      }
+    } catch (error: any) {
       console.error("Error approving booking:", error);
       toast({
         title: "Error",
-        description: "Failed to approve booking. Please try again.",
+        description: error.message || "Failed to approve booking. Please try again.",
         variant: "destructive",
       });
     }
@@ -261,6 +286,7 @@ export default function OwnerBookings() {
                     setShowCancelDialog(true);
                   }}
                   onApprove={() => handleApproveBooking(booking)}
+                  onClick={() => setSelectedBookingDetail(booking)}
                 />
               ))}
             </div>
@@ -284,21 +310,30 @@ export default function OwnerBookings() {
           </TabsContent>
 
           <TabsContent value="pending" className="space-y-3 sm:space-y-4">
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {pendingBookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  renter={renterInfo[booking.renterId]}
-                  listing={listingInfo[booking.listingId || ""]}
-                  onCancel={() => {
-                    setSelectedBooking(booking);
-                    setShowCancelDialog(true);
-                  }}
-                  onApprove={() => handleApproveBooking(booking)}
-                />
-              ))}
-            </div>
+            {pendingBookings.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="text-muted-foreground">No pending bookings</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {pendingBookings.map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    renter={renterInfo[booking.renterId]}
+                    listing={listingInfo[booking.listingId || ""]}
+                    onCancel={() => {
+                      setSelectedBooking(booking);
+                      setShowCancelDialog(true);
+                    }}
+                    onApprove={() => handleApproveBooking(booking)}
+                    onClick={() => setSelectedBookingDetail(booking)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-3 sm:space-y-4">
@@ -344,6 +379,35 @@ export default function OwnerBookings() {
           </div>
         )}
       </div>
+
+      {/* Booking Detail Dialog */}
+      <Dialog open={!!selectedBookingDetail} onOpenChange={(open) => !open && setSelectedBookingDetail(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedBookingDetail && (
+            <BookingDetail
+              booking={selectedBookingDetail}
+              renter={renterInfo[selectedBookingDetail.renterId]}
+              listingTitle={selectedBookingDetail.listingTitle}
+              currentUserId={auth.currentUser?.uid || ""}
+              onApprove={() => handleApproveBooking(selectedBookingDetail)}
+              onStatusUpdate={async () => {
+                await fetchBookings();
+                // Refresh the selected booking detail if it's still open
+                if (selectedBookingDetail) {
+                  try {
+                    const updated = await getTransaction(selectedBookingDetail.id);
+                    if (updated) {
+                      setSelectedBookingDetail(updated);
+                    }
+                  } catch (error) {
+                    console.error('Error refreshing booking detail:', error);
+                  }
+                }
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Booking Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
@@ -412,12 +476,14 @@ function BookingCard({
   listing,
   onCancel,
   onApprove,
+  onClick,
 }: {
   booking: Transaction;
   renter?: UserType;
   listing?: Listing;
   onCancel?: () => void;
   onApprove?: () => void;
+  onClick?: () => void;
 }) {
   const startDate = booking.startDate?.toDate
     ? booking.startDate.toDate()
@@ -427,24 +493,33 @@ function BookingCard({
     : new Date(booking.endDate || 0);
 
   return (
-    <Card>
+    <Card className={onClick ? "cursor-pointer hover:shadow-lg transition-shadow" : ""} onClick={onClick}>
       <CardHeader className="p-3 sm:p-6">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base sm:text-lg leading-tight">{booking.listingTitle || "Unknown Listing"}</CardTitle>
-          <Badge
-            variant={
-              booking.status === "active"
-                ? "default"
-                : booking.status === "pending"
-                ? "secondary"
-                : booking.status === "completed"
-                ? "outline"
-                : "destructive"
-            }
-            className="text-xs flex-shrink-0"
-          >
-            {booking.status}
-          </Badge>
+          <div className="flex flex-col items-end gap-1">
+            <Badge
+              variant={
+                booking.status === "active"
+                  ? "default"
+                  : booking.status === "pending"
+                  ? "secondary"
+                  : booking.status === "completed"
+                  ? "outline"
+                  : booking.status === "pickup_otp_generated"
+                  ? "default"
+                  : "destructive"
+              }
+              className="text-xs flex-shrink-0"
+            >
+              {booking.status === "pickup_otp_generated" ? "OTP Generated" : booking.status}
+            </Badge>
+            {booking.status === "pickup_otp_generated" && booking.pickupOtp && (
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                Click to view OTP
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-3 sm:p-6 pt-0 space-y-2 sm:space-y-3">
@@ -470,24 +545,40 @@ function BookingCard({
           </div>
         )}
 
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col gap-2 pt-2">
           {booking.status === "pending" && onApprove && (
-            <Button size="sm" onClick={onApprove} className="flex-1 text-xs sm:text-sm">
-              <CheckCircle className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-              Approve
-            </Button>
-          )}
-          {(booking.status === "pending" || booking.status === "active") && onCancel && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={onCancel}
-              className="flex-1 text-xs sm:text-sm"
+            <Button 
+              size="sm" 
+              onClick={(e) => { e.stopPropagation(); onApprove(); }} 
+              className="w-full text-xs sm:text-sm bg-green-600 hover:bg-green-700 text-white font-semibold"
             >
-              <X className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-              Cancel
+              <CheckCircle className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              Approve Booking
             </Button>
           )}
+          <div className="flex gap-2">
+            {(booking.status === "pending" || booking.status === "active") && onCancel && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={(e) => { e.stopPropagation(); onCancel(); }}
+                className="flex-1 text-xs sm:text-sm"
+              >
+                <X className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                Cancel
+              </Button>
+            )}
+            {onClick && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={(e) => { e.stopPropagation(); onClick(); }} 
+                className="flex-1 text-xs sm:text-sm"
+              >
+                View Details
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

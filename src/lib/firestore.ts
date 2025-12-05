@@ -108,7 +108,7 @@ export interface Transaction {
   ownerId: string;
   renterId: string;
   type: 'rent' | 'swap';
-  status: 'pending' | 'active' | 'completed' | 'disputed' | 'cancelled' | 'PENDING';
+  status: 'pending' | 'pickup_otp_generated' | 'picked_up' | 'return_otp_generated' | 'returned' | 'completed' | 'active' | 'disputed' | 'cancelled' | 'PENDING';
   startDate: any;
   endDate: any;
   amount: number;
@@ -128,6 +128,19 @@ export interface Transaction {
   cancelledAt?: any;
   refundAmount?: number;
   refundStatus?: 'pending' | 'processed' | 'failed';
+  // OTP fields for pickup and return
+  pickupOtp?: string;
+  pickupOtpExpiresAt?: any;
+  pickupConfirmedAt?: any;
+  returnOtp?: string;
+  returnOtpExpiresAt?: any;
+  returnConfirmedAt?: any;
+  // Media tracking
+  hasPickupMedia?: boolean;
+  hasReturnMedia?: boolean;
+  // User agreement
+  agreementAccepted?: boolean;
+  agreementAcceptedAt?: any;
 }
 
 export interface Message {
@@ -610,17 +623,26 @@ export const getTransaction = async (transactionId: string): Promise<Transaction
 export const getActiveTransactionsForListing = async (listingId: string): Promise<Transaction[]> => {
   try {
     const transactionsRef = collection(db, 'transactions');
+    // Get all transactions for this listing, then filter out cancelled ones
     const q = query(
       transactionsRef,
-      where('listingId', '==', listingId),
-      where('status', '==', 'active')
+      where('listingId', '==', listingId)
     );
     const querySnapshot = await getDocs(q);
     
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Transaction[];
+    // Filter to only include ACTUALLY ACTIVE rentals (item is in use)
+    // Exclude: pending (not yet approved), cancelled, completed, disputed, returned (item has been returned)
+    // Include: pickup_otp_generated (approved), picked_up (renter has it), return_otp_generated (waiting for return), active
+    const activeStatuses = ['pickup_otp_generated', 'picked_up', 'return_otp_generated', 'active'];
+    const transactions = querySnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Transaction))
+      .filter(t => activeStatuses.includes(t.status) && t.status !== 'cancelled' && t.status !== 'completed' && t.status !== 'disputed' && t.status !== 'returned');
+    
+    console.log('Active transactions for listing:', listingId, transactions.length);
+    return transactions;
   } catch (error: any) {
     // If permission denied or not authenticated, return empty array
     // This allows the page to still load even if we can't check transaction status
@@ -634,20 +656,27 @@ export const getActiveTransactionsForListing = async (listingId: string): Promis
 };
 
 // Get all bookings (pending, active) for a listing to check date conflicts
+// Excludes cancelled, completed, and disputed transactions
 export const getBookingsForListing = async (listingId: string): Promise<Transaction[]> => {
   try {
     const transactionsRef = collection(db, 'transactions');
+    // Get all transactions for this listing, then filter
     const q = query(
       transactionsRef,
-      where('listingId', '==', listingId),
-      where('status', 'in', ['pending', 'active'])
+      where('listingId', '==', listingId)
     );
     const querySnapshot = await getDocs(q);
     
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Transaction[];
+    // Filter to only include active booking statuses (exclude cancelled, completed, disputed)
+    const activeStatuses = ['pending', 'pickup_otp_generated', 'picked_up', 'return_otp_generated', 'returned', 'active'];
+    const bookings = querySnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Transaction))
+      .filter(t => activeStatuses.includes(t.status) && t.status !== 'cancelled' && t.status !== 'completed' && t.status !== 'disputed');
+    
+    return bookings;
   } catch (error: any) {
     if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
       console.warn('Cannot check bookings - user may not be authenticated');
@@ -663,7 +692,17 @@ export const checkBookingConflict = (
   newEndDate: Date,
   existingBookings: Transaction[]
 ): { hasConflict: boolean; conflictingBooking?: Transaction } => {
-  for (const booking of existingBookings) {
+  // Exclude returned, cancelled, completed, and disputed bookings from conflict check
+  // These bookings are no longer active, so their dates are available
+  const activeBookings = existingBookings.filter(booking => {
+    const status = booking.status;
+    return status !== 'returned' && 
+           status !== 'cancelled' && 
+           status !== 'completed' && 
+           status !== 'disputed';
+  });
+  
+  for (const booking of activeBookings) {
     if (!booking.startDate || !booking.endDate) continue;
     
     const existingStart = booking.startDate.toDate ? booking.startDate.toDate() : new Date(booking.startDate);
@@ -2015,6 +2054,346 @@ export const incrementAccessCodeUsage = async (code: string): Promise<void> => {
   } catch (error) {
     console.error('Error incrementing access code usage:', error);
     // Don't throw - this is not critical
+  }
+};
+
+// Handover Media Interface
+export interface HandoverMedia {
+  id: string;
+  stage: 'pickup' | 'return';
+  type: 'image' | 'video';
+  url: string;
+  uploadedBy: string;
+  createdAt: any;
+}
+
+/**
+ * Generate a 6-digit OTP
+ */
+export const generateOtp = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/**
+ * Generate pickup OTP for a booking
+ * This should be called after booking is confirmed (status: 'pending')
+ */
+export const generatePickupOtp = async (transactionId: string): Promise<string> => {
+  try {
+    const otp = generateOtp();
+    console.log('[generatePickupOtp] Generated OTP:', otp);
+    
+    const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)); // 24 hours
+    
+    const transactionRef = doc(db, 'transactions', transactionId);
+    
+    console.log('[generatePickupOtp] Updating transaction with OTP and status');
+    await updateDoc(transactionRef, {
+      pickupOtp: otp,
+      pickupOtpExpiresAt: expiresAt,
+      status: 'pickup_otp_generated',
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log('[generatePickupOtp] Transaction updated successfully');
+    
+    // Verify the update
+    const verifyDoc = await getDoc(transactionRef);
+    const verifyData = verifyDoc.data();
+    console.log('[generatePickupOtp] Verification - Status:', verifyData?.status, 'OTP:', verifyData?.pickupOtp ? '***' : 'MISSING');
+    
+    return otp;
+  } catch (error) {
+    console.error('Error generating pickup OTP:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generate return OTP for a booking
+ * This should be called when rental period is ending (status: 'picked_up')
+ */
+export const generateReturnOtp = async (transactionId: string): Promise<string> => {
+  try {
+    const otp = generateOtp();
+    const expiresAt = Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // 7 days
+    
+    const transactionRef = doc(db, 'transactions', transactionId);
+    await updateDoc(transactionRef, {
+      returnOtp: otp,
+      returnOtpExpiresAt: expiresAt,
+      status: 'return_otp_generated',
+      updatedAt: serverTimestamp()
+    });
+    
+    return otp;
+  } catch (error) {
+    console.error('Error generating return OTP:', error);
+    throw error;
+  }
+};
+
+/**
+ * Verify and confirm pickup OTP
+ * Can be called by either owner or renter
+ */
+export const confirmPickupOtp = async (
+  transactionId: string,
+  enteredOtp: string,
+  userId: string
+): Promise<boolean> => {
+  try {
+    const transactionRef = doc(db, 'transactions', transactionId);
+    const transactionSnap = await getDoc(transactionRef);
+    
+    if (!transactionSnap.exists()) {
+      throw new Error('Transaction not found');
+    }
+    
+    const transaction = transactionSnap.data() as Transaction;
+    
+    // Verify user is either the owner or renter
+    if (transaction.ownerId !== userId && transaction.renterId !== userId) {
+      throw new Error('Only the owner or renter can confirm pickup');
+    }
+    
+    // Check OTP
+    if (transaction.pickupOtp !== enteredOtp) {
+      return false;
+    }
+    
+    // Check if OTP is expired
+    if (transaction.pickupOtpExpiresAt) {
+      const expiresAt = transaction.pickupOtpExpiresAt.toDate();
+      if (expiresAt < new Date()) {
+        throw new Error('Pickup OTP has expired');
+      }
+    }
+    
+    // Update transaction status to picked_up
+    // This confirms the renter has the item
+    await updateDoc(transactionRef, {
+      status: 'picked_up',
+      pickupConfirmedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      confirmedBy: userId, // Track who confirmed the pickup
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error confirming pickup OTP:', error);
+    throw error;
+  }
+};
+
+/**
+ * Verify and confirm return OTP
+ */
+export const confirmReturnOtp = async (
+  transactionId: string,
+  enteredOtp: string,
+  userId: string
+): Promise<boolean> => {
+  try {
+    const transactionRef = doc(db, 'transactions', transactionId);
+    const transactionSnap = await getDoc(transactionRef);
+    
+    if (!transactionSnap.exists()) {
+      throw new Error('Transaction not found');
+    }
+    
+    const transaction = transactionSnap.data() as Transaction;
+    
+    // Verify user is the owner
+    if (transaction.ownerId !== userId) {
+      throw new Error('Only the owner can confirm return');
+    }
+    
+    // Check OTP
+    if (transaction.returnOtp !== enteredOtp) {
+      return false;
+    }
+    
+    // Check if OTP is expired
+    if (transaction.returnOtpExpiresAt) {
+      const expiresAt = transaction.returnOtpExpiresAt.toDate();
+      if (expiresAt < new Date()) {
+        throw new Error('Return OTP has expired');
+      }
+    }
+    
+    // Update transaction status
+    await updateDoc(transactionRef, {
+      status: 'returned',
+      returnConfirmedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error confirming return OTP:', error);
+    throw error;
+  }
+};
+
+/**
+ * Upload handover media (pickup or return)
+ */
+export const uploadHandoverMedia = async (
+  transactionId: string,
+  files: File[],
+  stage: 'pickup' | 'return',
+  uploadedBy: string
+): Promise<void> => {
+  try {
+    console.log('Starting handover media upload:', {
+      transactionId,
+      filesCount: files.length,
+      stage,
+      uploadedBy,
+      fileTypes: files.map(f => ({ name: f.name, type: f.type, size: f.size }))
+    });
+    
+    // Upload files to Cloudinary
+    const { uploadMultipleImages } = await import('./cloudinary');
+    console.log('Uploading to Cloudinary...');
+    const urls = await uploadMultipleImages(files, `handoverMedia/${transactionId}`);
+    console.log('Cloudinary upload complete. URLs:', urls);
+    
+    if (!urls || urls.length === 0) {
+      throw new Error('No URLs returned from Cloudinary upload');
+    }
+    
+    // Save media references to Firestore subcollection
+    const handoverMediaRef = collection(db, 'transactions', transactionId, 'handoverMedia');
+    const batch = writeBatch(db);
+    
+    urls.forEach((url, index) => {
+      const mediaDocRef = doc(handoverMediaRef);
+      const file = files[index];
+      const isVideo = file.type.startsWith('video/');
+      
+      const mediaData = {
+        stage,
+        type: isVideo ? 'video' : 'image',
+        url,
+        uploadedBy,
+        createdAt: serverTimestamp()
+      };
+      
+      console.log(`Adding media document ${index + 1}/${urls.length}:`, {
+        docId: mediaDocRef.id,
+        ...mediaData,
+        createdAt: 'serverTimestamp()'
+      });
+      
+      batch.set(mediaDocRef, mediaData);
+    });
+    
+    console.log('Committing batch to Firestore...');
+    await batch.commit();
+    console.log('Batch committed successfully');
+    
+    // Update transaction to indicate media exists
+    const transactionRef = doc(db, 'transactions', transactionId);
+    const updateData: any = {
+      updatedAt: serverTimestamp()
+    };
+    
+    if (stage === 'pickup') {
+      updateData.hasPickupMedia = true;
+    } else {
+      updateData.hasReturnMedia = true;
+    }
+    
+    console.log('Updating transaction document:', updateData);
+    await updateDoc(transactionRef, updateData);
+    console.log('Transaction updated successfully. Media upload complete!');
+  } catch (error) {
+    console.error('Error uploading handover media:', error);
+    console.error('Error details:', {
+      transactionId,
+      stage,
+      uploadedBy,
+      filesCount: files.length
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get handover media for a transaction (admin only)
+ */
+export const getHandoverMedia = async (
+  transactionId: string
+): Promise<HandoverMedia[]> => {
+  try {
+    console.log('Getting handover media for transaction:', transactionId);
+    const handoverMediaRef = collection(db, 'transactions', transactionId, 'handoverMedia');
+    const querySnapshot = await getDocs(handoverMediaRef);
+    
+    console.log('Handover media query snapshot:', {
+      size: querySnapshot.size,
+      empty: querySnapshot.empty,
+      docs: querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }))
+    });
+    
+    const media = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        stage: data.stage,
+        type: data.type,
+        url: data.url,
+        uploadedBy: data.uploadedBy,
+        createdAt: data.createdAt
+      } as HandoverMedia;
+    });
+    
+    console.log('Processed handover media:', media);
+    return media;
+  } catch (error: any) {
+    console.error('Error getting handover media:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      transactionId
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get all transactions (admin only)
+ * Note: This requires admin privileges and may need to be called from a Cloud Function
+ * For client-side, we'll fetch all transactions by querying without filters
+ */
+export const getAllTransactions = async (): Promise<Transaction[]> => {
+  try {
+    console.log('Fetching all transactions for admin...');
+    const transactionsRef = collection(db, 'transactions');
+    const q = query(transactionsRef, orderBy('createdAt', 'desc'), limit(1000));
+    const querySnapshot = await getDocs(q);
+    
+    console.log('Transactions query result:', {
+      size: querySnapshot.size,
+      empty: querySnapshot.empty
+    });
+    
+    const transactions = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Transaction[];
+    
+    console.log('Processed transactions:', transactions.length);
+    return transactions;
+  } catch (error: any) {
+    console.error('Error getting all transactions:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message
+    });
+    throw error;
   }
 };
 

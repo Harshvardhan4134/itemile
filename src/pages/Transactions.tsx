@@ -49,6 +49,10 @@ import {
   Star
 } from "lucide-react";
 import ReviewDialog from "@/components/ReviewDialog";
+import { BookingDetail } from "@/components/BookingDetail";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getTransaction } from "@/lib/firestore";
+import { createRazorpayPayment, RazorpayResponse } from "@/lib/razorpay";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -68,6 +72,8 @@ const Transactions = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [transactionToCancel, setTransactionToCancel] = useState<Transaction | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [selectedTransactionDetail, setSelectedTransactionDetail] = useState<Transaction | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   const fetchTransactions = async () => {
     if (!auth.currentUser) return;
@@ -328,7 +334,8 @@ const Transactions = () => {
   const filteredTransactions = transactions.filter(transaction => {
     switch (activeTab) {
       case "active":
-        return transaction.status === "active" || transaction.status === "pending";
+        // Include all active booking statuses (not completed/cancelled/disputed)
+        return ['pending', 'pickup_otp_generated', 'picked_up', 'return_otp_generated', 'returned', 'active', 'PENDING', 'ACTIVE'].includes(transaction.status);
       case "history":
         return transaction.status === "completed";
       case "swaps":
@@ -401,7 +408,7 @@ const Transactions = () => {
                   const isOwner = auth.currentUser?.uid === transaction.ownerId;
 
                   return (
-                    <Card key={transaction.id} className="glass-card hover-scale cursor-pointer" onClick={() => handleTransactionClick(transaction)}>
+                    <Card key={transaction.id} className="glass-card hover-scale cursor-pointer" onClick={() => setSelectedTransactionDetail(transaction)}>
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex gap-4">
@@ -499,10 +506,23 @@ const Transactions = () => {
                                   size="sm" 
                                   variant="outline"
                                   className="text-orange-500 border-orange-500 hover:bg-orange-50"
-                                  onClick={() => handleTransactionClick(transaction)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTransactionClick(transaction);
+                                  }}
                                 >
                                   <MessageCircle className="h-4 w-4 mr-1" />
                                   Chat
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTransactionDetail(transaction);
+                                  }}
+                                >
+                                  View Details
                                 </Button>
                               </div>
                             )}
@@ -513,10 +533,23 @@ const Transactions = () => {
                                   size="sm" 
                                   variant="outline"
                                   className="text-blue-500 border-blue-500 hover:bg-blue-50"
-                                  onClick={() => handleTransactionClick(transaction)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTransactionClick(transaction);
+                                  }}
                                 >
                                   <MessageCircle className="h-4 w-4 mr-1" />
                                   Chat
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTransactionDetail(transaction);
+                                  }}
+                                >
+                                  View Details
                                 </Button>
                                 <Button 
                                   size="sm" 
@@ -717,6 +750,149 @@ const Transactions = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Booking Detail Dialog */}
+      <Dialog open={!!selectedTransactionDetail} onOpenChange={(open) => !open && setSelectedTransactionDetail(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="sr-only">Booking Details</DialogTitle>
+          <DialogDescription className="sr-only">
+            View booking details, OTP, and manage your rental transaction
+          </DialogDescription>
+          {selectedTransactionDetail && (
+            <BookingDetail
+              booking={selectedTransactionDetail}
+              renter={users[selectedTransactionDetail.renterId]}
+              listingTitle={selectedTransactionDetail.listingTitle}
+              currentUserId={auth.currentUser?.uid || ""}
+              onStatusUpdate={async () => {
+                await fetchTransactions();
+                // Refresh the selected transaction
+                const updated = await getTransaction(selectedTransactionDetail.id);
+                if (updated) {
+                  setSelectedTransactionDetail(updated);
+                }
+              }}
+              onPaymentRequired={async (txnId) => {
+                // Payment processing after OTP verification
+                console.log('Payment required callback triggered for transaction:', txnId);
+                
+                try {
+                  const transaction = await getTransaction(txnId);
+                  console.log('Transaction fetched for payment:', transaction);
+                  
+                  if (!transaction) {
+                    throw new Error('Transaction not found');
+                  }
+
+                  setProcessingPayment(true);
+
+                  // Calculate total amount
+                  const totalAmount = (transaction.totalRent || transaction.amount || 0) + (transaction.deposit || 0) + (transaction.serviceFee || 0);
+
+                  toast({
+                    title: "Processing Payment",
+                    description: `Please complete the payment of ₹${totalAmount.toLocaleString()}`,
+                  });
+
+                  // Check if Razorpay is configured
+                  const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+                  if (!razorpayKey) {
+                    // Razorpay not configured - show error and suggest offline payment
+                    setProcessingPayment(false);
+                    toast({
+                      title: "Razorpay Not Configured",
+                      description: "Online payment is not available. Please use cash on delivery option.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  // Create Razorpay payment using the correct function signature
+                  await createRazorpayPayment(
+                    totalAmount,
+                    'INR',
+                    `Payment for ${transaction.listingTitle}`,
+                    {
+                      name: auth.currentUser?.displayName || 'User',
+                      email: auth.currentUser?.email || '',
+                      contact: '',
+                    },
+                    async (response: RazorpayResponse) => {
+                      // Payment successful
+                      try {
+                        await updateTransaction(txnId, {
+                          razorpayPaymentId: response.razorpay_payment_id,
+                          razorpayOrderId: response.razorpay_order_id,
+                          razorpaySignature: response.razorpay_signature,
+                          paymentStatus: 'completed',
+                          paidAt: new Date(),
+                        });
+
+                        // Auto-generate return OTP after payment
+                        try {
+                          const { generateReturnOtp } = await import('@/lib/firestore');
+                          await generateReturnOtp(txnId);
+                          console.log('Return OTP generated automatically after payment');
+                        } catch (error) {
+                          console.error('Error generating return OTP:', error);
+                          // Don't fail the payment if OTP generation fails
+                        }
+
+                        toast({
+                          title: "Payment Successful!",
+                          description: `Your payment of ₹${totalAmount.toLocaleString()} has been processed successfully. Return OTP has been generated.`,
+                        });
+
+                        await fetchTransactions();
+                        const updated = await getTransaction(txnId);
+                        if (updated) {
+                          setSelectedTransactionDetail(updated);
+                        }
+                        setProcessingPayment(false);
+                      } catch (error: any) {
+                        console.error('Error updating payment:', error);
+                        setProcessingPayment(false);
+                        toast({
+                          title: "Error",
+                          description: "Payment received but failed to update. Please contact support.",
+                          variant: "destructive",
+                        });
+                      }
+                    },
+                    async (error: any) => {
+                      // Payment failed or cancelled
+                      setProcessingPayment(false);
+                      
+                      if (error.message && error.message.includes('cancelled')) {
+                        toast({
+                          title: "Payment Cancelled",
+                          description: "You cancelled the payment. Please complete payment to finalize the booking.",
+                          variant: "default",
+                        });
+                      } else {
+                        toast({
+                          title: "Payment Failed",
+                          description: error.message || "Failed to process payment. Please try again or use cash on delivery.",
+                          variant: "destructive",
+                        });
+                      }
+                    }
+                  );
+
+                } catch (error: any) {
+                  console.error('Error processing payment:', error);
+                  setProcessingPayment(false);
+                  toast({
+                    title: "Error",
+                    description: error.message || "Failed to process payment. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
