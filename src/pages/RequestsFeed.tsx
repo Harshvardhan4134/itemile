@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getAllRequests, getRequest, markRequestAsMatched, getUser, createChat, sendMessage, getChatByRequestId } from "@/lib/firestore";
+import { getAllRequests, getRequest, markRequestAsMatched, getUser, createRequestTransactionAndChat, sendMessage, getChatByRequestId } from "@/lib/firestore";
 import { Request, User } from "@/lib/firestore";
 import { auth } from "@/lib/firebase";
 import { 
@@ -162,9 +162,8 @@ const RequestsFeed = () => {
       // Mark the request as matched
       await markRequestAsMatched(request.id, auth.currentUser.uid);
 
-      // Create a chat between the requester and responder
-      const chatId = `chat_${request.userId}_${auth.currentUser.uid}_${Date.now()}`;
-      await createChat(chatId, request.userId, auth.currentUser.uid, `Request: ${request.itemName}`, undefined, request.id);
+      // Create a transaction + chat for this request so it shows up like rental items
+      const { chatId } = await createRequestTransactionAndChat(request, auth.currentUser.uid);
 
       // Send an initial message
       const initialMessage = `Hi! I have ${request.itemName} that you're looking for. Let's discuss the details!`;
@@ -178,14 +177,14 @@ const RequestsFeed = () => {
       ));
 
       toast({
-        title: "Response sent!",
-        description: "Taking you to the chat to start the conversation...",
+        title: "Transaction started",
+        description: "View it in Transactions to proceed.",
       });
 
-      // Navigate directly to the created chat after ensuring it's created
+      // Take user to Transactions so it behaves like rental bookings
       setTimeout(() => {
-        navigate(`/chat/${chatId}`);
-      }, 1000);
+        navigate('/transactions');
+      }, 800);
 
     } catch (error) {
       console.error('Error responding to request:', error);
@@ -459,15 +458,25 @@ const RequestsFeed = () => {
                               <Badge variant="default" className="text-xs bg-blue-600 hover:bg-blue-700 mb-2">
                                 ✓ You responded to this request
                               </Badge>
-                              <Button 
-                                onClick={() => handleViewChat(request.id)}
-                                variant="outline" 
-                                size="sm" 
-                                className="w-full"
-                              >
-                                <MessageCircle className="h-4 w-4 mr-2" />
-                                Continue Chat
-                              </Button>
+                              <div className="flex flex-col gap-2">
+                                <Button 
+                                  onClick={() => handleViewChat(request.id)}
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full"
+                                >
+                                  <MessageCircle className="h-4 w-4 mr-2" />
+                                  Continue Chat
+                                </Button>
+                                <Button 
+                                  onClick={() => navigate('/transactions')}
+                                  variant="secondary" 
+                                  size="sm" 
+                                  className="w-full"
+                                >
+                                  View Transaction
+                                </Button>
+                              </div>
                             </div>
                           ) : (
                             <Badge variant="outline" className="text-xs w-full">
@@ -476,14 +485,25 @@ const RequestsFeed = () => {
                           )}
                         </div>
                       ) : auth.currentUser?.uid !== request.userId ? (
-                        <Button 
-                          onClick={() => handleIHaveThisItem(request)}
-                          className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-                          size="sm"
-                        >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          I Have This Item
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                          <Button 
+                            onClick={() => handleIHaveThisItem(request)}
+                            className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                            size="sm"
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            I Have This Item
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleViewChat(request.id)}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Open Chat
+                          </Button>
+                        </div>
                       ) : (
                         <div className="text-center py-2">
                           <Badge variant="secondary" className="text-xs">

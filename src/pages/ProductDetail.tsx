@@ -67,7 +67,7 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchListingData = async () => {
       if (!id) {
-        navigate('/explore');
+        setLoading(false);
         return;
       }
 
@@ -81,7 +81,8 @@ const ProductDetail = () => {
             description: "The item you're looking for doesn't exist.",
             variant: "destructive"
           });
-          navigate('/explore');
+          setListing(null);
+          setOwner(null);
           return;
         }
 
@@ -129,7 +130,8 @@ const ProductDetail = () => {
           description: "Failed to load item details. Please try again.",
           variant: "destructive"
         });
-        navigate('/explore');
+        setListing(null);
+        setOwner(null);
       } finally {
         setLoading(false);
       }

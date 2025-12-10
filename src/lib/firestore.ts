@@ -105,6 +105,9 @@ export interface Transaction {
   transactionId?: string;
   listingId?: string;
   listingTitle?: string;
+  requestId?: string;
+  // Participants explicitly stored on the doc for easy access control/lookups
+  participants?: string[];
   ownerId: string;
   renterId: string;
   type: 'rent' | 'swap';
@@ -153,7 +156,7 @@ export interface Message {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'rental_request' | 'swap_proposal' | 'message' | 'transaction_update' | 'verification_approved' | 'verification_rejected' | 'request_match' | 'new_request_nearby';
+  type: 'rental_request' | 'swap_proposal' | 'message' | 'transaction_update' | 'verification_approved' | 'verification_rejected' | 'request_match' | 'new_request_nearby' | 'new_listing_nearby';
   transactionId?: string;
   requestId?: string;
   message: string;
@@ -166,7 +169,7 @@ export interface EmailNotification {
   email: string;
   subject: string;
   message: string;
-  type: 'rental_request' | 'message' | 'verification_approved' | 'verification_rejected';
+  type: 'rental_request' | 'message' | 'verification_approved' | 'verification_rejected' | 'new_request_nearby' | 'new_listing_nearby';
   read?: boolean;
   createdAt: any;
 }
@@ -380,6 +383,14 @@ export const createListing = async (listingData: Omit<Listing, 'id' | 'createdAt
     ...listingData,
     createdAt: serverTimestamp()
   });
+
+  // Best-effort notify nearby users about the new listing (fire-and-forget)
+  try {
+    await notifyNearbyUsersAboutListing({ ...(listingData as Listing), id: docRef.id });
+  } catch (err) {
+    console.warn('notifyNearbyUsersAboutListing failed (non-blocking):', err);
+  }
+
   return docRef.id;
 };
 
@@ -1192,6 +1203,82 @@ export const createTransactionAndChat = async (
   return { transactionId, chatId };
 };
 
+// Transaction + chat creation for request-based flows (responder owns item)
+export const createRequestTransactionAndChat = async (
+  request: Request,
+  responderId: string
+): Promise<{ transactionId: string; chatId: string }> => {
+  if (responderId === request.userId) {
+    throw new Error('Responder cannot be the same as requester');
+  }
+
+  const requesterId = request.userId;
+
+  // Try to reuse an existing chat for this request
+  let existingChatId: string | null = null;
+  try {
+    const existingChat = await getChatByRequestId(request.id, responderId);
+    existingChatId = existingChat?.id || null;
+  } catch (error) {
+    console.warn('Unable to check existing request chat, proceeding to create new one:', error);
+  }
+
+  const transactionId = `txn_request_${request.id}_${responderId}_${Date.now()}`;
+  const chatId = existingChatId || `chat_${requesterId}_${responderId}_${Date.now()}`;
+
+  const durationDays = Math.max(1, request.duration || 1);
+  const rentPerDay = request.maxBudget ?? 0;
+  const totalRent = rentPerDay * durationDays;
+
+  const startDate = Timestamp.fromDate(new Date());
+  const endDate = Timestamp.fromDate(new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000));
+
+  const transactionData: any = {
+    transactionId,
+    requestId: request.id,
+    listingTitle: request.itemName,
+    ownerId: responderId, // The responder owns the item
+    renterId: requesterId, // The requester will rent it
+    status: 'pending',
+    type: 'rent',
+    paymentMode: 'offline',
+    durationType: 'days',
+    days: durationDays,
+    rentPerUnit: rentPerDay,
+    totalRent,
+    amount: totalRent,
+    participants: [responderId, requesterId],
+    startDate,
+    endDate,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(doc(db, 'transactions', transactionId), transactionData);
+
+  // Create or update chat link with request metadata
+  if (!existingChatId) {
+    const chatData = {
+      chatId,
+      participants: [requesterId, responderId],
+      requestId: request.id,
+      listingTitle: `Request: ${request.itemName}`,
+      transactionId,
+      lastMessage: '',
+      lastUpdated: serverTimestamp(),
+    };
+    await setDoc(doc(db, 'chats', chatId), chatData);
+  } else {
+    await updateDoc(doc(db, 'chats', existingChatId), {
+      transactionId,
+      requestId: request.id,
+      lastUpdated: serverTimestamp(),
+    });
+  }
+
+  return { transactionId, chatId };
+};
+
 // Notification functions
 export const createNotification = async (notificationData: Omit<Notification, 'id' | 'createdAt'>): Promise<string> => {
   const docRef = await addDoc(collection(db, 'notifications'), {
@@ -1735,8 +1822,69 @@ export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<v
     }
     
     await batch.commit();
+
+    // Also send email notifications (best effort, non-blocking) to up to 10 nearby users
+    const emailTargets = usersToNotify
+      .filter((u) => !!u.email)
+      .slice(0, 10);
+
+    await Promise.all(emailTargets.map(async (user) => {
+      try {
+        await sendEmailNotification({
+          email: user.email,
+          subject: `Someone nearby needs "${request.itemName}" - Rent Share`,
+          message: `Hi ${user.name || 'there'},\n\nSomeone near you is looking for "${request.itemName}". If you have it, respond in the app to rent it out!\n\nOpen app: ${window.location.origin}/requests\n\nThanks,\nRent Share Team`,
+          type: 'new_request_nearby',
+          createdAt: serverTimestamp(),
+        });
+      } catch (error) {
+        console.warn('Failed to queue email notification for nearby request:', error);
+      }
+    }));
   } catch (error) {
     console.error('Error notifying nearby users about request:', error);
+  }
+};
+
+// Notify nearby users when a new listing is posted (in-app + email, best effort)
+export const notifyNearbyUsersAboutListing = async (listing: Listing): Promise<void> => {
+  if (!listing.location) return;
+  try {
+    const nearbyUsers = await getNearbyUsers(listing.location);
+    const usersToNotify = nearbyUsers.filter((user) => user.uid !== listing.ownerId);
+
+    const batch = writeBatch(db);
+    for (const user of usersToNotify.slice(0, 50)) {
+      const notificationRef = doc(collection(db, 'notifications'));
+      batch.set(notificationRef, {
+        userId: user.uid,
+        type: 'new_listing_nearby',
+        listingId: listing.id,
+        message: `A new item "${listing.title}" is available near you.`,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+    }
+    await batch.commit();
+
+    const emailTargets = usersToNotify.filter((u) => !!u.email).slice(0, 10);
+    await Promise.all(
+      emailTargets.map(async (user) => {
+        try {
+          await sendEmailNotification({
+            email: user.email,
+            subject: `New item near you: "${listing.title}"`,
+            message: `Hi ${user.name || 'there'},\n\nA new item "${listing.title}" is available near you. Check it out in the app!\n\nOpen app: ${window.location.origin}/item/${listing.id}\n\nThanks,\nRent Share Team`,
+            type: 'new_listing_nearby',
+            createdAt: serverTimestamp(),
+          });
+        } catch (error) {
+          console.warn('Failed to queue email notification for nearby listing:', error);
+        }
+      })
+    );
+  } catch (error) {
+    console.error('Error notifying nearby users about listing:', error);
   }
 };
 

@@ -153,3 +153,5 @@ You can access it through:
 | **Component** | `src/pages/AdminKYC.tsx` |
 | **Route** | Defined in `src/App.tsx` line 148-155 |
 
+
+

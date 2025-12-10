@@ -11,6 +11,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Search, 
   Plus, 
@@ -21,7 +29,8 @@ import {
   MessageCircle,
   LogOut,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Receipt
 } from "lucide-react";
 import {
   Tooltip,
@@ -40,6 +49,7 @@ export const Header = () => {
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [showPostChooser, setShowPostChooser] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -93,12 +103,17 @@ export const Header = () => {
         <div className="container flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-primary flex items-center justify-center">
             <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
-          <span className="font-urbanist font-bold text-lg sm:text-xl gradient-text">
-            Lendlly
-          </span>
+          <div className="flex flex-col">
+            <span className="font-urbanist font-bold text-lg sm:text-xl text-foreground leading-tight">
+              Lendlly
+            </span>
+            <span className="font-urbanist text-[10px] sm:text-xs text-muted-foreground leading-tight -mt-0.5">
+              RENT & SWAP
+            </span>
+          </div>
         </Link>
 
         {/* Search Bar - Hidden on mobile */}
@@ -106,7 +121,7 @@ export const Header = () => {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search items to rent or swap..."
+              placeholder="Search items, brands, or categories..."
               className="pl-10 glass-effect border-0 text-foreground placeholder:text-muted-foreground"
             />
           </div>
@@ -150,21 +165,6 @@ export const Header = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link 
-                      to="/transactions" 
-                      className={`text-sm font-medium transition-colors hover:text-primary ${
-                        isActive('/transactions') ? 'text-primary' : 'text-muted-foreground'
-                      }`}
-                    >
-                      Transactions
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View your rental and swap transactions</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link 
                       to="/chat" 
                       className={`text-sm font-medium transition-colors hover:text-primary ${
                         isActive('/chat') ? 'text-primary' : 'text-muted-foreground'
@@ -175,21 +175,6 @@ export const Header = () => {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Messages with item owners and renters</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link 
-                      to="/profile" 
-                      className={`text-sm font-medium transition-colors hover:text-primary ${
-                        isActive('/profile') ? 'text-primary' : 'text-muted-foreground'
-                      }`}
-                    >
-                      Profile
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Your account settings and information</p>
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -218,38 +203,18 @@ export const Header = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link to="/post" className="hidden md:block">
-                      <Button 
-                        size="sm" 
-                        className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-8 sm:h-9"
-                      >
-                        <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                        <span className="hidden lg:inline">Post Item</span>
-                        <span className="lg:hidden">Post</span>
-                      </Button>
-                    </Link>
+                    <Button 
+                      size="sm" 
+                      className="bg-primary hover:bg-primary/90 transition-opacity h-8 sm:h-9 text-white hidden md:inline-flex"
+                      onClick={() => setShowPostChooser(true)}
+                    >
+                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                      <span className="hidden lg:inline">Post Item</span>
+                      <span className="lg:hidden">Post</span>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>List an item you want to rent out or swap</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/post-request" className="hidden lg:block">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors h-8 sm:h-9"
-                      >
-                        <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                        <span className="hidden xl:inline">Post Request</span>
-                        <span className="xl:hidden">Request</span>
-                      </Button>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Request an item you need - others can offer to rent or swap</p>
+                    <p>List an item or post a request</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -290,6 +255,12 @@ export const Header = () => {
                     <Link to="/dashboard" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/transactions" className="cursor-pointer">
+                      <Receipt className="mr-2 h-4 w-4" />
+                      <span>Transactions</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -338,7 +309,7 @@ export const Header = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search items..."
+                  placeholder="Search items, brands, or categories..."
                   className="pl-10 glass-effect border-0"
                 />
               </div>
@@ -395,40 +366,21 @@ export const Header = () => {
                         <div className="text-xs text-muted-foreground">Manage your listings</div>
                       </div>
                     </Link>
-                    <Link 
-                      to="/transactions" 
-                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <div>
-                        <div className="font-semibold">Transactions</div>
-                        <div className="text-xs text-muted-foreground">Your rentals and swaps</div>
-                      </div>
-                    </Link>
                     
-                    {/* Mobile Post Buttons */}
+                    {/* Mobile Post Button */}
                     <div className="flex flex-col space-y-2 pt-2 border-t border-border/40">
-                      <Link to="/post" onClick={() => setIsMenuOpen(false)}>
-                        <Button 
-                          size="sm" 
-                          className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Post Item
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-1 ml-1">List an item to rent or swap</p>
-                      </Link>
-                      <Link to="/post-request" onClick={() => setIsMenuOpen(false)}>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Post Request
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-1 ml-1">Request an item you need</p>
-                      </Link>
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setShowPostChooser(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Post
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-1 ml-1">List an item or post a request</p>
                     </div>
                   </>
                 )}
@@ -456,6 +408,28 @@ export const Header = () => {
         </div>
       )}
       </header>
+
+      {/* Post chooser dialog */}
+      <Dialog open={showPostChooser} onOpenChange={setShowPostChooser}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>What would you like to post?</DialogTitle>
+            <DialogDescription>
+              Choose whether you want to list an item for rent or request an item.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button className="w-full" onClick={() => { setShowPostChooser(false); navigate('/post'); }}>
+              Item for Rent
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => { setShowPostChooser(false); navigate('/post-request'); }}>
+              Request an Item
+            </Button>
+          </div>
+          <DialogFooter />
+        </DialogContent>
+      </Dialog>
+
       {userData && (
         <VerificationBanner 
           verificationStatus={userData.verificationStatus}

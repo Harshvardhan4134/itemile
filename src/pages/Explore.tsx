@@ -42,6 +42,7 @@ import {
   Grid3x3,
   List,
   TrendingUp,
+  Filter,
   Sparkles,
   ArrowRight,
   Smartphone,
@@ -54,6 +55,8 @@ import {
   Book,
   Shirt,
   Home,
+  Shield,
+  CheckCircle,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -743,118 +746,119 @@ const Explore = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container py-4 sm:py-6">
-        {/* Map Container - Replaces Hero Banner */}
-        <Card className="mb-6 sm:mb-8">
-          <CardContent className="p-2 sm:p-4">
-            <div className="h-[300px] sm:h-[400px] md:h-[500px] rounded-lg overflow-hidden border border-border">
-              {loading ? (
-                <div className="h-full w-full bg-muted/20 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p className="text-muted-foreground">Loading map...</p>
-                  </div>
-                </div>
-              ) : attemptedGeolocation ? (
-                <div className="relative h-full w-full">
-                  <LiveMap 
-                    listings={listings}
-                    requests={requests}
-                    onListingSelect={setSelectedItem}
-                    center={userLocation || { lat: 37.7749, lng: -122.4194 }}
-                    zoom={userLocation ? 15 : 12}
-                    userLocation={userLocation}
-                    onLocationUpdate={handleLocationUpdate}
-                    onManualLocationPick={() => setShowManualLocationPicker(true)}
-                    isUpdatingLocation={isUpdatingLocation}
-                  />
-                  {!userLocation && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-                      <div className="bg-white rounded-lg p-6 max-w-md mx-4 text-center">
-                        <MapPin className="h-12 w-12 text-primary mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">GPS Location Not Available</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          We couldn't get your GPS location. Please pick your location manually on the map.
-                        </p>
-                        <Button onClick={() => setShowManualLocationPicker(true)}>
-                          Pick Location Manually
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="h-full w-full bg-muted/20 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p className="text-muted-foreground">Getting your location...</p>
+      <div className="relative">
+        {/* Map Background */}
+        <div className="relative h-[460px] sm:h-[540px] md:h-[620px] w-full">
+          {loading ? (
+            <div className="h-full w-full bg-muted/20 flex items-center justify-center">
+              <div className="text-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading map...</p>
+              </div>
+            </div>
+          ) : attemptedGeolocation ? (
+            <div className="relative h-full w-full">
+              <LiveMap 
+                listings={listings}
+                requests={requests}
+                onListingSelect={setSelectedItem}
+                center={userLocation || { lat: 37.7749, lng: -122.4194 }}
+                zoom={userLocation ? 15 : 12}
+                userLocation={userLocation}
+                onLocationUpdate={handleLocationUpdate}
+                onManualLocationPick={() => setShowManualLocationPicker(true)}
+                isUpdatingLocation={isUpdatingLocation}
+              />
+              {!userLocation && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20">
+                  <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-xl">
+                    <MapPin className="h-16 w-16 text-primary mx-auto mb-4" />
+                    <h3 className="text-xl font-bold mb-3">Location Not Found</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      We couldn't locate you automatically. Pick your location manually to find items nearby.
+                    </p>
+                    <Button 
+                      onClick={() => setShowManualLocationPicker(true)}
+                      className="bg-gradient-to-r from-primary to-green-500 hover:opacity-90 text-white px-8 py-6 text-base font-semibold"
+                    >
+                      Pick Location Manually
+                    </Button>
                   </div>
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Search and Filter Bar */}
-        <div className="mb-6 sm:mb-8 space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="What's your rental need?"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 sm:h-12 text-sm sm:text-base"
-              />
+          ) : (
+            <div className="h-full w-full bg-muted/20 flex items-center justify-center">
+              <div className="text-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Getting your location...</p>
+              </div>
             </div>
-            <div className="flex gap-2 sm:gap-2">
-              <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("grid")}
-              >
-                <Grid3x3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          )}
+        </div>
 
-          {/* Categories */}
-          <div className="flex flex-wrap gap-2 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
-            <Button
-              variant={selectedCategory === "" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory("")}
-              className="text-xs sm:text-sm whitespace-nowrap h-8 sm:h-9"
-            >
-              All Categories
-            </Button>
-            {categoryCounts.map((category) => (
+        {/* Search and Filter Bar - White Card Below Map */}
+        <div className="container relative z-30 -mt-12 sm:-mt-16">
+          <div className="w-full bg-white shadow-lg rounded-3xl px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="What are you looking for?"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-11 h-12 sm:h-13 text-sm sm:text-base rounded-2xl bg-muted/30 border-transparent focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  className="h-11 sm:h-12 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 px-4 sm:px-5 shadow-md"
+                >
+                  <Grid3x3 className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">All Categories</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-11 sm:h-12 w-11 sm:w-12 rounded-2xl border-slate-200"
+                >
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
               <Button
-                key={category.value}
-                variant={selectedCategory === category.value ? "default" : "outline"}
+                variant={selectedCategory === "" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(category.value)}
-                className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap h-8 sm:h-9"
+                onClick={() => setSelectedCategory("")}
+                className={`text-sm font-semibold whitespace-nowrap h-10 rounded-full px-5 ${
+                  selectedCategory === "" ? "bg-primary text-white hover:bg-primary/90" : "bg-white border-slate-200 text-foreground"
+                }`}
               >
-                <category.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">{category.name}</span>
-                <span className="sm:hidden">{category.name.split(' ')[0]}</span>
-                {category.count > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs">
-                    {category.count}
-                  </Badge>
-                )}
+                All Categories
               </Button>
-            ))}
+              {categoryCounts.map((category) => (
+                <Button
+                  key={category.value}
+                  variant={selectedCategory === category.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category.value)}
+                  className={`gap-1.5 sm:gap-2 text-sm whitespace-nowrap h-10 rounded-full px-5 ${
+                    selectedCategory === category.value ? "bg-primary text-white hover:bg-primary/90" : "bg-white border-slate-200 text-foreground"
+                  }`}
+                >
+                  <category.icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{category.name}</span>
+                  <span className="sm:hidden">{category.name.split(' ')[0]}</span>
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
+      </div>
+
+      <div className="container py-4 sm:py-6">
 
 
         {/* Featured Items Section */}
@@ -862,8 +866,8 @@ const Explore = () => {
           <div className="mb-8 sm:mb-12">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                <h2 className="text-xl sm:text-2xl font-bold">Featured Items</h2>
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Featured Items</h2>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
@@ -880,6 +884,9 @@ const Explore = () => {
                         SWAP
                       </Badge>
                     )}
+                    <Badge variant="secondary" className="absolute top-2 left-2 text-xs bg-black/70 text-white">
+                      {listing.category.toUpperCase()}
+                    </Badge>
                   </div>
                   <CardContent className="p-3 sm:p-4">
                     <h3 className="font-semibold text-base sm:text-lg mb-1 line-clamp-1">{listing.title}</h3>
@@ -887,15 +894,14 @@ const Explore = () => {
                     <div className="flex items-center justify-between mb-2 sm:mb-3">
                       <div>
                         <span className="text-xl sm:text-2xl font-bold text-primary">₹{listing.rentPerDay}</span>
-                        <span className="text-xs sm:text-sm text-muted-foreground">/day</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground"> / day</span>
                       </div>
-                      <Badge variant="secondary" className="text-xs">{listing.category}</Badge>
                     </div>
                     <Button
-                      className="w-full"
+                      className="w-full bg-foreground text-background hover:bg-foreground/90"
                       onClick={() => navigate(`/item/${listing.id}`)}
                     >
-                      View Details
+                      View
                     </Button>
                   </CardContent>
                 </Card>
@@ -905,45 +911,50 @@ const Explore = () => {
         )}
 
         {/* Community Posts Section - All Posts (Listings, Requests, Message Posts) */}
-        <div>
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold">
-              Community Posts
-            </h2>
-            <span className="text-xs sm:text-sm text-muted-foreground">
-              {filteredPosts.length} posts
-            </span>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
+                Community Posts
+              </h2>
+              <Badge variant="secondary" className="text-xs sm:text-sm bg-muted text-muted-foreground">
+                {filteredPosts.length} UPDATES
+              </Badge>
+            </div>
 
           {/* Info Cards explaining different post types */}
           {!searchTerm && filteredPosts.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="h-4 w-4 text-primary" />
+              <Card className="border-0 bg-blue-50 hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <Grid3x3 className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-base mb-1">Items for Rent</h3>
+                      <p className="text-sm text-muted-foreground">
+                        View available items.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Items for Rent/Swap</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Browse items available to rent or swap. Click to view details and book!
-                    </p>
+                </CardContent>
+              </Card>
+              <Card className="border-0 bg-blue-50 hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-base mb-1">Requests</h3>
+                      <p className="text-sm text-muted-foreground">
+                        View what people need.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="p-4 rounded-lg border border-blue-500/20 bg-blue-500/5">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <MessageCircle className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Item Requests</h3>
-                    <p className="text-sm text-muted-foreground">
-                      People looking for items. If you have what they need, click "I Have This Item" to respond!
-                    </p>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -976,9 +987,9 @@ const Explore = () => {
                   const isLiked = currentUser && messagePost.likes?.includes(currentUser.uid);
                   
                   return (
-                    <Card key={messagePost.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex items-start justify-between mb-2 sm:mb-3">
+                    <Card key={messagePost.id} className="rounded-2xl border border-border/60 shadow-sm hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4 sm:p-5 space-y-3">
+                        <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2 sm:gap-3">
                             <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                               <AvatarImage src={messagePost.userPhotoUrl} />
@@ -994,42 +1005,41 @@ const Explore = () => {
                           </Button>
                         </div>
                         
-                        <p className="mb-2 sm:mb-3 text-sm sm:text-base">{messagePost.message}</p>
+                        <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 sm:p-5">
+                          <p className="text-sm sm:text-base mb-3">{messagePost.message}</p>
                         
-                        {messagePost.images && messagePost.images.length > 0 && (
-                          <div className={`grid gap-2 mb-2 sm:mb-3 ${
-                            messagePost.images.length === 1 ? 'grid-cols-1' :
-                            messagePost.images.length === 2 ? 'grid-cols-2' :
-                            messagePost.images.length === 3 ? 'grid-cols-2 sm:grid-cols-3' :
-                            messagePost.images.length === 4 ? 'grid-cols-2' :
-                            'grid-cols-2 sm:grid-cols-3'
-                          }`}>
-                            {messagePost.images.slice(0, 6).map((img, idx) => (
-                              <div 
-                                key={idx}
-                                className={`relative overflow-hidden rounded-lg bg-muted ${
-                                  messagePost.images.length === 1 ? 'aspect-[4/3] max-h-[500px]' :
-                                  messagePost.images.length === 2 ? 'aspect-square' :
-                                  messagePost.images.length === 3 ? 'aspect-square' :
-                                  messagePost.images.length === 4 ? 'aspect-square' :
-                                  'aspect-square'
-                                }`}
-                              >
-                                <img
-                                  src={img}
-                                  alt={`Post image ${idx + 1}`}
-                                  className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                                  onClick={() => messagePost.listingId && navigate(`/item/${messagePost.listingId}`)}
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = '/placeholder.svg';
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                          {messagePost.images && messagePost.images.length > 0 && (
+                            <div className={`grid gap-2 ${
+                              messagePost.images.length === 1 ? 'grid-cols-1' :
+                              messagePost.images.length === 2 ? 'grid-cols-2' :
+                              messagePost.images.length === 3 ? 'grid-cols-2 sm:grid-cols-3' :
+                              messagePost.images.length === 4 ? 'grid-cols-2' :
+                              'grid-cols-2 sm:grid-cols-3'
+                            }`}>
+                              {messagePost.images.slice(0, 6).map((img, idx) => (
+                                <div 
+                                  key={idx}
+                                  className={`relative overflow-hidden rounded-2xl bg-muted ${
+                                    messagePost.images.length === 1 ? 'aspect-[4/3] max-h-[500px]' :
+                                    'aspect-square'
+                                  }`}
+                                >
+                                  <img
+                                    src={img}
+                                    alt={`Post image ${idx + 1}`}
+                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                                    onClick={() => messagePost.listingId && navigate(`/item/${messagePost.listingId}`)}
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = '/placeholder.svg';
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         
                         <div className="flex items-center gap-2 sm:gap-4 pt-2 border-t flex-wrap">
                           <Button
@@ -1116,9 +1126,9 @@ const Explore = () => {
                   const isLiked = currentUser && listing.likes?.includes(currentUser.uid);
                   
                   return (
-                    <Card key={listing.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
+                    <Card key={listing.id} className="rounded-2xl border border-border/60 shadow-sm hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
                             <Avatar>
                               <AvatarFallback className="bg-primary/20 text-primary">
@@ -1135,32 +1145,14 @@ const Explore = () => {
                           </Button>
                         </div>
                         
-                        <p className="mb-2 font-semibold text-lg">{listing.title}</p>
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{listing.description}</p>
-                        
-                        {listing.images && listing.images.length > 0 && (
-                          <div className={`grid gap-2 mb-3 ${
-                            listing.images.length === 1 ? 'grid-cols-1' :
-                            listing.images.length === 2 ? 'grid-cols-2' :
-                            listing.images.length === 3 ? 'grid-cols-3' :
-                            listing.images.length === 4 ? 'grid-cols-2' :
-                            'grid-cols-3'
-                          }`}>
-                            {listing.images.slice(0, 6).map((img, idx) => (
-                              <div 
-                                key={idx}
-                                className={`relative overflow-hidden rounded-lg bg-muted ${
-                                  listing.images.length === 1 ? 'aspect-[4/3] max-h-[500px]' :
-                                  listing.images.length === 2 ? 'aspect-square' :
-                                  listing.images.length === 3 ? 'aspect-square' :
-                                  listing.images.length === 4 ? 'aspect-square' :
-                                  'aspect-square'
-                                }`}
-                              >
+                        <div className="rounded-2xl border border-border/40 bg-muted/30 p-4">
+                          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+                            {listing.images && listing.images.length > 0 ? (
+                              <div className="w-full sm:w-32 aspect-square overflow-hidden rounded-2xl bg-muted">
                                 <img
-                                  src={img}
+                                  src={listing.images[0]}
                                   alt={listing.title}
-                                  className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                                  className="w-full h-full object-cover"
                                   onClick={() => navigate(`/item/${listing.id}`)}
                                   loading="lazy"
                                   onError={(e) => {
@@ -1169,13 +1161,17 @@ const Explore = () => {
                                   }}
                                 />
                               </div>
-                            ))}
+                            ) : null}
+                            
+                            <div className="flex-1 space-y-2">
+                              <Badge variant="secondary" className="bg-white text-foreground border">
+                                {listing.category}
+                              </Badge>
+                              <p className="font-semibold text-lg">{listing.title}</p>
+                              <p className="text-sm text-muted-foreground line-clamp-2">{listing.description}</p>
+                              <p className="text-base font-semibold text-primary">₹{listing.rentPerDay}/day</p>
+                            </div>
                           </div>
-                        )}
-                        
-                        <div className="flex items-center gap-2 mb-3">
-                          <Badge variant="secondary">{listing.category}</Badge>
-                          <span className="text-sm font-semibold text-primary">₹{listing.rentPerDay}/day</span>
                         </div>
                         
                         <div className="flex items-center gap-4 pt-2 border-t">
@@ -1266,9 +1262,9 @@ const Explore = () => {
                   const isLiked = currentUser && request.likes?.includes(currentUser.uid);
                   
                   return (
-                    <Card key={request.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
+                    <Card key={request.id} className="rounded-2xl border border-border/60 shadow-sm hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
                             <Avatar>
                               <AvatarFallback className="bg-primary/20 text-primary">
@@ -1285,14 +1281,19 @@ const Explore = () => {
                           </Button>
                         </div>
                         
-                        <p className="mb-2 font-semibold text-lg">{request.itemName}</p>
-                        <p className="text-sm text-muted-foreground mb-3">{request.description}</p>
-                        
-                        <div className="flex items-center gap-2 mb-3">
-                          <Badge variant="secondary">{request.category}</Badge>
-                          {request.maxBudget && (
-                            <span className="text-sm text-muted-foreground">Up to ₹{request.maxBudget}</span>
-                          )}
+                        <div className="rounded-2xl border border-border/40 bg-muted/30 p-4">
+                          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+                            <div className="flex-1 space-y-2 w-full">
+                              <Badge variant="secondary" className="bg-white text-foreground border">
+                                {request.category}
+                              </Badge>
+                              <p className="font-semibold text-lg">{request.itemName}</p>
+                              <p className="text-sm text-muted-foreground">{request.description}</p>
+                              {request.maxBudget && (
+                                <span className="text-sm font-semibold text-primary">Up to ₹{request.maxBudget}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         
                         <div className="flex items-center gap-4 pt-2 border-t">
@@ -1382,6 +1383,41 @@ const Explore = () => {
               })}
             </div>
           )}
+          </div>
+          
+          {/* Safety Tips Sidebar */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-20">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Shield className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Safety Tips</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-muted-foreground">
+                      Meet in public places (malls, cafes) for exchanges.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-muted-foreground">
+                      Inspect items thoroughly before accepting them.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-muted-foreground">
+                      Use Lendlly chat for all payments and messages.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 

@@ -406,6 +406,8 @@ const Transactions = () => {
                   const owner = users[transaction.ownerId];
                   const renter = users[transaction.renterId];
                   const isOwner = auth.currentUser?.uid === transaction.ownerId;
+                  const title = listing?.title || transaction.listingTitle || 'Unknown Item';
+                  const isRequestTransaction = !!transaction.requestId && !transaction.listingId;
 
                   return (
                     <Card key={transaction.id} className="glass-card hover-scale cursor-pointer" onClick={() => setSelectedTransactionDetail(transaction)}>
@@ -413,7 +415,7 @@ const Transactions = () => {
                         <div className="flex items-start justify-between">
                           <div className="flex gap-4">
                             <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-                              {listing?.images[0] ? (
+                              {listing?.images?.[0] ? (
                                 <img 
                                   src={listing.images[0]} 
                                   alt={listing.title}
@@ -426,7 +428,7 @@ const Transactions = () => {
                             
                             <div className="flex-1">
                               <h3 className="font-semibold text-lg mb-1">
-                                {listing?.title || 'Unknown Item'}
+                                {title}
                               </h3>
                               <div className="flex items-center gap-2 mb-2">
                                 <Badge variant="secondary" className="text-xs">
@@ -435,6 +437,11 @@ const Transactions = () => {
                                 <Badge className={`text-xs ${getStatusColor(transaction.status)} text-white`}>
                                   {transaction.status.toUpperCase()}
                                 </Badge>
+                                {isRequestTransaction && (
+                                  <Badge variant="outline" className="text-xs border-dashed">
+                                    Request
+                                  </Badge>
+                                )}
                               </div>
                               
                               <div className="space-y-1 text-sm text-muted-foreground">

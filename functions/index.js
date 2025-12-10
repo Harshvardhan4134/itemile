@@ -247,8 +247,17 @@ exports.onPickupOtpGenerated = functions.firestore
           const renter = renterDoc.data();
           const owner = ownerDoc.data();
 
-          // Send email to renter
+          // Validate that we have the correct user data
+          if (!renter) {
+            console.error(`[Pickup OTP] Renter not found for ID: ${after.renterId}`);
+          }
+          if (!owner) {
+            console.error(`[Pickup OTP] Owner not found for ID: ${after.ownerId}`);
+          }
+
+          // Send email to renter with their OTP
           if (renter?.email) {
+            console.log(`[Pickup OTP] Sending email to RENTER: ${renter.email} (ID: ${after.renterId})`);
             await admin.firestore().collection("email_notifications").add({
               email: renter.email,
               subject: `Your Pickup OTP - ${after.listingTitle || 'Booking'}`,
@@ -257,10 +266,13 @@ exports.onPickupOtpGenerated = functions.firestore
               read: false,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+          } else {
+            console.error(`[Pickup OTP] Renter email not found for ID: ${after.renterId}`);
           }
 
-          // Send email to owner
+          // Send email to owner with the OTP they should expect from renter
           if (owner?.email) {
+            console.log(`[Pickup OTP] Sending email to OWNER: ${owner.email} (ID: ${after.ownerId})`);
             await admin.firestore().collection("email_notifications").add({
               email: owner.email,
               subject: `Pickup OTP Generated - ${after.listingTitle || 'Booking'}`,
@@ -269,6 +281,8 @@ exports.onPickupOtpGenerated = functions.firestore
               read: false,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+          } else {
+            console.error(`[Pickup OTP] Owner email not found for ID: ${after.ownerId}`);
           }
 
           console.log(`Pickup OTP emails sent for transaction ${context.params.transactionId}`);
@@ -302,8 +316,17 @@ exports.onReturnOtpGenerated = functions.firestore
           const renter = renterDoc.data();
           const owner = ownerDoc.data();
 
-          // Send email to renter
+          // Validate that we have the correct user data
+          if (!renter) {
+            console.error(`[Return OTP] Renter not found for ID: ${after.renterId}`);
+          }
+          if (!owner) {
+            console.error(`[Return OTP] Owner not found for ID: ${after.ownerId}`);
+          }
+
+          // Send email to renter with their OTP
           if (renter?.email) {
+            console.log(`[Return OTP] Sending email to RENTER: ${renter.email} (ID: ${after.renterId})`);
             await admin.firestore().collection("email_notifications").add({
               email: renter.email,
               subject: `Your Return OTP - ${after.listingTitle || 'Booking'}`,
@@ -312,10 +335,13 @@ exports.onReturnOtpGenerated = functions.firestore
               read: false,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+          } else {
+            console.error(`[Return OTP] Renter email not found for ID: ${after.renterId}`);
           }
 
-          // Send email to owner
+          // Send email to owner with the OTP they should expect from renter
           if (owner?.email) {
+            console.log(`[Return OTP] Sending email to OWNER: ${owner.email} (ID: ${after.ownerId})`);
             await admin.firestore().collection("email_notifications").add({
               email: owner.email,
               subject: `Return OTP for ${after.listingTitle || 'Booking'}`,
@@ -324,6 +350,8 @@ exports.onReturnOtpGenerated = functions.firestore
               read: false,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+          } else {
+            console.error(`[Return OTP] Owner email not found for ID: ${after.ownerId}`);
           }
 
           console.log(`Return OTP emails sent for transaction ${context.params.transactionId}`);
