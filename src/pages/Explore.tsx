@@ -257,6 +257,24 @@ const Explore = () => {
       return;
     }
     
+    const useSelectedCityFallback = () => {
+      if (!selectedCityFromStorage) return false;
+      const key = selectedCityFromStorage.toLowerCase();
+      const coords = CITY_COORDS[key];
+      if (coords) {
+        setUserLocation(coords);
+        setLocationAccuracy(0);
+        setAttemptedGeolocation(true);
+        setIsUpdatingLocation(false);
+        toast({
+          title: "Using selected city",
+          description: `Location unavailable; centering on ${selectedCityFromStorage}.`,
+        });
+        return true;
+      }
+      return false;
+    };
+
     setIsUpdatingLocation(true);
     setLocationAccuracy(null);
     
@@ -394,6 +412,8 @@ const Explore = () => {
               errorMessage = 'Location request timed out. Please try again or use manual location picker.';
             }
             console.warn('❌ Error getting current position:', errorMessage);
+            const usedCity = useSelectedCityFallback();
+            if (usedCity) return;
             toast({
               title: "GPS Not Available",
               description: errorMessage,
