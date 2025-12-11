@@ -94,6 +94,33 @@ const persistTermsAcceptance = (user?: FirebaseUser | null) => {
   }
 };
 
+// Lightweight city → coordinate defaults for manual selection fallback
+const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+  "bengaluru": { lat: 12.9716, lng: 77.5946 },
+  "mumbai": { lat: 19.076, lng: 72.8777 },
+  "delhi": { lat: 28.6139, lng: 77.209 },
+  "hyderabad": { lat: 17.385, lng: 78.4867 },
+  "chennai": { lat: 13.0827, lng: 80.2707 },
+  "pune": { lat: 18.5204, lng: 73.8567 },
+  "kolkata": { lat: 22.5726, lng: 88.3639 },
+  "ahmedabad": { lat: 23.0225, lng: 72.5714 },
+  "jaipur": { lat: 26.9124, lng: 75.7873 },
+  "lucknow": { lat: 26.8467, lng: 80.9462 },
+  "surat": { lat: 21.1702, lng: 72.8311 },
+  "indore": { lat: 22.7196, lng: 75.8577 },
+  "chandigarh": { lat: 30.7333, lng: 76.7794 },
+  "noida": { lat: 28.5355, lng: 77.391 },
+  "gurugram": { lat: 28.4595, lng: 77.0266 },
+  "visakhapatnam": { lat: 17.6868, lng: 83.2185 },
+  "vizag": { lat: 17.6868, lng: 83.2185 },
+  "bhopal": { lat: 23.2599, lng: 77.4126 },
+  "coimbatore": { lat: 11.0168, lng: 76.9558 },
+  "kochi": { lat: 9.9312, lng: 76.2673 },
+  "thiruvananthapuram": { lat: 8.5241, lng: 76.9366 },
+  "nagpur": { lat: 21.1458, lng: 79.0882 },
+  "goa": { lat: 15.2993, lng: 74.124 },
+};
+
 const Explore = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -116,6 +143,10 @@ const Explore = () => {
   const [userData, setUserData] = useState<any>(null);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(() => hasAcceptedTerms(auth.currentUser));
   const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [selectedCityFromStorage, setSelectedCityFromStorage] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("lendlly_selected_city");
+  });
   
   // Post creation state
   const [showPostDialog, setShowPostDialog] = useState(false);
@@ -195,6 +226,20 @@ const Explore = () => {
       isMounted = false;
     };
   }, [isAuthenticated]);
+
+  // If a city was selected in the header, use it to set a default map center
+  useEffect(() => {
+    if (userLocation) return; // don't override real GPS/manual location
+    if (!selectedCityFromStorage) return;
+    const key = selectedCityFromStorage.toLowerCase();
+    const coords = CITY_COORDS[key];
+    if (coords) {
+      setUserLocation(coords);
+      setLocationAccuracy(0);
+      setAttemptedGeolocation(true);
+      setManualLocation(coords);
+    }
+  }, [selectedCityFromStorage, userLocation]);
 
   const handleLocationUpdate = () => {
     if (!navigator.geolocation) {
