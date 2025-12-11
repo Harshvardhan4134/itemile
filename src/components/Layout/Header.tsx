@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
+import {
   Search, 
   Plus, 
   User, 
@@ -43,6 +43,7 @@ import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { getUnreadNotificationCount, subscribeToNotifications, getUser } from "@/lib/firestore";
 import { VerificationBanner } from "@/components/VerificationBanner";
+import { CitySelectorDialog } from "@/components/CitySelectorDialog";
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,6 +51,11 @@ export const Header = () => {
   const [userData, setUserData] = useState<any>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [showPostChooser, setShowPostChooser] = useState(false);
+  const [cityDialogOpen, setCityDialogOpen] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("lendlly_selected_city");
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -78,6 +84,20 @@ export const Header = () => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!selectedCity) {
+      // Auto-prompt city picker on first visit when none is set
+      setCityDialogOpen(true);
+    }
+  }, [selectedCity]);
+
+  const handleCitySelect = (city: string) => {
+    setSelectedCity(city);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lendlly_selected_city", city);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -115,6 +135,19 @@ export const Header = () => {
             </span>
           </div>
         </Link>
+
+        {/* City selector - desktop */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="hidden md:inline-flex items-center gap-2 min-w-[170px]"
+          onClick={() => setCityDialogOpen(true)}
+        >
+          <MapPin className="h-4 w-4 text-primary" />
+          <span className="truncate">
+            {selectedCity ? selectedCity : "Select your city"}
+          </span>
+        </Button>
 
         {/* Search Bar - Hidden on mobile */}
         <div className="hidden md:flex flex-1 max-w-md mx-8">
@@ -313,6 +346,17 @@ export const Header = () => {
                   className="pl-10 glass-effect border-0"
                 />
               </div>
+              {/* Mobile city selector */}
+              <Button
+                variant="outline"
+                className="justify-start gap-2"
+                onClick={() => setCityDialogOpen(true)}
+              >
+                <MapPin className="h-4 w-4 text-primary" />
+                <span className="truncate">
+                  {selectedCity ? selectedCity : "Select your city"}
+                </span>
+              </Button>
               <nav className="flex flex-col space-y-2">
                 <Link 
                   to="/explore" 
@@ -408,6 +452,13 @@ export const Header = () => {
         </div>
       )}
       </header>
+
+      <CitySelectorDialog
+        open={cityDialogOpen}
+        onOpenChange={setCityDialogOpen}
+        selectedCity={selectedCity}
+        onSelectCity={handleCitySelect}
+      />
 
       {/* Post chooser dialog */}
       <Dialog open={showPostChooser} onOpenChange={setShowPostChooser}>
