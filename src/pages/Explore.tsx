@@ -147,6 +147,9 @@ const Explore = () => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem("lendlly_selected_city");
   });
+
+  // Treat very coarse location (> this radius in meters) as too imprecise to override a chosen city
+  const COARSE_ACCURACY_THRESHOLD = 20000; // 20 km
   
   // Post creation state
   const [showPostDialog, setShowPostDialog] = useState(false);
@@ -334,26 +337,31 @@ const Explore = () => {
               });
             } else if (isValidCoordinate(coords.lat, coords.lng)) {
               // Accept coarse accuracy to unblock UI
-              console.warn('⚠️ Location accuracy is coarse:', accuracy + 'm, using it for now.');
-              setUserLocation(coords);
-              setLocationAccuracy(accuracy);
-              setAttemptedGeolocation(true);
-              setIsUpdatingLocation(false);
-              toast({
-                title: "Location Updated (coarse)",
-                description: `Accuracy is about ±${Math.round(accuracy/1000)}km. You can refine via manual picker.`,
-                variant: "default",
-                duration: 8000,
-                action: (
-                  <Button
-                    size="sm"
-                    onClick={() => setShowManualLocationPicker(true)}
-                    className="ml-2"
-                  >
-                    Pick Location
-                  </Button>
-                )
-              });
+              const isTooCoarse = accuracy > COARSE_ACCURACY_THRESHOLD && !!selectedCityFromStorage;
+              if (isTooCoarse) {
+                console.warn('⚠️ Coarse fallback ignored because a city is selected:', accuracy + 'm');
+              } else {
+                console.warn('⚠️ Location accuracy is coarse:', accuracy + 'm, using it for now.');
+                setUserLocation(coords);
+                setLocationAccuracy(accuracy);
+                setAttemptedGeolocation(true);
+                setIsUpdatingLocation(false);
+                toast({
+                  title: "Location Updated (coarse)",
+                  description: `Accuracy is about ±${Math.round(accuracy/1000)}km. You can refine via manual picker.`,
+                  variant: "default",
+                  duration: 8000,
+                  action: (
+                    <Button
+                      size="sm"
+                      onClick={() => setShowManualLocationPicker(true)}
+                      className="ml-2"
+                    >
+                      Pick Location
+                    </Button>
+                  )
+                });
+              }
             } else {
               console.error('❌ Invalid coordinates received:', coords);
               setIsUpdatingLocation(false);
@@ -415,7 +423,7 @@ const Explore = () => {
     }, maxWatchTime);
     
     // Start watching position for better accuracy.
-    // Accept coarse/IP positions immediately to unblock UI; keep watching for better GPS.
+    // Accept coarse/IP positions immediately to unblock UI unless user picked a city and accuracy is extremely coarse.
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -439,8 +447,11 @@ const Explore = () => {
           return;
         }
         
-        // Accept the first valid coordinate (even coarse/IP) so the map centers.
-        if (!userLocation) {
+        const isTooCoarseWithCity = accuracy > COARSE_ACCURACY_THRESHOLD && !!selectedCityFromStorage;
+
+        // Accept the first valid coordinate (even coarse/IP) so the map centers,
+        // unless it's extremely coarse and a city has been explicitly selected.
+        if (!userLocation && !isTooCoarseWithCity) {
           setUserLocation(coords);
           setLocationAccuracy(accuracy);
           setAttemptedGeolocation(true);
