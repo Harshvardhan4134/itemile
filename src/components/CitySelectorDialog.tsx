@@ -29,6 +29,14 @@ const POPULAR_CITIES = [
   "Chandigarh",
   "Noida",
   "Gurugram",
+  "Visakhapatnam",
+  "Vizag",
+  "Bhopal",
+  "Coimbatore",
+  "Kochi",
+  "Thiruvananthapuram",
+  "Nagpur",
+  "Goa",
 ];
 
 type CitySelectorDialogProps = {
@@ -150,9 +158,23 @@ export const CitySelectorDialog = ({
                 </Button>
               ))}
               {filteredCities.length === 0 && (
-                <p className="text-sm text-muted-foreground px-2">
-                  No cities found. Try another name.
-                </p>
+                <div className="space-y-2 px-2">
+                  <p className="text-sm text-muted-foreground">
+                    No cities found. Try another name or use your location.
+                  </p>
+                  {search.trim().length > 0 && (
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        onSelectCity(search.trim());
+                        onOpenChange(false);
+                      }}
+                    >
+                      Use “{search.trim()}”
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </ScrollArea>
