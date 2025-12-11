@@ -332,13 +332,16 @@ const Explore = () => {
                 title: "Location Updated",
                 description: `Your GPS location: ±${Math.round(accuracy)}m accuracy`,
               });
-            } else if (accuracy > MAX_ACCEPTABLE_ACCURACY) {
-              console.warn('⚠️ Location accuracy too poor:', accuracy + 'm');
-              setIsUpdatingLocation(false);
+            } else if (isValidCoordinate(coords.lat, coords.lng)) {
+              // Accept coarse accuracy to unblock UI
+              console.warn('⚠️ Location accuracy is coarse:', accuracy + 'm, using it for now.');
+              setUserLocation(coords);
+              setLocationAccuracy(accuracy);
               setAttemptedGeolocation(true);
+              setIsUpdatingLocation(false);
               toast({
-                title: "Location Accuracy Low",
-                description: `GPS accuracy is ±${Math.round(accuracy/1000)}km. You can use manual location picker for better accuracy.`,
+                title: "Location Updated (coarse)",
+                description: `Accuracy is about ±${Math.round(accuracy/1000)}km. You can refine via manual picker.`,
                 variant: "default",
                 duration: 8000,
                 action: (
@@ -411,9 +414,8 @@ const Explore = () => {
       }
     }, maxWatchTime);
     
-    // Start watching position for better accuracy
-    // This will wait until GPS chip locks and provides good accuracy (<10km)
-    // Browsers sometimes return IP-based location first (poor accuracy), so we wait for GPS
+    // Start watching position for better accuracy.
+    // Accept coarse/IP positions immediately to unblock UI; keep watching for better GPS.
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -422,20 +424,6 @@ const Explore = () => {
         const altitude = pos.coords.altitude;
         const heading = pos.coords.heading;
         const speed = pos.coords.speed;
-        
-        // Reject only very poor locations (accuracy > 10km = 10000m)
-        // Note: Browsers sometimes return IP-based location first (10km-150km accuracy)
-        // before GPS chip locks. We wait for better accuracy.
-        const MAX_ACCEPTABLE_ACCURACY = 10000; // 10km - reject anything worse than this
-        
-        if (accuracy > MAX_ACCEPTABLE_ACCURACY) {
-          // Only log once per session to reduce console noise
-          // This is expected - browser may return IP-based location first before GPS locks
-          if (locationCount === 0) {
-            console.warn(`⚠️ Initial location has poor accuracy (${Math.round(accuracy)}m), waiting for GPS to lock...`);
-          }
-          return; // Don't use this location, wait for better GPS signal
-        }
         
         // Log detailed location info only for accepted locations (reduced verbosity)
         if (locationCount === 0 || accuracy < 100) {
@@ -446,15 +434,18 @@ const Explore = () => {
           });
         }
         
-        // This is GPS data (from watchPosition), so it's valid GPS even if accuracy is moderate
-        // GPS accuracy can vary: excellent (<20m), good (20-100m), moderate (100-1000m), poor (>1000m)
-        // We accept all GPS locations up to 10km accuracy
-        
         if (!isValidCoordinate(coords.lat, coords.lng)) {
           console.error('❌ Invalid coordinates received:', coords);
           return;
         }
         
+        // Accept the first valid coordinate (even coarse/IP) so the map centers.
+        if (!userLocation) {
+          setUserLocation(coords);
+          setLocationAccuracy(accuracy);
+          setAttemptedGeolocation(true);
+        }
+
         locationCount++;
         
         // Track the best location (most accurate)
