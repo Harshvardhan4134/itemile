@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
+import { 
   Search, 
   Plus, 
   User, 
@@ -32,6 +32,7 @@ import {
   HelpCircle,
   Receipt
 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import {
   Tooltip,
   TooltipContent,
@@ -122,17 +123,13 @@ export const Header = () => {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 glass-card">
         <div className="container flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-primary flex items-center justify-center">
-            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-urbanist font-bold text-lg sm:text-xl text-foreground leading-tight">
-              Lendlly
-            </span>
-            <span className="font-urbanist text-[10px] sm:text-xs text-muted-foreground leading-tight -mt-0.5">
-              RENT & SWAP
-            </span>
+        <Link to="/" className="flex items-center flex-shrink-0 group">
+          <div className="relative h-14 w-auto sm:h-16 flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105">
+            <img 
+              src={logo} 
+              alt="Lendlly Logo" 
+              className="h-full w-auto object-contain"
+            />
           </div>
         </Link>
 

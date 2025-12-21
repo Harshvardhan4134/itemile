@@ -10,8 +10,8 @@ import { Alert } from '@/components/ui/alert';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import GoogleAuth from '@/components/GoogleAuth';
-import { MapPin } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -60,10 +60,11 @@ const Login: React.FC = () => {
         <Card className="glass-card w-full max-w-md border-0 shadow-2xl">
           <CardHeader className="text-center pb-4 sm:pb-6 px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex items-center justify-center mb-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mr-2">
-                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-              </div>
-              <span className="font-urbanist font-bold text-lg sm:text-xl gradient-text">Lendlly</span>
+              <img 
+                src={logo} 
+                alt="Lendlly Logo" 
+                className="h-8 sm:h-10 w-auto object-contain"
+              />
             </div>
             <Badge className="mb-2 glass-effect text-xs sm:text-sm" variant="outline">✨ Welcome Back</Badge>
             <CardTitle className="text-xl sm:text-2xl font-urbanist font-bold">Sign In</CardTitle>

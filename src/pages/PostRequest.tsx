@@ -23,6 +23,12 @@ import {
   AlertCircle
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { 
+  isCategoryRestricted, 
+  getRestrictedMessage,
+  getAllowedDirectListingCategories,
+  getAllowedRequestFirstCategories
+} from "@/lib/categoryRules";
 
 const PostRequest = () => {
   const navigate = useNavigate();
@@ -42,10 +48,16 @@ const PostRequest = () => {
   const [gettingLocation, setGettingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Get all allowed categories (both direct listing and request-first are allowed for requests)
+  const directListingCategories = getAllowedDirectListingCategories();
+  const requestFirstCategories = getAllowedRequestFirstCategories();
+  const allAllowedCategories = [...directListingCategories, ...requestFirstCategories];
+  
+  // Filter out restricted categories and keep some legacy categories for backward compatibility
   const categories = [
-    "Photography", "Sports & Outdoor", "Electronics", "Tools", 
-    "Gaming", "Music", "Kitchen", "Furniture", "Books", "Clothing"
-  ];
+    "Photography", "Sports & Outdoor", "Tools", 
+    "Music", "Kitchen", "Furniture", "Books", "Clothing", "Fitness"
+  ].filter(cat => !isCategoryRestricted(cat));
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -152,6 +164,16 @@ const PostRequest = () => {
       toast({
         title: "Category required",
         description: "Please select a category",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if category is restricted
+    if (isCategoryRestricted(formData.category)) {
+      toast({
+        title: "Category Not Allowed",
+        description: getRestrictedMessage(formData.category),
         variant: "destructive"
       });
       return;
@@ -278,7 +300,7 @@ const PostRequest = () => {
                   
                   <div className="space-y-2">
                     <Label htmlFor="category">Category *</Label>
-                    <Select onValueChange={(value) => handleInputChange("category", value)}>
+                    <Select onValueChange={(value) => handleInputChange("category", value)} value={formData.category}>
                       <SelectTrigger className="glass-effect border-0">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
@@ -290,6 +312,14 @@ const PostRequest = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {formData.category && isCategoryRestricted(formData.category) && (
+                      <Alert className="mt-2 border-destructive/20 bg-destructive/5">
+                        <AlertCircle className="h-4 w-4 text-destructive" />
+                        <AlertDescription className="text-xs">
+                          {getRestrictedMessage(formData.category)}
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </div>
 

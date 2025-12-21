@@ -89,6 +89,9 @@ export interface Listing {
     itemValue?: number; // Used to calculate deposit (if >= 5000, deposit required)
   };
   bookingsCount?: number;
+  // Category-based listing controls
+  listingType?: 'direct' | 'request-only'; // Type of listing based on category rules
+  requestEnabled?: boolean; // For request-first items, whether owner has enabled requests
 }
 
 export interface ListingComment {

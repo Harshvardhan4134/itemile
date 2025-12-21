@@ -40,6 +40,18 @@ import {
 } from "lucide-react";
 import LocationPickerMap from "@/components/LocationPickerMap";
 import { getCityNameFromCoordinates } from "@/lib/utils";
+import { 
+  getCategoryListingType, 
+  isCategoryRestricted, 
+  isRequestFirstAllowed,
+  isDirectListingAllowed,
+  getRequestFirstMessage,
+  getRestrictedMessage,
+  getAllowedDirectListingCategories,
+  getAllowedRequestFirstCategories
+} from "@/lib/categoryRules";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, Info, Shield } from "lucide-react";
 
 const PostItem = () => {
   const navigate = useNavigate();
@@ -71,14 +83,55 @@ const PostItem = () => {
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [mapSelectedCoords, setMapSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [resolvingAddress, setResolvingAddress] = useState(false);
+  const [showRequestFirstDialog, setShowRequestFirstDialog] = useState(false);
+  const [requestEnabled, setRequestEnabled] = useState(false);
+  const [selectedCategoryType, setSelectedCategoryType] = useState<'direct' | 'request-only' | 'restricted' | null>(null);
 
+  // Get all allowed categories (direct listing + request-first)
+  const directListingCategories = getAllowedDirectListingCategories();
+  const requestFirstCategories = getAllowedRequestFirstCategories();
+  const allAllowedCategories = [...directListingCategories, ...requestFirstCategories];
+  
+  // Keep some legacy categories for backward compatibility, but filter restricted ones
   const categories = [
-    "Photography", "Sports & Outdoor", "Electronics", "Tools", 
-    "Gaming", "Music", "Kitchen", "Furniture", "Books", "Clothing"
-  ];
+    "Photography", "Sports & Outdoor", "Tools", 
+    "Music", "Kitchen", "Furniture", "Books", "Clothing", "Fitness"
+  ].filter(cat => !isCategoryRestricted(cat));
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCategoryChange = (category: string) => {
+    const categoryType = getCategoryListingType(category);
+    setSelectedCategoryType(categoryType);
+    
+    if (isCategoryRestricted(category)) {
+      toast({
+        title: "Category Not Allowed",
+        description: getRestrictedMessage(category),
+        variant: "destructive"
+      });
+      handleInputChange("category", "");
+      return;
+    }
+    
+    if (isRequestFirstAllowed(category)) {
+      // Show dialog for request-first items
+      setShowRequestFirstDialog(true);
+      setRequestEnabled(false); // Reset request enabled state
+    }
+    
+    handleInputChange("category", category);
+  };
+
+  const handleEnableRequests = () => {
+    setRequestEnabled(true);
+    setShowRequestFirstDialog(false);
+    toast({
+      title: "Requests Enabled",
+      description: "Your item will be available for requests. Nearby users can request it, and you'll be notified.",
+    });
   };
 
   const addFeature = () => {
@@ -267,6 +320,33 @@ const PostItem = () => {
         uploadedVideoUrl = videoResult.secure_url;
       }
 
+      // Validate category restrictions before submitting
+      if (isCategoryRestricted(formData.category)) {
+        toast({
+          title: "Category Not Allowed",
+          description: getRestrictedMessage(formData.category),
+          variant: "destructive"
+        });
+        setSubmitting(false);
+        setUploading(false);
+        return;
+      }
+
+      // Determine listing type
+      const listingType = isRequestFirstAllowed(formData.category) ? 'request-only' : 'direct';
+      
+      // For request-first items, ensure requests are enabled
+      if (listingType === 'request-only' && !requestEnabled) {
+        toast({
+          title: "Enable Requests Required",
+          description: "Please enable requests for this item to proceed.",
+          variant: "destructive"
+        });
+        setSubmitting(false);
+        setUploading(false);
+        return;
+      }
+
       // Create listing data
       const listingData = {
         ownerId: auth.currentUser.uid,
@@ -278,15 +358,21 @@ const PostItem = () => {
         location: new GeoPoint(Number(formData.lat), Number(formData.lng)),
         images: uploadedImageUrls,
         videoProof: uploadedVideoUrl,
-        available: true
+        available: true,
+        listingType: listingType,
+        requestEnabled: listingType === 'request-only' ? requestEnabled : undefined
       };
 
       // Save to Firestore
       await createListing(listingData);
 
+      const successMessage = listingType === 'request-only' 
+        ? "Your item is now available for requests. Nearby users can request it, and you'll be notified!"
+        : "You successfully posted your item. Let's wait for renters to discover it!";
+
       toast({
         title: "Listing published!",
-        description: "You successfully posted your item. Let's wait for renters to discover it!"
+        description: successMessage
       });
 
       navigate('/explore');
@@ -344,7 +430,7 @@ const PostItem = () => {
                   
                   <div className="space-y-2">
                     <Label htmlFor="category" className="text-sm sm:text-base">Category *</Label>
-                    <Select onValueChange={(value) => handleInputChange("category", value)}>
+                    <Select onValueChange={handleCategoryChange} value={formData.category}>
                       <SelectTrigger className="glass-effect border-0 h-10 sm:h-11 text-sm sm:text-base">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
@@ -356,6 +442,22 @@ const PostItem = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {formData.category && selectedCategoryType === 'request-only' && requestEnabled && (
+                      <Alert className="mt-2 border-primary/20 bg-primary/5">
+                        <Info className="h-4 w-4 text-primary" />
+                        <AlertDescription className="text-xs">
+                          This item will work on a request-first basis. It won't appear in public listings, but nearby users can request it.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {formData.category && selectedCategoryType === 'restricted' && (
+                      <Alert className="mt-2 border-destructive/20 bg-destructive/5">
+                        <AlertCircle className="h-4 w-4 text-destructive" />
+                        <AlertDescription className="text-xs">
+                          {getRestrictedMessage(formData.category)}
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </div>
 
@@ -772,6 +874,54 @@ const PostItem = () => {
               ) : (
                 "Use this Location"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request-First Dialog */}
+      <Dialog open={showRequestFirstDialog} onOpenChange={setShowRequestFirstDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Request-First Item
+            </DialogTitle>
+            <DialogDescription className="pt-2 whitespace-pre-line">
+              {getRequestFirstMessage()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Alert className="border-primary/20 bg-primary/5">
+              <Info className="h-4 w-4 text-primary" />
+              <AlertTitle className="text-sm font-semibold mb-1">How it works:</AlertTitle>
+              <AlertDescription className="text-xs space-y-1">
+                <p>• Your item won't appear in public listings</p>
+                <p>• Nearby users can request this item</p>
+                <p>• You'll be notified when there's demand in your city</p>
+                <p>• You can then connect with interested renters</p>
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowRequestFirstDialog(false);
+                handleInputChange("category", "");
+                setSelectedCategoryType(null);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleEnableRequests}
+              className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary"
+            >
+              Enable Requests for This Item
             </Button>
           </DialogFooter>
         </DialogContent>

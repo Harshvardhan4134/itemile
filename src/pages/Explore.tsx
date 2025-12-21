@@ -64,6 +64,7 @@ import TermsNotification from "@/components/TermsNotification";
 import { uploadMultipleImages } from "@/lib/cloudinary";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { isDirectListingAllowed } from "@/lib/categoryRules";
 
 const TERMS_VERSION = "2025-11";
 const buildTermsKey = (uid?: string | null) =>
@@ -208,7 +209,15 @@ const Explore = () => {
 
         if (!isMounted) return;
 
-        setListings(listingsData);
+        // Filter out request-first items from public listings
+        // Only show direct listing items on the Explore page
+        const publicListings = listingsData.filter(listing => {
+          // Show listings that are explicitly marked as 'direct' or don't have listingType set (backward compatibility)
+          // Hide listings marked as 'request-only'
+          return listing.listingType !== 'request-only';
+        });
+
+        setListings(publicListings);
         setRequests(requestsData);
         setMessagePosts(postsData);
       } catch (error) {
