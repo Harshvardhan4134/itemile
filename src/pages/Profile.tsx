@@ -876,7 +876,7 @@ const Profile = () => {
                       <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs sm:text-sm text-muted-foreground">Email Support</p>
-                        <a href="mailto:rentshare11@gmail.com" className="font-medium text-primary hover:underline text-xs sm:text-sm break-all">rentshare11@gmail.com</a>
+                        <a href="mailto:support@lendlly.in" className="font-medium text-primary hover:underline text-xs sm:text-sm break-all">support@lendlly.in</a>
                       </div>
                     </div>
                   </div>

@@ -173,7 +173,7 @@ const TermsNotification: React.FC<TermsNotificationProps> = ({
       },
       {
         heading: "17. Contact Us",
-        body: "For support or disputes, reach out at rentshare11@gmail.com.",
+        body: "For support or disputes, reach out at support@lendlly.in.",
       },
     ],
     []

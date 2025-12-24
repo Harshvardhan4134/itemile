@@ -1628,7 +1628,7 @@ export const rejectKYCVerification = async (uid: string, reason: string): Promis
     await sendEmailNotification({
       email: user.email,
       subject: 'Verification Failed - Action Required - Rent Share',
-      message: `Hi ${user.name},\n\nUnfortunately, your verification could not be approved.\n\nReason: ${reason}\n\nPlease re-upload your documents in your profile section.\n\nIf you have any questions, contact us at rentshare11@gmail.com.\n\nBest regards,\nRent Share Team`,
+      message: `Hi ${user.name},\n\nUnfortunately, your verification could not be approved.\n\nReason: ${reason}\n\nPlease re-upload your documents in your profile section.\n\nIf you have any questions, contact us at support@lendlly.in.\n\nBest regards,\nRent Share Team`,
       type: 'verification_rejected',
       createdAt: serverTimestamp()
     });

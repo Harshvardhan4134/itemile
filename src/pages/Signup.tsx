@@ -11,7 +11,6 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import GoogleAuth from '@/components/GoogleAuth';
 import { ArrowLeft } from 'lucide-react';
-import logo from '@/assets/logo.png';
 
 const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])(?=.*\d).{8,}$/;
 
@@ -88,11 +87,7 @@ const Signup: React.FC = () => {
         <Card className="glass-card w-full max-w-md border-0 shadow-2xl">
           <CardHeader className="text-center pb-4 sm:pb-6 px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex items-center justify-center mb-2">
-              <img 
-                src={logo} 
-                alt="Lendlly Logo" 
-                className="h-8 sm:h-10 w-auto object-contain"
-              />
+              <span className="text-2xl sm:text-3xl font-bold gradient-text">Lendlly</span>
             </div>
             <Badge className="mb-2 glass-effect text-xs sm:text-sm" variant="outline">✨ Join the Future of Sharing</Badge>
             <CardTitle className="text-xl sm:text-2xl font-urbanist font-bold">Create Your Account</CardTitle>

@@ -236,7 +236,7 @@ const TermsAndConditions = () => {
                   If you have any questions about these Terms and Conditions, please contact us:
                 </p>
                 <ul className="list-none space-y-2 text-muted-foreground">
-                  <li><strong>Email:</strong> rentshare11@gmail.com</li>
+                  <li><strong>Email:</strong> support@lendlly.in</li>
                   <li><strong>Website:</strong> https://lendlly.vercel.app/</li>
                 </ul>
               </section>

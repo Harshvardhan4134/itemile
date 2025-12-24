@@ -256,7 +256,7 @@ const AdminListings = () => {
             subjectPrefix = '⚠️ URGENT: Listing Removed - Safety Concern';
           }
           
-          const emailMessage = `Hi ${owner.name},\n\nYour listing "${selectedListing.title}" has been removed by our admin team.\n\nReason: ${reasonText}${additionalNotes.trim() ? `\n\nAdditional Notes: ${additionalNotes.trim()}` : ''}${strikeUser ? '\n\n⚠️ Important: Your account has received a strike due to this violation. Repeated violations may result in account suspension.' : ''}\n\nIf you believe this was done in error, please contact our support team at rentshare11@gmail.com or call +91 8547652100.\n\nView your listings: ${window.location.origin}/profile\n\nBest regards,\nRent Share Admin Team`;
+          const emailMessage = `Hi ${owner.name},\n\nYour listing "${selectedListing.title}" has been removed by our admin team.\n\nReason: ${reasonText}${additionalNotes.trim() ? `\n\nAdditional Notes: ${additionalNotes.trim()}` : ''}${strikeUser ? '\n\n⚠️ Important: Your account has received a strike due to this violation. Repeated violations may result in account suspension.' : ''}\n\nIf you believe this was done in error, please contact our support team at support@lendlly.in or call +91 8547652100.\n\nView your listings: ${window.location.origin}/profile\n\nBest regards,\nRent Share Admin Team`;
           
           await sendEmailNotification({
             email: owner.email,

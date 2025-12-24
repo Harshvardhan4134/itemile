@@ -56,10 +56,10 @@ const NotFound = () => {
                 <div className="flex items-center justify-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <a 
-                    href="mailto:rentshare11@gmail.com" 
+                    href="mailto:support@lendlly.in" 
                     className="text-primary hover:underline"
                   >
-                    rentshare11@gmail.com
+                    support@lendlly.in
                   </a>
                 </div>
               </div>

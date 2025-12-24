@@ -402,7 +402,10 @@ const Index = () => {
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="mailto:rentshare11@gmail.com" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2">
+                  <a
+                    href="mailto:support@lendlly.in"
+                    className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                  >
                     <Mail className="h-4 w-4" />
                     Contact Us
                   </a>

@@ -146,7 +146,7 @@ const PrivacyPolicy = () => {
                   <li>Withdraw consent where processing is based on consent</li>
                 </ul>
                 <p className="text-muted-foreground">
-                  To exercise these rights, please contact us at rentshare11@gmail.com.
+                  To exercise these rights, please contact us at support@lendlly.in.
                 </p>
               </section>
 
@@ -187,7 +187,7 @@ const PrivacyPolicy = () => {
                   If you have any questions about this Privacy Policy, please contact us:
                 </p>
                 <ul className="list-none space-y-2 text-muted-foreground">
-                  <li><strong>Email:</strong> rentshare11@gmail.com</li>
+                  <li><strong>Email:</strong> support@lendlly.in</li>
                   <li><strong>Website:</strong> https://lendlly.vercel.app/</li>
                 </ul>
               </section>
