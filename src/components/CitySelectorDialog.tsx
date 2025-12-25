@@ -120,7 +120,15 @@ export const CitySelectorDialog = ({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search city"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && search.trim().length > 0) {
+                  e.preventDefault();
+                  onSelectCity(search.trim());
+                  onOpenChange(false);
+                  setSearch("");
+                }
+              }}
+              placeholder="Search city or type any location"
             />
             <Button
               variant="outline"
@@ -143,39 +151,49 @@ export const CitySelectorDialog = ({
           </div>
 
           <ScrollArea className="h-64 rounded-md border">
-            <div className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {filteredCities.map((city) => (
-                <Button
-                  key={city}
-                  variant={selectedCity === city ? "default" : "outline"}
-                  className="justify-start"
-                  onClick={() => {
-                    onSelectCity(city);
-                    onOpenChange(false);
-                  }}
-                >
-                  {city}
-                </Button>
-              ))}
-              {filteredCities.length === 0 && (
-                <div className="space-y-2 px-2">
-                  <p className="text-sm text-muted-foreground">
-                    No cities found. Try another name or use your location.
-                  </p>
-                  {search.trim().length > 0 && (
-                    <Button
-                      variant="secondary"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        onSelectCity(search.trim());
-                        onOpenChange(false);
-                      }}
-                    >
-                      Use “{search.trim()}”
-                    </Button>
-                  )}
+            <div className="p-2 space-y-2">
+              {/* Show custom location option if user has typed something */}
+              {search.trim().length > 0 && (
+                <div className="pb-2 border-b">
+                  <Button
+                    variant="default"
+                    className="w-full justify-start bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                    onClick={() => {
+                      onSelectCity(search.trim());
+                      onOpenChange(false);
+                      setSearch("");
+                    }}
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Use "{search.trim()}"
+                  </Button>
                 </div>
               )}
+              
+              {/* Show filtered cities or popular cities */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {filteredCities.map((city) => (
+                  <Button
+                    key={city}
+                    variant={selectedCity === city ? "default" : "outline"}
+                    className="justify-start"
+                    onClick={() => {
+                      onSelectCity(city);
+                      onOpenChange(false);
+                      setSearch("");
+                    }}
+                  >
+                    {city}
+                  </Button>
+                ))}
+                {filteredCities.length === 0 && search.trim().length === 0 && (
+                  <div className="col-span-2 px-2 py-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Type a city name to search, or use your location.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </ScrollArea>
         </div>
