@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getAllRequests, getRequest, markRequestAsMatched, getUser, createRequestTransactionAndChat, sendMessage, getChatByRequestId } from "@/lib/firestore";
+import { getAllRequests, getRequest, markRequestAsMatched, getUser, createRequestTransactionAndChat, sendMessage, getChatByRequestId, getOrCreateRequestChat } from "@/lib/firestore";
 import { Request, User } from "@/lib/firestore";
 import { auth } from "@/lib/firebase";
 import { 
@@ -217,46 +217,39 @@ const RequestsFeed = () => {
     }
 
     try {
-      console.log('Looking for chat with requestId:', requestId, 'userId:', auth.currentUser.uid);
+      console.log('Getting or creating chat for requestId:', requestId, 'userId:', auth.currentUser.uid);
       
       // Show loading state
       toast({
-        title: "Loading conversation...",
-        description: "Finding your chat...",
+        title: "Opening conversation...",
+        description: "Setting up chat...",
       });
 
-      const chat = await getChatByRequestId(requestId, auth.currentUser.uid);
-      console.log('Found chat:', chat);
+      // Get or create chat - this will create a chat if one doesn't exist
+      const chat = await getOrCreateRequestChat(requestId, auth.currentUser.uid);
+      console.log('Got/created chat:', chat);
       
       if (chat) {
         console.log('Navigating to chat:', `/chat/${chat.id}`);
-        toast({
-          title: "Opening conversation",
-          description: "Taking you to the chat...",
-        });
         navigate(`/chat/${chat.id}`);
       } else {
-        console.log('Chat not found, falling back to inbox');
+        console.log('Failed to get/create chat, falling back to inbox');
         toast({
-          title: "Chat not found",
-          description: "Could not find the conversation. Please check your messages in the chat inbox.",
+          title: "Chat not available",
+          description: "Could not create the conversation. Please try again.",
           variant: "destructive"
         });
-        // Give user a moment to read the message, then navigate
         setTimeout(() => {
           navigate('/chat');
         }, 1500);
       }
-    } catch (error) {
-      console.error('Error finding chat:', error);
+    } catch (error: any) {
+      console.error('Error getting/creating chat:', error);
       toast({
         title: "Error",
-        description: "Failed to open chat. Redirecting to chat inbox.",
+        description: error.message || "Failed to open chat. Please try again.",
         variant: "destructive"
       });
-      setTimeout(() => {
-        navigate('/chat');
-      }, 1500);
     }
   };
 

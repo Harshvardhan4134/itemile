@@ -755,13 +755,14 @@ export const updateTransactionStatus = async (transactionId: string, status: str
     
     // Create notification for the other party
     const otherUserId = transaction.ownerId === userId ? transaction.renterId : transaction.ownerId;
-    const action = status === 'active' ? 'approved' : status === 'declined' ? 'declined' : 'updated';
+    const action = status === 'active' || status === 'pickup_otp_generated' ? 'approved' : status === 'declined' || status === 'cancelled' ? 'declined' : 'updated';
+    const itemName = transaction.listingTitle || 'item';
     
     await createNotification({
       userId: otherUserId,
       type: 'transaction_update',
       transactionId: transactionId,
-      message: `Your rental request has been ${action}`,
+      message: `Your rental request for "${itemName}" has been ${action}`,
       read: false
     });
     
@@ -1044,6 +1045,63 @@ export const getChatByRequestId = async (requestId: string, userId?: string): Pr
   } catch (error) {
     console.error('Error finding chat by requestId:', error);
     return null;
+  }
+};
+
+// Get or create a chat for a request (used when someone wants to chat about a request before matching)
+export const getOrCreateRequestChat = async (requestId: string, userId: string): Promise<Chat> => {
+  try {
+    const request = await getRequest(requestId);
+    if (!request) {
+      throw new Error('Request not found');
+    }
+
+    // Participants should be the requester and the current user
+    const participants = [request.userId, userId].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates if same user
+    
+    // Try to find existing chat first
+    try {
+      const existingChat = await getChatByRequestId(requestId, userId);
+      if (existingChat) {
+        return existingChat;
+      }
+    } catch (error) {
+      // Chat doesn't exist yet, will create one below
+      console.log('No existing chat found, creating new one');
+    }
+
+    // Check for any existing chat between these participants for this request
+    const userChats = await getChatsByUser(userId);
+    const existingChatBetweenUsers = userChats.find(chat => 
+      chat.requestId === requestId &&
+      chat.participants.includes(request.userId) &&
+      chat.participants.includes(userId)
+    );
+    
+    if (existingChatBetweenUsers) {
+      return existingChatBetweenUsers;
+    }
+
+    // If no chat exists, create one
+    const chatId = `chat_request_${requestId}_${userId}_${Date.now()}`;
+    const chatData = {
+      chatId,
+      participants: participants,
+      requestId: request.id,
+      listingTitle: `Request: ${request.itemName}`,
+      lastMessage: '',
+      lastUpdated: serverTimestamp(),
+    };
+
+    await setDoc(doc(db, 'chats', chatId), chatData);
+    
+    return {
+      id: chatId,
+      ...chatData
+    } as Chat;
+  } catch (error) {
+    console.error('Error getting or creating request chat:', error);
+    throw error;
   }
 };
 
@@ -1698,8 +1756,12 @@ export const getAllRequests = async (): Promise<Request[]> => {
     ...doc.data()
   })) as Request[];
   
+  // Filter to only show unmatched requests (pending requests that haven't been matched yet)
+  // Only show requests where matched is false or undefined (not matched yet)
+  const unmatchedRequests = requests.filter(req => !req.matched);
+  
   // Sort by createdAt in descending order on the client side
-  return requests.sort((a, b) => {
+  return unmatchedRequests.sort((a, b) => {
     if (!a.createdAt || !b.createdAt) return 0;
     const aTime = a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
     const bTime = b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();

@@ -86,7 +86,7 @@ const Index = () => {
               Discover Items to <span className="gradient-text">Rent</span>
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-4 sm:mb-6 max-w-2xl mx-auto px-4">
-              Find the perfect items for your needs. Rent from trusted community members.
+              A peer-to-peer rental marketplace where you can rent items, earn from unused things, and request items nearby instead of buying new.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
               <Link to="/explore">
@@ -103,6 +103,22 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* What is Lendlly Section */}
+        <section className="py-6 sm:py-8 mb-8 sm:mb-12">
+          <Card className="glass-card">
+            <CardContent className="p-6 sm:p-8 md:p-10">
+              <div className="text-center max-w-3xl mx-auto">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">
+                  What is <span className="gradient-text">Lendlly</span>?
+                </h2>
+                <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
+                  Lendlly is a community-driven peer-to-peer rental platform. People can rent items to others in their city, earn money from things they already own, and request items they need instead of buying them.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* Categories Section */}
         <section className="py-6 sm:py-8 mb-8 sm:mb-12">
@@ -352,7 +368,7 @@ const Index = () => {
             <div className="space-y-4">
               <h3 className="text-2xl font-bold gradient-text">Lendlly</h3>
               <p className="text-sm text-muted-foreground">
-                The modern marketplace for renting and swapping items within your community.
+                A peer-to-peer rental marketplace connecting people to rent, earn, and request items nearby.
               </p>
               <div className="flex gap-4">
                 <Button variant="ghost" size="icon" className="rounded-full">

@@ -500,7 +500,34 @@ const Transactions = () => {
                               </div>
                             )}
 
-                            {transaction.status === "active" && (
+                            {(transaction.status === "active" || transaction.status === "picked_up" || transaction.status === "return_otp_generated") && (
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-orange-500 border-orange-500 hover:bg-orange-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTransactionClick(transaction);
+                                  }}
+                                >
+                                  <MessageCircle className="h-4 w-4 mr-1" />
+                                  Chat
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTransactionDetail(transaction);
+                                  }}
+                                >
+                                  View Details
+                                </Button>
+                              </div>
+                            )}
+
+                            {transaction.status === "returned" && (
                               <div className="flex gap-2">
                                 <Button 
                                   size="sm" 
