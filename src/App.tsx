@@ -32,6 +32,9 @@ import AdminBookings from "./pages/admin/AdminBookings";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import OwnerBookings from "./pages/OwnerBookings";
+import Refund from "./pages/Refund";
+import Contact from "./pages/Contact";
+import Shipping from "./pages/Shipping";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +140,11 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/refund" element={<Refund />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/shipping" element={<Shipping />} />
           <Route
             path="/profile"
             element={

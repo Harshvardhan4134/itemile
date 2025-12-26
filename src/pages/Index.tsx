@@ -418,22 +418,29 @@ const Index = () => {
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a
-                    href="mailto:support@lendlly.in"
-                    className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-                  >
+                  <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     Contact Us
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <Link to="/privacy-policy" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Terms & Conditions
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
                     Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link to="/terms-and-conditions" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Terms and Conditions
+                  <Link to="/refund" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Refund Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/shipping" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Rentals & Delivery
                   </Link>
                 </li>
               </ul>
