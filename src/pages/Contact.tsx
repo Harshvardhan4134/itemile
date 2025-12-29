@@ -58,6 +58,31 @@ const Contact = () => {
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+                          <Phone className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg mb-2">Phone Support</h3>
+                          <p className="text-muted-foreground mb-3">
+                            Call us for immediate assistance or inquiries
+                          </p>
+                          <a 
+                            href="tel:+918547652100" 
+                            className="text-primary hover:underline font-medium"
+                          >
+                            +91 85476 52100
+                          </a>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Available: Monday - Friday, 9 AM - 6 PM IST
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0">
                           <MapPin className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -100,7 +125,7 @@ const Contact = () => {
                     <CardContent className="p-6">
                       <h3 className="font-semibold mb-2">What if I need help with a payment?</h3>
                       <p className="text-muted-foreground">
-                        For payment-related issues, refunds, or transaction disputes, email us at support@lendlly.in with your transaction ID and details. We'll assist you promptly.
+                        For payment-related issues, refunds, or transaction disputes, email us at <a href="mailto:support@lendlly.in" className="text-primary hover:underline">support@lendlly.in</a> or call <a href="tel:+918547652100" className="text-primary hover:underline">+91 85476 52100</a> with your transaction ID and details. We'll assist you promptly.
                       </p>
                     </CardContent>
                   </Card>
@@ -121,6 +146,8 @@ const Contact = () => {
                 <Card>
                   <CardContent className="p-6">
                     <div className="space-y-2 text-muted-foreground">
+                      <p><strong className="text-foreground">Phone Support:</strong> Monday - Friday, 9 AM - 6 PM IST</p>
+                      <p><strong className="text-foreground">Phone:</strong> <a href="tel:+918547652100" className="text-primary hover:underline">+91 85476 52100</a></p>
                       <p><strong className="text-foreground">Email Support:</strong> Available 24/7</p>
                       <p><strong className="text-foreground">Response Time:</strong> 24-48 hours (Monday - Friday)</p>
                       <p><strong className="text-foreground">Urgent Issues:</strong> We prioritize urgent matters and aim to respond within 12 hours</p>
@@ -132,6 +159,12 @@ const Contact = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">Other Ways to Reach Us</h2>
                 <div className="space-y-3 text-muted-foreground">
+                  <p>
+                    <strong className="text-foreground">Phone:</strong> <a href="tel:+918547652100" className="text-primary hover:underline">+91 85476 52100</a>
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Email:</strong> <a href="mailto:support@lendlly.in" className="text-primary hover:underline">support@lendlly.in</a>
+                  </p>
                   <p>
                     <strong className="text-foreground">For Partners & Collaborations:</strong> support@lendlly.in
                   </p>

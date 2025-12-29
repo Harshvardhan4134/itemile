@@ -1083,6 +1083,8 @@ const ProductDetail = () => {
           }}
           bookingData={bookingData}
           listingTitle={listing.title}
+          ownerId={listing.ownerId}
+          transactionId={pendingTransactionId || undefined}
           onPaymentComplete={handlePaymentComplete}
           onPaymentCancelled={handlePaymentCancelled}
           isProcessing={isRequestingRent}

@@ -55,6 +55,10 @@ export interface User {
   // Access code fields
   hasAccess?: boolean;
   accessGrantedAt?: any;
+  // Razorpay Route account fields
+  razorpayAccountId?: string;
+  razorpayAccountStatus?: string;
+  razorpayAccountCreatedAt?: any;
 }
 
 export type ModerationStatus = 'active' | 'flagged' | 'removed' | 'pending_review';
@@ -147,6 +151,20 @@ export interface Transaction {
   // User agreement
   agreementAccepted?: boolean;
   agreementAcceptedAt?: any;
+  // Payment split details (marketplace)
+  paymentSplit?: {
+    rentAmount: number;
+    serviceFee: number;
+    depositAmount: number;
+    ownerAccountId: string;
+    platformAccountId: string | null;
+  };
+  depositStatus?: 'held' | 'refunded' | 'partially_refunded' | 'released';
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  paymentStatus?: 'pending' | 'completed' | 'failed';
+  paidAt?: any;
 }
 
 export interface Message {

@@ -841,6 +841,15 @@ const Transactions = () => {
                     return;
                   }
 
+                  // Prepare marketplace split for payment
+                  const marketplaceSplit = {
+                    ownerId: transaction.ownerId,
+                    rentAmount: transaction.totalRent || 0,
+                    serviceFee: transaction.serviceFee || 0,
+                    depositAmount: transaction.deposit || 0,
+                    transactionId: txnId,
+                  };
+
                   // Create Razorpay payment using the correct function signature
                   await createRazorpayPayment(
                     totalAmount,
@@ -910,7 +919,9 @@ const Transactions = () => {
                           variant: "destructive",
                         });
                       }
-                    }
+                    },
+                    undefined, // onError handler
+                    marketplaceSplit // Pass marketplace split parameters
                   );
 
                 } catch (error: any) {

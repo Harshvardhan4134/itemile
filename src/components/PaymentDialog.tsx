@@ -23,6 +23,8 @@ interface PaymentDialogProps {
   onOpenChange: (open: boolean) => void;
   bookingData: BookingData | null;
   listingTitle: string;
+  ownerId?: string; // Owner ID for marketplace split
+  transactionId?: string; // Transaction ID for marketplace split
   onPaymentComplete: (paymentMethod: 'SecurePay' | 'online' | 'offline', razorpayResponse?: RazorpayResponse, agreementAccepted?: boolean) => Promise<void>;
   onPaymentCancelled?: () => Promise<void>;
   isProcessing?: boolean;
@@ -34,6 +36,8 @@ export default function PaymentDialog({
   onOpenChange,
   bookingData,
   listingTitle,
+  ownerId,
+  transactionId,
   onPaymentComplete,
   onPaymentCancelled,
   isProcessing = false,
@@ -71,6 +75,15 @@ export default function PaymentDialog({
       const userEmail = currentUser?.email || '';
       const userName = currentUser?.displayName || 'User';
       
+      // Prepare marketplace split if ownerId is provided
+      const marketplaceSplit = ownerId && bookingData ? {
+        ownerId: ownerId,
+        rentAmount: bookingData.totalRent,
+        serviceFee: bookingData.serviceFee || 0,
+        depositAmount: bookingData.deposit || 0,
+        transactionId: transactionId,
+      } : undefined;
+
       await createRazorpayPayment(
         bookingData.payableNow,
         'INR',
@@ -91,6 +104,33 @@ export default function PaymentDialog({
           await onPaymentComplete(paymentMethod, response, agreementAccepted);
         },
         async (error: any) => {
+          // Payment failed or cancelled
+          setIsProcessingPayment(false);
+          
+          if (error.message && error.message.includes('cancelled')) {
+            // Call the cancellation handler if provided
+            if (onPaymentCancelled) {
+              try {
+                await onPaymentCancelled();
+              } catch (err) {
+                console.error('Error handling payment cancellation:', err);
+              }
+            }
+            toast({
+              title: "Payment Cancelled",
+              description: "Payment was cancelled. The booking request has been removed.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Payment Failed",
+              description: error.message || "Failed to process payment. Please try again.",
+              variant: "destructive",
+            });
+          }
+        },
+        marketplaceSplit // Pass marketplace split parameters
+      );
           // Payment failed or cancelled
           setIsProcessingPayment(false);
           

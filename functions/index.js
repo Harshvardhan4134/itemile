@@ -3,6 +3,8 @@ const functions = require("firebase-functions/v1");
 const { defineString } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
 
 admin.initializeApp();
 
@@ -12,6 +14,11 @@ const emailUser = defineString("EMAIL_USER", { default: "lendlly2025@gmail.com" 
 // so we don't need functions.runWith(). This avoids the runWith() error you're seeing.
 const emailPassword = defineString("EMAIL_PASSWORD");
 const appUrl = defineString("APP_URL", { default: "https://lendlly.vercel.app" });
+
+// Razorpay configuration
+// Using functions.config() for v1 compatibility
+// Set via: firebase functions:config:set razorpay.key_id="..." razorpay.key_secret="..."
+// Note: Remove the old defineString lines if they exist
 
 // Configure your email transport
 // IMPORTANT: Replace with your actual email credentials
@@ -362,3 +369,439 @@ exports.onReturnOtpGenerated = functions.firestore
 
       return null;
     });
+
+/**
+ * Cloud Function: Create Razorpay Route Account for Owner
+ * Creates a Razorpay Route account (sub-merchant) for an owner
+ */
+exports.createRazorpayRouteAccount = functions.https.onCall(async (data, context) => {
+  try {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated to create route account"
+      );
+    }
+
+    const { name, email, phone, bankAccountNumber, ifscCode, accountHolderName } = data;
+
+    // Validate input
+    if (!name || !email || !phone) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Name, email, and phone are required"
+      );
+    }
+
+    // Get Razorpay credentials
+    const config = functions.config();
+    const keyId = config?.razorpay?.key_id;
+    const keySecret = config?.razorpay?.key_secret;
+
+    if (!keyId || !keySecret) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Razorpay credentials not configured"
+      );
+    }
+
+    // Initialize Razorpay
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+
+    // Create Route account (sub-merchant)
+    const accountData = {
+      email: email,
+      phone: phone,
+      legal_business_name: name,
+      business_type: "individual", // or "partnership", "private_limited", etc.
+      contact_name: name,
+      profile: {
+        category: "services",
+        subcategory: "rental_services",
+        description: "Peer-to-peer rental marketplace",
+      },
+    };
+
+    // Add bank account if provided
+    if (bankAccountNumber && ifscCode && accountHolderName) {
+      accountData.bank_account = {
+        name: accountHolderName,
+        account_number: bankAccountNumber,
+        ifsc: ifscCode,
+      };
+    }
+
+    const account = await razorpay.accounts.create(accountData);
+
+    // Store account ID in Firestore
+    await admin.firestore()
+      .collection("users")
+      .doc(context.auth.uid)
+      .update({
+        razorpayAccountId: account.id,
+        razorpayAccountStatus: account.status,
+        razorpayAccountCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    return {
+      success: true,
+      accountId: account.id,
+      status: account.status,
+    };
+  } catch (error) {
+    console.error("Error creating Razorpay route account:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      error.message || "Failed to create route account"
+    );
+  }
+});
+
+/**
+ * Cloud Function: Create Razorpay Order with Marketplace Split
+ * Creates a Razorpay order with transfer rules for marketplace split
+ */
+exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
+  try {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated to create payment order"
+      );
+    }
+
+    const { 
+      amount, 
+      currency = "INR", 
+      receipt,
+      ownerId,
+      rentAmount,
+      serviceFee,
+      depositAmount,
+      transactionId
+    } = data;
+
+    // Validate input
+    if (!amount || amount < 1) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Amount must be provided and greater than 0"
+      );
+    }
+
+    if (!ownerId || !rentAmount || serviceFee === undefined) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "ownerId, rentAmount, and serviceFee are required for marketplace split"
+      );
+    }
+
+    // Get Razorpay credentials
+    const config = functions.config();
+    const keyId = config?.razorpay?.key_id;
+    const keySecret = config?.razorpay?.key_secret;
+    const platformAccountId = config?.razorpay?.platform_account_id; // Your platform account ID
+
+    if (!keyId || !keySecret) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Razorpay credentials not configured"
+      );
+    }
+
+    // Get owner's Razorpay account ID
+    const ownerDoc = await admin.firestore()
+      .collection("users")
+      .doc(ownerId)
+      .get();
+
+    if (!ownerDoc.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "Owner not found"
+      );
+    }
+
+    const ownerData = ownerDoc.data();
+    const ownerAccountId = ownerData?.razorpayAccountId;
+
+    if (!ownerAccountId) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Owner does not have a Razorpay account. Please create one first."
+      );
+    }
+
+    // Initialize Razorpay
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+
+    // Build transfer rules for marketplace split
+    const transfers = [
+      {
+        account: ownerAccountId, // Owner receives rent amount
+        amount: Math.round(rentAmount * 100), // Convert to paise
+        currency: currency,
+        on_hold: false, // Immediate transfer
+      },
+    ];
+
+    // Add platform fee transfer if platform account is configured
+    if (platformAccountId && serviceFee > 0) {
+      transfers.push({
+        account: platformAccountId, // Lendlly receives service fee
+        amount: Math.round(serviceFee * 100),
+        currency: currency,
+      });
+    }
+
+    // Create order with transfers
+    const options = {
+      amount: Math.round(amount * 100), // Total amount in paise
+      currency: currency,
+      receipt: receipt || `receipt_${context.auth.uid}_${Date.now()}`,
+      transfers: transfers,
+      notes: {
+        transactionId: transactionId || "",
+        ownerId: ownerId,
+        renterId: context.auth.uid,
+        rentAmount: rentAmount.toString(),
+        serviceFee: serviceFee.toString(),
+        depositAmount: depositAmount ? depositAmount.toString() : "0",
+        depositStatus: "held", // Deposit stays with platform
+      },
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    // Update transaction with order details
+    if (transactionId) {
+      await admin.firestore()
+        .collection("transactions")
+        .doc(transactionId)
+        .update({
+          razorpayOrderId: order.id,
+          paymentSplit: {
+            rentAmount: rentAmount,
+            serviceFee: serviceFee,
+            depositAmount: depositAmount || 0,
+            ownerAccountId: ownerAccountId,
+            platformAccountId: platformAccountId || null,
+          },
+          depositStatus: "held", // Deposit is held in escrow
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+
+    return {
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      status: order.status,
+      transfers: transfers,
+    };
+  } catch (error) {
+    console.error("Error creating Razorpay order:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      error.message || "Failed to create payment order"
+    );
+  }
+});
+
+/**
+ * Cloud Function: Verify Razorpay Payment Signature
+ * Verifies the authenticity of a payment using the signature
+ */
+exports.verifyRazorpayPayment = functions.https.onCall(async (data, context) => {
+  try {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated to verify payment"
+      );
+    }
+
+    const { orderId, paymentId, signature, transactionId } = data;
+
+    // Validate input
+    if (!orderId || !paymentId || !signature) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "orderId, paymentId, and signature are required"
+      );
+    }
+
+    // Get Razorpay key secret from functions config
+    const config = functions.config();
+    const keySecret = config?.razorpay?.key_secret;
+
+    if (!keySecret) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Razorpay key secret not configured"
+      );
+    }
+
+    // Verify signature
+    const text = orderId + "|" + paymentId;
+    const generatedSignature = crypto
+      .createHmac("sha256", keySecret)
+      .update(text)
+      .digest("hex");
+
+    const isValid = generatedSignature === signature;
+
+    // If verified and transaction ID provided, update transaction
+    if (isValid && transactionId) {
+      await admin.firestore()
+        .collection("transactions")
+        .doc(transactionId)
+        .update({
+          razorpayPaymentId: paymentId,
+          razorpayOrderId: orderId,
+          razorpaySignature: signature,
+          paymentStatus: "completed",
+          paidAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+
+    return {
+      success: isValid,
+      verified: isValid,
+    };
+  } catch (error) {
+    console.error("Error verifying Razorpay payment:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      error.message || "Failed to verify payment"
+    );
+  }
+});
+
+/**
+ * Cloud Function: Refund Deposit
+ * Refunds the deposit amount to the renter after safe return
+ */
+exports.refundDeposit = functions.https.onCall(async (data, context) => {
+  try {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated to process refund"
+      );
+    }
+
+    const { transactionId, refundAmount, reason = "Item returned safely" } = data;
+
+    if (!transactionId || !refundAmount) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "transactionId and refundAmount are required"
+      );
+    }
+
+    // Get transaction
+    const transactionDoc = await admin.firestore()
+      .collection("transactions")
+      .doc(transactionId)
+      .get();
+
+    if (!transactionDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Transaction not found");
+    }
+
+    const transaction = transactionDoc.data();
+
+    // Verify user is owner or admin
+    const isOwner = transaction.ownerId === context.auth.uid;
+    const isRenter = transaction.renterId === context.auth.uid;
+    const userDoc = await admin.firestore()
+      .collection("users")
+      .doc(context.auth.uid)
+      .get();
+    const isAdmin = userDoc.data()?.systemRole === "admin";
+
+    if (!isOwner && !isAdmin) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Only owner or admin can process refunds"
+      );
+    }
+
+    // Get Razorpay credentials
+    const config = functions.config();
+    const keyId = config?.razorpay?.key_id;
+    const keySecret = config?.razorpay?.key_secret;
+
+    if (!keyId || !keySecret) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Razorpay credentials not configured"
+      );
+    }
+
+    // Initialize Razorpay
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+
+    // Get payment ID from transaction
+    const paymentId = transaction.razorpayPaymentId;
+    if (!paymentId) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Payment ID not found in transaction"
+      );
+    }
+
+    // Create refund
+    const refund = await razorpay.payments.refund(paymentId, {
+      amount: Math.round(refundAmount * 100), // Convert to paise
+      notes: {
+        reason: reason,
+        transactionId: transactionId,
+        refundedBy: context.auth.uid,
+      },
+    });
+
+    // Update transaction
+    await admin.firestore()
+      .collection("transactions")
+      .doc(transactionId)
+      .update({
+        depositStatus: refundAmount >= (transaction.deposit || 0) ? "refunded" : "partially_refunded",
+        refundAmount: refundAmount,
+        refundId: refund.id,
+        refundStatus: "processed",
+        refundedAt: admin.firestore.FieldValue.serverTimestamp(),
+        refundReason: reason,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    return {
+      success: true,
+      refundId: refund.id,
+      amount: refund.amount / 100, // Convert back to rupees
+      status: refund.status,
+    };
+  } catch (error) {
+    console.error("Error processing deposit refund:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      error.message || "Failed to process refund"
+    );
+  }
+});
