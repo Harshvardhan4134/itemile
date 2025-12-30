@@ -178,10 +178,25 @@ const AdminListings = () => {
     });
   }, [filteredListings]);
 
+  const pendingListings = useMemo(() => {
+    return filteredListings.filter((listing) => {
+      const status = resolveStatus(listing);
+      return status === "pending_review";
+    });
+  }, [filteredListings]);
+
   const removedListings = useMemo(() => {
     return filteredListings.filter((listing) => {
       const status = resolveStatus(listing);
       return status === "removed";
+    });
+  }, [filteredListings]);
+
+  // Active listings should exclude pending and removed
+  const trulyActiveListings = useMemo(() => {
+    return filteredListings.filter((listing) => {
+      const status = resolveStatus(listing);
+      return status !== "removed" && status !== "pending_review";
     });
   }, [filteredListings]);
 
@@ -559,26 +574,43 @@ const AdminListings = () => {
           Loading listings…
         </div>
       ) : (
-        <Tabs defaultValue="active" className="space-y-4">
+        <Tabs defaultValue="pending" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="pending">
+              Pending Approval ({pendingListings.length})
+            </TabsTrigger>
             <TabsTrigger value="active">
-              Active Listings ({activeListings.length})
+              Active Listings ({trulyActiveListings.length})
             </TabsTrigger>
             <TabsTrigger value="removed">
               Removed / Taken Down ({removedListings.length})
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="pending" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {pendingListings.length === 0 ? (
+                <Card>
+                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                    No pending listings. All items have been reviewed.
+                  </CardContent>
+                </Card>
+              ) : (
+                pendingListings.map((listing) => renderListingCard(listing))
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="active" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {activeListings.length === 0 ? (
+              {trulyActiveListings.length === 0 ? (
                 <Card>
                   <CardContent className="p-6 text-center text-sm text-muted-foreground">
                     No active listings match the current filters.
                   </CardContent>
                 </Card>
               ) : (
-                activeListings.map((listing) => renderListingCard(listing))
+                trulyActiveListings.map((listing) => renderListingCard(listing))
               )}
             </div>
           </TabsContent>
