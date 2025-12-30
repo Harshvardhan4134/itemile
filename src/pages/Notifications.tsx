@@ -71,6 +71,30 @@ const Notifications = () => {
     }
   };
 
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read when clicked
+    if (!notification.read) {
+      await handleMarkAsRead(notification.id);
+    }
+
+    // Navigate based on notification type and available IDs
+    if (notification.type === 'new_listing_nearby' && notification.listingId) {
+      navigate(`/item/${notification.listingId}`);
+    } else if (notification.type === 'new_request_nearby' && notification.requestId) {
+      navigate(`/requests?requestId=${notification.requestId}`);
+    } else if (notification.type === 'message' && notification.chatId) {
+      navigate(`/chat/${notification.chatId}`);
+    } else if (notification.type === 'rental_request' && notification.transactionId) {
+      // Navigate to transaction/booking detail
+      navigate(`/transactions?transactionId=${notification.transactionId}`);
+    } else if (notification.type === 'transaction_update' && notification.transactionId) {
+      navigate(`/transactions?transactionId=${notification.transactionId}`);
+    } else if (notification.type === 'request_match' && notification.requestId) {
+      navigate(`/requests?requestId=${notification.requestId}`);
+    }
+    // For other types (verification_approved, verification_rejected), no navigation needed
+  };
+
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'rental_request':
@@ -160,51 +184,64 @@ const Notifications = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {notifications.map((notification) => (
-              <Card 
-                key={notification.id} 
-                className={`glass-card hover-scale ${!notification.read ? 'border-primary/20 bg-primary/5' : ''}`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className={`font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
-                            {notification.message}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {formatTime(notification.createdAt)}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {!notification.read && (
-                            <Badge variant="secondary" className="text-xs">
-                              New
-                            </Badge>
-                          )}
+            {notifications.map((notification) => {
+              const isClickable = !!(
+                notification.listingId || 
+                notification.requestId || 
+                notification.transactionId || 
+                notification.chatId
+              );
+              
+              return (
+                <Card 
+                  key={notification.id} 
+                  className={`glass-card hover-scale ${!notification.read ? 'border-primary/20 bg-primary/5' : ''} ${isClickable ? 'cursor-pointer' : ''}`}
+                  onClick={() => isClickable && handleNotificationClick(notification)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className={`font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                              {notification.message}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {formatTime(notification.createdAt)}
+                            </p>
+                          </div>
                           
-                          {!notification.read && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleMarkAsRead(notification.id)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {!notification.read && (
+                              <Badge variant="secondary" className="text-xs">
+                                New
+                              </Badge>
+                            )}
+                            
+                            {!notification.read && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAsRead(notification.id);
+                                }}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

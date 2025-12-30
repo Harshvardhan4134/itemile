@@ -214,17 +214,29 @@ exports.onNewMessage = functions.firestore
 
         const sender = senderDoc.data();
 
+        // Create in-app notification
+        await admin.firestore().collection("notifications").add({
+          userId: recipientId,
+          type: "message",
+          chatId: chatId,
+          transactionId: chat.transactionId || undefined,
+          listingId: chat.listingId || undefined,
+          message: `Someone contacted you about "${chat.listingTitle || "an item"}"`,
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
         // Send email notification
         await admin.firestore().collection("email_notifications").add({
           email: recipient.email,
           subject: `New message from ${sender?.name || "a user"} - Rent Share`,
-          message: `Hi ${recipient.name},\n\nYou have a new message on Rent Share!\n\nFrom: ${sender?.name || "A user"}\nRegarding: ${chat.listingTitle || "Your listing"}\n\nMessage: "${message.text}"\n\nReply now: ${appUrl.value()}/chat\n\nBest regards,\nRent Share Team`,
+          message: `Hi ${recipient.name},\n\nYou have a new message on Rent Share!\n\nFrom: ${sender?.name || "A user"}\nRegarding: ${chat.listingTitle || "Your listing"}\n\nMessage: "${message.text}"\n\nReply now: ${appUrl.value()}/chat/${chatId}\n\nBest regards,\nRent Share Team`,
           type: "message",
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        console.log(`Message notification email created for ${recipient.email}`);
+        console.log(`Message notification created for ${recipient.email}`);
       } catch (error) {
         console.error("Error creating message notification:", error);
       }

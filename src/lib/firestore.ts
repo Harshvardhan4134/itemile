@@ -180,6 +180,8 @@ export interface Notification {
   type: 'rental_request' | 'swap_proposal' | 'message' | 'transaction_update' | 'verification_approved' | 'verification_rejected' | 'request_match' | 'new_request_nearby' | 'new_listing_nearby';
   transactionId?: string;
   requestId?: string;
+  listingId?: string;
+  chatId?: string;
   message: string;
   createdAt: any;
   read: boolean;
