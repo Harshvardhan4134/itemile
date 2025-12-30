@@ -12,7 +12,7 @@ build/
 .vite/
 
 # Env and local
-.env
+# .env - Now tracked in private repo
 .env.*
 .firebase/
 .firebaserc.local
