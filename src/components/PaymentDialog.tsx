@@ -75,62 +75,37 @@ export default function PaymentDialog({
       const userEmail = currentUser?.email || '';
       const userName = currentUser?.displayName || 'User';
       
-      // Prepare marketplace split if ownerId is provided
-      const marketplaceSplit = ownerId && bookingData ? {
-        ownerId: ownerId,
-        rentAmount: bookingData.totalRent,
-        serviceFee: bookingData.serviceFee || 0,
-        depositAmount: bookingData.deposit || 0,
-        transactionId: transactionId,
-      } : undefined;
+      // Build payment URL with all necessary parameters
+      const paymentUrl = new URL('/payment', window.location.origin);
+      paymentUrl.searchParams.set('transaction_id', transactionId || '');
+      paymentUrl.searchParams.set('amount', bookingData.payableNow.toString());
+      paymentUrl.searchParams.set('description', `Payment for ${listingTitle} - ${bookingData.units} ${bookingData.durationType}`);
+      if (ownerId) {
+        paymentUrl.searchParams.set('owner_id', ownerId);
+        paymentUrl.searchParams.set('rent_amount', bookingData.totalRent.toString());
+        paymentUrl.searchParams.set('service_fee', (bookingData.serviceFee || 0).toString());
+        paymentUrl.searchParams.set('deposit_amount', (bookingData.deposit || 0).toString());
+      }
 
-      await createRazorpayPayment(
-        bookingData.payableNow,
-        'INR',
-        `Payment for ${listingTitle} - ${bookingData.units} ${bookingData.durationType}`,
-        {
-          name: userName,
-          email: userEmail,
-        },
-        async (response: RazorpayResponse) => {
-          // Payment successful
-          setIsProcessingPayment(false);
-          toast({
-            title: "Payment Successful!",
-            description: `Payment ID: ${response.razorpay_payment_id}`,
-          });
-          
-          // Call the payment complete handler with Razorpay response
-          await onPaymentComplete(paymentMethod, response, agreementAccepted);
-        },
-        async (error: any) => {
-          // Payment failed or cancelled
-          setIsProcessingPayment(false);
-          
-          if (error.message && error.message.includes('cancelled')) {
-            // Call the cancellation handler if provided
-            if (onPaymentCancelled) {
-              try {
-                await onPaymentCancelled();
-              } catch (err) {
-                console.error('Error handling payment cancellation:', err);
-              }
-            }
-            toast({
-              title: "Payment Cancelled",
-              description: "Payment was cancelled. The booking request has been removed.",
-              variant: "default",
-            });
-          } else {
-            toast({
-              title: "Payment Failed",
-              description: error.message || "Failed to process payment. Please try again.",
-              variant: "destructive",
-            });
-          }
-        },
-        marketplaceSplit // Pass marketplace split parameters
-      );
+      // Open payment page in new tab (responsive for mobile)
+      const isMobile = window.innerWidth < 768;
+      const windowFeatures = isMobile ? '' : 'width=800,height=600';
+      const paymentWindow = window.open(paymentUrl.toString(), '_blank', windowFeatures);
+      
+      if (!paymentWindow) {
+        throw new Error('Please allow popups to proceed with payment');
+      }
+
+      setIsProcessingPayment(false);
+      
+      toast({
+        title: "Payment Window Opened",
+        description: "Please complete the payment in the new window.",
+      });
+
+      // Listen for payment completion (will be handled by payment success page)
+      // Close the payment dialog
+      onOpenChange(false);
     } catch (error: any) {
       setIsProcessingPayment(false);
       console.error('Error initiating payment:', error);

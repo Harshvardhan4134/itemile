@@ -52,7 +52,6 @@ import ReviewDialog from "@/components/ReviewDialog";
 import { BookingDetail } from "@/components/BookingDetail";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getTransaction } from "@/lib/firestore";
-import { createRazorpayPayment, RazorpayResponse } from "@/lib/razorpay";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -841,89 +840,37 @@ const Transactions = () => {
                     return;
                   }
 
-                  // Prepare marketplace split for payment
-                  const marketplaceSplit = {
-                    ownerId: transaction.ownerId,
-                    rentAmount: transaction.totalRent || 0,
-                    serviceFee: transaction.serviceFee || 0,
-                    depositAmount: transaction.deposit || 0,
-                    transactionId: txnId,
-                  };
+                  // Build payment URL with all necessary parameters
+                  const paymentUrl = new URL('/payment', window.location.origin);
+                  paymentUrl.searchParams.set('transaction_id', txnId);
+                  paymentUrl.searchParams.set('amount', totalAmount.toString());
+                  paymentUrl.searchParams.set('description', `Payment for ${transaction.listingTitle}`);
+                  paymentUrl.searchParams.set('owner_id', transaction.ownerId);
+                  paymentUrl.searchParams.set('rent_amount', (transaction.totalRent || 0).toString());
+                  paymentUrl.searchParams.set('service_fee', (transaction.serviceFee || 0).toString());
+                  paymentUrl.searchParams.set('deposit_amount', (transaction.deposit || 0).toString());
 
-                  // Create Razorpay payment using the correct function signature
-                  await createRazorpayPayment(
-                    totalAmount,
-                    'INR',
-                    `Payment for ${transaction.listingTitle}`,
-                    {
-                      name: auth.currentUser?.displayName || 'User',
-                      email: auth.currentUser?.email || '',
-                      contact: '',
-                    },
-                    async (response: RazorpayResponse) => {
-                      // Payment successful
-                      try {
-                        await updateTransaction(txnId, {
-                          razorpayPaymentId: response.razorpay_payment_id,
-                          razorpayOrderId: response.razorpay_order_id,
-                          razorpaySignature: response.razorpay_signature,
-                          paymentStatus: 'completed',
-                          paidAt: new Date(),
-                        });
+                  // Open payment page in new tab (responsive for mobile)
+                  const isMobile = window.innerWidth < 768;
+                  const windowFeatures = isMobile ? '' : 'width=800,height=600';
+                  const paymentWindow = window.open(paymentUrl.toString(), '_blank', windowFeatures);
+                  
+                  if (!paymentWindow) {
+                    setProcessingPayment(false);
+                    toast({
+                      title: "Popup Blocked",
+                      description: "Please allow popups to proceed with payment.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
 
-                        // Auto-generate return OTP after payment
-                        try {
-                          const { generateReturnOtp } = await import('@/lib/firestore');
-                          await generateReturnOtp(txnId);
-                          console.log('Return OTP generated automatically after payment');
-                        } catch (error) {
-                          console.error('Error generating return OTP:', error);
-                          // Don't fail the payment if OTP generation fails
-                        }
-
-                        toast({
-                          title: "Payment Successful!",
-                          description: `Your payment of ₹${totalAmount.toLocaleString()} has been processed successfully. Return OTP has been generated.`,
-                        });
-
-                        await fetchTransactions();
-                        const updated = await getTransaction(txnId);
-                        if (updated) {
-                          setSelectedTransactionDetail(updated);
-                        }
-                        setProcessingPayment(false);
-                      } catch (error: any) {
-                        console.error('Error updating payment:', error);
-                        setProcessingPayment(false);
-                        toast({
-                          title: "Error",
-                          description: "Payment received but failed to update. Please contact support.",
-                          variant: "destructive",
-                        });
-                      }
-                    },
-                    async (error: any) => {
-                      // Payment failed or cancelled
-                      setProcessingPayment(false);
-                      
-                      if (error.message && error.message.includes('cancelled')) {
-                        toast({
-                          title: "Payment Cancelled",
-                          description: "You cancelled the payment. Please complete payment to finalize the booking.",
-                          variant: "default",
-                        });
-                      } else {
-                        toast({
-                          title: "Payment Failed",
-                          description: error.message || "Failed to process payment. Please try again or use cash on delivery.",
-                          variant: "destructive",
-                        });
-                      }
-                    },
-                    undefined, // onError handler
-                    marketplaceSplit // Pass marketplace split parameters
-                  );
-
+                  setProcessingPayment(false);
+                  
+                  toast({
+                    title: "Payment Window Opened",
+                    description: "Please complete the payment in the new window.",
+                  });
                 } catch (error: any) {
                   console.error('Error processing payment:', error);
                   setProcessingPayment(false);

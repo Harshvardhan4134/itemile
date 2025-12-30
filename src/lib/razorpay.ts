@@ -35,6 +35,8 @@ export interface RazorpayOptions {
     ondismiss?: () => void;
     backdropclose?: boolean;
   };
+  redirect?: boolean;
+  callback_url?: string;
   config?: {
     display?: {
       blocks?: any;
@@ -167,6 +169,14 @@ export const createRazorpayPayment = async (
       }
     }
 
+    // Store transaction ID for redirect callback
+    if (marketplaceSplit?.transactionId) {
+      localStorage.setItem('pending_payment_transaction_id', marketplaceSplit.transactionId);
+    }
+
+    // Get the current origin for callback URL
+    const callbackUrl = `${window.location.origin}/payment-success?transaction_id=${marketplaceSplit?.transactionId || ''}`;
+
     const options: RazorpayOptions = {
       key: razorpayKey,
       amount: amountInPaise,
@@ -185,102 +195,18 @@ export const createRazorpayPayment = async (
         netbanking: true,
         wallet: true,
       },
+      // Redirect to separate page instead of modal
+      redirect: true,
+      callback_url: callbackUrl,
+      // Handler for when payment is successful (will be called after redirect)
       handler: async (response) => {
-        // Restore background interaction on payment success
-        restoreBackgroundInteraction();
-        window.removeEventListener('blur', handleBlur);
-        
-        // Verify payment signature if order was used
-        if (orderId && useOrderCreation) {
-          try {
-            const verifyPayment = httpsCallable(functions, 'verifyRazorpayPayment');
-            const verifyResult = await verifyPayment({
-              orderId: response.razorpay_order_id,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-              transactionId: marketplaceSplit?.transactionId,
-            });
-            
-            if ((verifyResult.data as any).verified) {
-              onSuccess(response);
-            } else {
-              onError(new Error('Payment verification failed'));
-            }
-          } catch (error) {
-            console.error('Error verifying payment:', error);
-            // Still call onSuccess if verification fails (for development)
-            // In production, you should handle this more strictly
-            onSuccess(response);
-          }
-        } else {
-          onSuccess(response);
-        }
+        // This will be handled on the payment success page
+        // But we keep it here for backward compatibility
+        onSuccess(response);
       },
-      modal: {
-        ondismiss: () => {
-          restoreBackgroundInteraction();
-          window.removeEventListener('blur', handleBlur);
-          onError(new Error('Payment cancelled by user'));
-        },
-        // Prevent closing by clicking backdrop
-        backdropclose: false,
-      },
-    };
-
-    // Prevent body scroll and background interactions when Razorpay modal opens
-    const preventBackgroundInteraction = () => {
-      // Add CSS to ensure Razorpay modal is on top and body doesn't scroll
-      const style = document.createElement('style');
-      style.id = 'razorpay-modal-fix';
-      style.textContent = `
-        body.razorpay-modal-open {
-          overflow: hidden !important;
-          position: fixed !important;
-          width: 100% !important;
-        }
-        .razorpay-container,
-        .razorpay-checkout-frame,
-        .razorpay-checkout-iframe,
-        iframe[src*="razorpay"] {
-          z-index: 99999 !important;
-        }
-      `;
-      if (!document.getElementById('razorpay-modal-fix')) {
-        document.head.appendChild(style);
-      }
-      document.body.classList.add('razorpay-modal-open');
-    };
-
-    const restoreBackgroundInteraction = () => {
-      document.body.classList.remove('razorpay-modal-open');
-      const style = document.getElementById('razorpay-modal-fix');
-      if (style) {
-        style.remove();
-      }
-    };
-
-    // Handle window blur to detect if modal was closed
-    const handleBlur = () => {
-      setTimeout(() => {
-        if (!document.querySelector('.razorpay-container')) {
-          restoreBackgroundInteraction();
-          window.removeEventListener('blur', handleBlur);
-        }
-      }, 100);
     };
 
     const razorpay = new window.Razorpay(options);
-    
-    // Prevent background interaction when modal opens
-    preventBackgroundInteraction();
-    window.addEventListener('blur', handleBlur);
-    
-    // Restore when payment fails
-    razorpay.on('payment.failed', () => {
-      restoreBackgroundInteraction();
-      window.removeEventListener('blur', handleBlur);
-    });
-    
     razorpay.open();
   } catch (error) {
     console.error('Error creating Razorpay payment:', error);

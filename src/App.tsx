@@ -35,6 +35,8 @@ import OwnerBookings from "./pages/OwnerBookings";
 import Refund from "./pages/Refund";
 import Contact from "./pages/Contact";
 import Shipping from "./pages/Shipping";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentPage from "./pages/PaymentPage";
 
 const queryClient = new QueryClient();
 
@@ -145,6 +147,8 @@ const App = () => (
           <Route path="/refund" element={<Refund />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/shipping" element={<Shipping />} />
+          <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route
             path="/profile"
             element={
