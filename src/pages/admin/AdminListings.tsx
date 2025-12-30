@@ -428,9 +428,8 @@ const AdminListings = () => {
   const renderListingCard = (listing: Listing) => {
     const status = resolveStatus(listing);
     const isRemoved = status === "removed";
+    // Only show approve button for items that are pending review (not yet approved/active)
     const isPending = status === "pending_review";
-    // Show approve button if pending OR if category requires approval but doesn't have moderation status set yet
-    const needsApproval = isPending || (status === "active" && listing.category && isCategoryRequiringApproval(listing.category) && !listing.moderation?.status);
     
     return (
       <Card key={listing.id}>
@@ -472,7 +471,7 @@ const AdminListings = () => {
             </Button>
           </div>
           <div className="flex gap-2">
-            {needsApproval ? (
+            {isPending ? (
               <Button
                 variant="default"
                 className="flex-1"
