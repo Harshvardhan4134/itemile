@@ -366,8 +366,12 @@ const PostItem = () => {
         videoProof: uploadedVideoUrl,
         available: !requiresApproval, // Set to false if approval required
         listingType: listingType,
-        requestEnabled: listingType === 'request-only' ? requestEnabled : undefined
       };
+
+      // Only add requestEnabled if listingType is 'request-only' (don't include undefined values)
+      if (listingType === 'request-only') {
+        listingData.requestEnabled = requestEnabled;
+      }
 
       // Set moderation status to pending_review if approval is required
       if (requiresApproval) {
