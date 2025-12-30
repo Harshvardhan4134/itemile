@@ -402,8 +402,17 @@ export const adjustUserTrustMetrics = async (
 
 // Listing functions
 export const createListing = async (listingData: Omit<Listing, 'id' | 'createdAt'>): Promise<string> => {
+  // Remove undefined values to avoid Firestore errors
+  const cleanListingData: any = {};
+  Object.keys(listingData).forEach(key => {
+    const value = (listingData as any)[key];
+    if (value !== undefined) {
+      cleanListingData[key] = value;
+    }
+  });
+  
   const docRef = await addDoc(collection(db, 'listings'), {
-    ...listingData,
+    ...cleanListingData,
     createdAt: serverTimestamp()
   });
 
