@@ -131,32 +131,6 @@ export default function PaymentDialog({
         },
         marketplaceSplit // Pass marketplace split parameters
       );
-          // Payment failed or cancelled
-          setIsProcessingPayment(false);
-          
-          if (error.message && error.message.includes('cancelled')) {
-            // Call the cancellation handler if provided
-            if (onPaymentCancelled) {
-              try {
-                await onPaymentCancelled();
-              } catch (err) {
-                console.error('Error handling payment cancellation:', err);
-              }
-            }
-            toast({
-              title: "Payment Cancelled",
-              description: "Payment was cancelled. The booking request has been removed.",
-              variant: "default",
-            });
-          } else {
-            toast({
-              title: "Payment Failed",
-              description: error.message || "Failed to process payment. Please try again.",
-              variant: "destructive",
-            });
-          }
-        }
-      );
     } catch (error: any) {
       setIsProcessingPayment(false);
       console.error('Error initiating payment:', error);

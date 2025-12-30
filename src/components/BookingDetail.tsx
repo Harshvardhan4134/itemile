@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -98,19 +98,53 @@ export const BookingDetail = ({
     });
   }, [currentBooking.status, currentBooking.paymentStatus, currentBooking.razorpayPaymentId, currentBooking.paymentMode, currentBooking.paymentMethod]);
 
+  // Track if payment dialog has been auto-opened for this transaction to prevent multiple triggers
+  const paymentDialogAutoOpenedRef = useRef<string | null>(null);
+
   // Auto-open payment dialog when status becomes 'picked_up' and payment not completed
   useEffect(() => {
-    if (isRenter && 
+    // Only auto-open if:
+    // 1. User is renter
+    // 2. Status is picked_up
+    // 3. Payment is not completed
+    // 4. No Razorpay payment ID exists
+    // 5. Payment mode is not offline
+    // 6. Payment method is not cash_on_delivery
+    // 7. Dialog is not already open
+    // 8. Dialog hasn't been auto-opened for this transaction ID yet
+    const shouldOpen = isRenter && 
         currentBooking.status === 'picked_up' && 
         currentBooking.paymentStatus !== 'completed' && 
         !currentBooking.razorpayPaymentId && 
         currentBooking.paymentMode !== 'offline' &&
         currentBooking.paymentMethod !== 'cash_on_delivery' &&
-        !showPaymentMethodDialog) {
-      console.log('Auto-opening payment method dialog - status is picked_up and payment not completed');
+        !showPaymentMethodDialog &&
+        paymentDialogAutoOpenedRef.current !== currentBooking.id;
+    
+    if (shouldOpen) {
+      console.log('Auto-opening payment method dialog - status is picked_up and payment not completed', {
+        transactionId: currentBooking.id,
+        status: currentBooking.status,
+        paymentStatus: currentBooking.paymentStatus,
+        razorpayPaymentId: currentBooking.razorpayPaymentId,
+        paymentMode: currentBooking.paymentMode,
+        paymentMethod: currentBooking.paymentMethod
+      });
       setShowPaymentMethodDialog(true);
+      paymentDialogAutoOpenedRef.current = currentBooking.id;
     }
-  }, [isRenter, currentBooking.status, currentBooking.paymentStatus, currentBooking.razorpayPaymentId, currentBooking.paymentMode, currentBooking.paymentMethod, showPaymentMethodDialog]);
+    
+    // Reset the flag if payment is completed or status changes away from picked_up
+    if (currentBooking.paymentStatus === 'completed' || 
+        currentBooking.razorpayPaymentId || 
+        currentBooking.status !== 'picked_up' ||
+        currentBooking.paymentMode === 'offline' ||
+        currentBooking.paymentMethod === 'cash_on_delivery') {
+      if (paymentDialogAutoOpenedRef.current === currentBooking.id) {
+        paymentDialogAutoOpenedRef.current = null;
+      }
+    }
+  }, [isRenter, currentBooking.id, currentBooking.status, currentBooking.paymentStatus, currentBooking.razorpayPaymentId, currentBooking.paymentMode, currentBooking.paymentMethod, showPaymentMethodDialog]);
 
   // Removed automatic return OTP generation - owner will manually generate when needed
 
@@ -561,6 +595,13 @@ export const BookingDetail = ({
       <Dialog open={showPaymentMethodDialog} onOpenChange={(open) => {
         console.log('Payment method dialog open state changed:', open);
         setShowPaymentMethodDialog(open);
+        // If dialog is closed without payment completion, allow it to reopen
+        if (!open && paymentDialogAutoOpenedRef.current === currentBooking.id) {
+          // Only reset if payment is still not completed
+          if (currentBooking.paymentStatus !== 'completed' && !currentBooking.razorpayPaymentId) {
+            paymentDialogAutoOpenedRef.current = null;
+          }
+        }
       }}>
         <DialogContent>
           <DialogHeader>

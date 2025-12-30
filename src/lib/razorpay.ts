@@ -24,6 +24,12 @@ export interface RazorpayOptions {
   theme?: {
     color?: string;
   };
+  method?: {
+    upi?: boolean;
+    card?: boolean;
+    netbanking?: boolean;
+    wallet?: boolean;
+  };
   handler: (response: RazorpayResponse) => void;
   modal?: {
     ondismiss?: () => void;
@@ -160,6 +166,13 @@ export const createRazorpayPayment = async (
       prefill: prefill || {},
       theme: {
         color: '#3b82f6', // Primary blue color
+      },
+      // Explicitly enable payment methods including UPI
+      method: {
+        upi: true,
+        card: true,
+        netbanking: true,
+        wallet: true,
       },
       handler: async (response) => {
         // Verify payment signature if order was used
