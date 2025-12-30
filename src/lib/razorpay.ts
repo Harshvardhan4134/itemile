@@ -33,7 +33,18 @@ export interface RazorpayOptions {
   handler: (response: RazorpayResponse) => void;
   modal?: {
     ondismiss?: () => void;
+    backdropclose?: boolean;
   };
+  config?: {
+    display?: {
+      blocks?: any;
+      sequence?: string[];
+      preferences?: {
+        show_default_blocks?: boolean;
+      };
+    };
+  };
+  [key: string]: any; // Allow additional Razorpay-specific options
 }
 
 export interface RazorpayResponse {
@@ -175,6 +186,10 @@ export const createRazorpayPayment = async (
         wallet: true,
       },
       handler: async (response) => {
+        // Restore background interaction on payment success
+        restoreBackgroundInteraction();
+        window.removeEventListener('blur', handleBlur);
+        
         // Verify payment signature if order was used
         if (orderId && useOrderCreation) {
           try {
@@ -203,12 +218,69 @@ export const createRazorpayPayment = async (
       },
       modal: {
         ondismiss: () => {
+          restoreBackgroundInteraction();
+          window.removeEventListener('blur', handleBlur);
           onError(new Error('Payment cancelled by user'));
         },
+        // Prevent closing by clicking backdrop
+        backdropclose: false,
       },
     };
 
+    // Prevent body scroll and background interactions when Razorpay modal opens
+    const preventBackgroundInteraction = () => {
+      // Add CSS to ensure Razorpay modal is on top and body doesn't scroll
+      const style = document.createElement('style');
+      style.id = 'razorpay-modal-fix';
+      style.textContent = `
+        body.razorpay-modal-open {
+          overflow: hidden !important;
+          position: fixed !important;
+          width: 100% !important;
+        }
+        .razorpay-container,
+        .razorpay-checkout-frame,
+        .razorpay-checkout-iframe,
+        iframe[src*="razorpay"] {
+          z-index: 99999 !important;
+        }
+      `;
+      if (!document.getElementById('razorpay-modal-fix')) {
+        document.head.appendChild(style);
+      }
+      document.body.classList.add('razorpay-modal-open');
+    };
+
+    const restoreBackgroundInteraction = () => {
+      document.body.classList.remove('razorpay-modal-open');
+      const style = document.getElementById('razorpay-modal-fix');
+      if (style) {
+        style.remove();
+      }
+    };
+
+    // Handle window blur to detect if modal was closed
+    const handleBlur = () => {
+      setTimeout(() => {
+        if (!document.querySelector('.razorpay-container')) {
+          restoreBackgroundInteraction();
+          window.removeEventListener('blur', handleBlur);
+        }
+      }, 100);
+    };
+
     const razorpay = new window.Razorpay(options);
+    
+    // Prevent background interaction when modal opens
+    preventBackgroundInteraction();
+    window.addEventListener('blur', handleBlur);
+    
+    // Restore when payment fails
+    razorpay.on('payment.failed', () => {
+      restoreBackgroundInteraction();
+      window.removeEventListener('blur', handleBlur);
+    });
+    
     razorpay.open();
   } catch (error) {
     console.error('Error creating Razorpay payment:', error);
