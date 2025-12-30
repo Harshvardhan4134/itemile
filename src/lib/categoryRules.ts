@@ -24,15 +24,23 @@ export const REQUEST_FIRST_CATEGORIES = [
   "Drones"
 ] as const;
 
-// Restricted Categories - Not allowed due to fraud and safety concerns
-export const RESTRICTED_CATEGORIES = [
+// Categories requiring admin approval before going live
+export const APPROVAL_REQUIRED_CATEGORIES = [
+  "Electronics",
+  "High-End Electronics",
   "Mobile Phones / Smartphones",
   "Laptops / Tablets / Computers",
-  "High-End Electronics",
   "Gaming / Gaming Consoles",
   "Smartwatches / Wearables",
   "Expensive Gadgets",
-  "Electronics"
+  "Photography", // High-value cameras and equipment
+  "Professional Equipment",
+  "Drones"
+] as const;
+
+// Restricted Categories - Not allowed due to fraud and safety concerns
+export const RESTRICTED_CATEGORIES = [
+  // Note: Categories can be moved from RESTRICTED to APPROVAL_REQUIRED to allow them with approval
 ] as const;
 
 /**
@@ -101,4 +109,20 @@ export function getAllowedDirectListingCategories(): string[] {
  */
 export function getAllowedRequestFirstCategories(): string[] {
   return [...REQUEST_FIRST_CATEGORIES];
+}
+
+/**
+ * Check if a category requires admin approval
+ */
+export function isCategoryRequiringApproval(category: string): boolean {
+  return APPROVAL_REQUIRED_CATEGORIES.some(
+    approvalRequired => approvalRequired.toLowerCase() === category.toLowerCase()
+  );
+}
+
+/**
+ * Get all categories that require admin approval
+ */
+export function getApprovalRequiredCategories(): string[] {
+  return [...APPROVAL_REQUIRED_CATEGORIES];
 }

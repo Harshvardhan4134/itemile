@@ -48,7 +48,8 @@ import {
   getRequestFirstMessage,
   getRestrictedMessage,
   getAllowedDirectListingCategories,
-  getAllowedRequestFirstCategories
+  getAllowedRequestFirstCategories,
+  isCategoryRequiringApproval
 } from "@/lib/categoryRules";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Info, Shield } from "lucide-react";
@@ -93,9 +94,11 @@ const PostItem = () => {
   const allAllowedCategories = [...directListingCategories, ...requestFirstCategories];
   
   // Keep some legacy categories for backward compatibility, but filter restricted ones
+  // Include approval-required categories (they'll need admin approval before going live)
   const categories = [
-    "Photography", "Sports & Outdoor", "Tools", 
-    "Music", "Kitchen", "Furniture", "Books", "Clothing", "Fitness"
+    "Electronics", "Photography", "Sports & Outdoor", "Tools", 
+    "Music", "Kitchen", "Furniture", "Books", "Clothing", "Fitness",
+    "Drones", "Professional Equipment"
   ].filter(cat => !isCategoryRestricted(cat));
 
   const handleInputChange = (field: string, value: any) => {
@@ -347,8 +350,11 @@ const PostItem = () => {
         return;
       }
 
+      // Check if category requires admin approval
+      const requiresApproval = isCategoryRequiringApproval(formData.category);
+      
       // Create listing data
-      const listingData = {
+      const listingData: any = {
         ownerId: auth.currentUser.uid,
         title: formData.title,
         description: formData.description,
@@ -358,20 +364,31 @@ const PostItem = () => {
         location: new GeoPoint(Number(formData.lat), Number(formData.lng)),
         images: uploadedImageUrls,
         videoProof: uploadedVideoUrl,
-        available: true,
+        available: !requiresApproval, // Set to false if approval required
         listingType: listingType,
         requestEnabled: listingType === 'request-only' ? requestEnabled : undefined
       };
 
+      // Set moderation status to pending_review if approval is required
+      if (requiresApproval) {
+        listingData.moderation = {
+          status: 'pending_review'
+        };
+      }
+
       // Save to Firestore
       await createListing(listingData);
 
-      const successMessage = listingType === 'request-only' 
+      let successMessage = listingType === 'request-only' 
         ? "Your item is now available for requests. Nearby users can request it, and you'll be notified!"
         : "You successfully posted your item. Let's wait for renters to discover it!";
+      
+      if (requiresApproval) {
+        successMessage = "Your listing has been submitted and is pending admin approval. You'll be notified once it's approved!";
+      }
 
       toast({
-        title: "Listing published!",
+        title: requiresApproval ? "Listing submitted for approval!" : "Listing published!",
         description: successMessage
       });
 

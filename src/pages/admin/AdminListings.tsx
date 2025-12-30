@@ -155,8 +155,7 @@ const AdminListings = () => {
 
   const filteredListings = useMemo(() => {
     return listings.filter((listing) => {
-      const status =
-        listing.moderation?.status ?? (listing.softDeleted ? "removed" : "active");
+      const status = resolveStatus(listing);
       const matchesStatus =
         statusFilter === "all" ? true : status === statusFilter;
       const matchesCategory =
