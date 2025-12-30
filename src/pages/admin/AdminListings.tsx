@@ -28,7 +28,6 @@ import {
   type Listing,
   type User,
 } from "@/lib/firestore";
-import { isCategoryRequiringApproval } from "@/lib/categoryRules";
 import {
   Dialog,
   DialogContent,
