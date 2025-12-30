@@ -311,6 +311,53 @@ const AdminListings = () => {
     }
   };
 
+  const handleApprove = async (listing: Listing) => {
+    if (!user) {
+      toast({
+        title: "Unable to approve listing",
+        description: "Admin session not detected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingListingId(listing.id);
+    try {
+      await setListingModeration({
+        listingId: listing.id,
+        status: "active",
+        reasons: [],
+        reviewerId: user.uid,
+        softDeleted: false,
+        available: true,
+      });
+
+      await logAdminAction({
+        actorId: user.uid,
+        action: "APPROVE",
+        targetType: "listing",
+        targetId: listing.id,
+        reason: "admin_approval",
+        metadata: {},
+      });
+
+      toast({
+        title: "Listing approved",
+        description: `${listing.title} has been approved and is now active.`,
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Failed to approve listing", error);
+      toast({
+        title: "Failed to approve listing",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingListingId(null);
+    }
+  };
+
   const handleRestore = async (listing: Listing) => {
     if (!user) {
       toast({
@@ -381,6 +428,7 @@ const AdminListings = () => {
   const renderListingCard = (listing: Listing) => {
     const status = resolveStatus(listing);
     const isRemoved = status === "removed";
+    const isPending = status === "pending_review";
     
     return (
       <Card key={listing.id}>
@@ -422,7 +470,16 @@ const AdminListings = () => {
             </Button>
           </div>
           <div className="flex gap-2">
-            {!isRemoved ? (
+            {isPending ? (
+              <Button
+                variant="default"
+                className="flex-1"
+                disabled={processingListingId === listing.id}
+                onClick={() => handleApprove(listing)}
+              >
+                {processingListingId === listing.id ? "Approving..." : "Approve"}
+              </Button>
+            ) : !isRemoved ? (
               <Button
                 variant="destructive"
                 className="flex-1"

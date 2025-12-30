@@ -61,7 +61,7 @@ exports.sendEmailNotification = functions.firestore
               </div>
               
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px;">
-                <p style="margin: 5px 0;">Need help? Contact us at <a href="mailto:${emailUser.value()}" style="color: #4f46e5; text-decoration: none;">${emailUser.value()}</a></p>
+                <p style="margin: 5px 0;">Need help? Contact us at <a href="mailto:support@lendlly.in" style="color: #4f46e5; text-decoration: none;">support@lendlly.in</a></p>
                 <p style="margin-top: 15px; color: #9ca3af; font-size: 12px;">© 2025 Rent Share. All rights reserved.</p>
               </div>
             </div>

@@ -1884,15 +1884,23 @@ export const getNearbyUsers = async (location: GeoPoint, radiusKm: number = 10):
 // Function to notify nearby users about new requests
 export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<void> => {
   try {
-    const nearbyUsers = await getNearbyUsers(request.location);
+    // Get ALL verified users (not just nearby ones)
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('verified', '==', true));
+    const querySnapshot = await getDocs(q);
+    
+    const allUsers = querySnapshot.docs.map(doc => ({
+      uid: doc.id,
+      ...doc.data()
+    })) as User[];
     
     // Filter out the user who made the request
-    const usersToNotify = nearbyUsers.filter(user => user.uid !== request.userId);
+    const usersToNotify = allUsers.filter(user => user.uid !== request.userId);
     
-    // Create notifications for each nearby user
+    // Create notifications for each user (limit to 50 for in-app notifications to avoid spam)
     const batch = writeBatch(db);
     
-    for (const user of usersToNotify.slice(0, 50)) { // Limit to 50 notifications to avoid spam
+    for (const user of usersToNotify.slice(0, 50)) {
       const notificationRef = doc(collection(db, 'notifications'));
       batch.set(notificationRef, {
         userId: user.uid,
@@ -1906,26 +1914,29 @@ export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<v
     
     await batch.commit();
 
-    // Also send email notifications (best effort, non-blocking) to up to 10 nearby users
-    const emailTargets = usersToNotify
-      .filter((u) => !!u.email)
-      .slice(0, 10);
+    // Send email notifications to ALL users (excluding the requester)
+    const emailTargets = usersToNotify.filter((u) => !!u.email);
 
-    await Promise.all(emailTargets.map(async (user) => {
-      try {
-        await sendEmailNotification({
-          email: user.email,
-          subject: `Someone nearby needs "${request.itemName}" - Rent Share`,
-          message: `Hi ${user.name || 'there'},\n\nSomeone near you is looking for "${request.itemName}". If you have it, respond in the app to rent it out!\n\nOpen app: ${window.location.origin}/requests\n\nThanks,\nRent Share Team`,
-          type: 'new_request_nearby',
-          createdAt: serverTimestamp(),
-        });
-      } catch (error) {
-        console.warn('Failed to queue email notification for nearby request:', error);
-      }
-    }));
+    // Send emails in batches to avoid overwhelming the system
+    const batchSize = 50;
+    for (let i = 0; i < emailTargets.length; i += batchSize) {
+      const batch = emailTargets.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (user) => {
+        try {
+          await sendEmailNotification({
+            email: user.email,
+            subject: `Someone nearby needs "${request.itemName}" - Rent Share`,
+            message: `Hi ${user.name || 'there'},\n\nSomeone near you is looking for "${request.itemName}". If you have it, respond in the app to rent it out!\n\nOpen app: ${window.location.origin}/requests\n\nThanks,\nRent Share Team`,
+            type: 'new_request_nearby',
+            createdAt: serverTimestamp(),
+          });
+        } catch (error) {
+          console.warn('Failed to queue email notification for request:', error);
+        }
+      }));
+    }
   } catch (error) {
-    console.error('Error notifying nearby users about request:', error);
+    console.error('Error notifying users about request:', error);
   }
 };
 
