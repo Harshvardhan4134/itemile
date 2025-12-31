@@ -209,13 +209,10 @@ const Explore = () => {
 
         if (!isMounted) return;
 
-        // Filter out request-first items from public listings
-        // Only show direct listing items on the Explore page
-        const publicListings = listingsData.filter(listing => {
-          // Show listings that are explicitly marked as 'direct' or don't have listingType set (backward compatibility)
-          // Hide listings marked as 'request-only'
-          return listing.listingType !== 'request-only';
-        });
+        // Show ALL approved items on the Explore page
+        // Once approved by admin, all items should be visible regardless of listingType
+        // The listingType only affects the initial creation flow, not visibility after approval
+        const publicListings = listingsData; // All items from getListings are already approved and should be shown
 
         setListings(publicListings);
         setRequests(requestsData);
