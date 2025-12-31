@@ -1908,18 +1908,11 @@ export const getNearbyUsers = async (location: GeoPoint, radiusKm: number = 10):
 // Function to notify nearby users about new requests
 export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<void> => {
   try {
-    // Get ALL verified users (not just nearby ones)
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('verified', '==', true));
-    const querySnapshot = await getDocs(q);
-    
-    const allUsers = querySnapshot.docs.map(doc => ({
-      uid: doc.id,
-      ...doc.data()
-    })) as User[];
+    // Get nearby users (within 50km radius for better coverage)
+    const nearbyUsers = await getNearbyUsers(request.location, 50);
     
     // Filter out the user who made the request
-    const usersToNotify = allUsers.filter(user => user.uid !== request.userId);
+    const usersToNotify = nearbyUsers.filter(user => user.uid !== request.userId);
     
     // Create notifications for each user (limit to 50 for in-app notifications to avoid spam)
     const batch = writeBatch(db);
