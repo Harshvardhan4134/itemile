@@ -78,7 +78,11 @@ const Notifications = () => {
     }
 
     // Navigate based on notification type and available IDs
-    if (notification.type === 'new_listing_nearby' && notification.listingId) {
+    // Priority: chatId > transactionId for transaction-related notifications
+    if (notification.chatId) {
+      // If chatId is available, navigate to chat (best option for communication)
+      navigate(`/chat/${notification.chatId}`);
+    } else if (notification.type === 'new_listing_nearby' && notification.listingId) {
       navigate(`/item/${notification.listingId}`);
     } else if (notification.type === 'new_request_nearby' && notification.requestId) {
       navigate(`/requests?requestId=${notification.requestId}`);
@@ -88,6 +92,7 @@ const Notifications = () => {
       // Navigate to transaction/booking detail
       navigate(`/transactions?transactionId=${notification.transactionId}`);
     } else if (notification.type === 'transaction_update' && notification.transactionId) {
+      // Try to get chat from transaction, otherwise navigate to transactions page
       navigate(`/transactions?transactionId=${notification.transactionId}`);
     } else if (notification.type === 'request_match' && notification.requestId) {
       navigate(`/requests?requestId=${notification.requestId}`);
