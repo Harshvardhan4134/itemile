@@ -20,6 +20,7 @@ export const REQUEST_FIRST_CATEGORIES = [
   "Vehicles",
   "Cars",
   "Music",
+  "Electronics",
   "Professional Equipment",
   "Drones"
 ] as const;

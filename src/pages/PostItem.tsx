@@ -377,8 +377,8 @@ const PostItem = () => {
       await createListing(listingData);
 
       const successMessage = listingType === 'request-only' 
-        ? "Your item has been submitted for admin approval. Once approved, nearby users can request it, and you'll be notified!"
-        : "Your listing has been submitted and is pending admin approval. You'll be notified once it's approved!";
+        ? "Your item has been submitted for admin approval. Once approved by admin, users will be able to see and request your item!"
+        : "Your listing has been submitted and is pending admin approval. Once approved by admin, users will be able to see your item on the explore page!";
 
       toast({
         title: "Listing submitted for approval!",

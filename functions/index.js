@@ -52,7 +52,7 @@ exports.sendEmailNotification = functions.firestore
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 8px;">
             <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
               <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">Rent Share</h1>
+                <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">Lendlly</h1>
                 <p style="color: #6b7280; margin-top: 5px;">Peer-to-Peer Rental Platform</p>
               </div>
               
@@ -62,7 +62,7 @@ exports.sendEmailNotification = functions.firestore
               
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px;">
                 <p style="margin: 5px 0;">Need help? Contact us at <a href="mailto:support@lendlly.in" style="color: #4f46e5; text-decoration: none;">support@lendlly.in</a></p>
-                <p style="margin-top: 15px; color: #9ca3af; font-size: 12px;">© 2025 Rent Share. All rights reserved.</p>
+                <p style="margin-top: 15px; color: #9ca3af; font-size: 12px;">© 2025 Lendlly. All rights reserved.</p>
               </div>
             </div>
           </div>
@@ -148,8 +148,8 @@ exports.onTransactionCreated = functions.firestore
           // Send email notification to owner
           await admin.firestore().collection("email_notifications").add({
             email: owner.email,
-            subject: "New Booking Request! 🎉 - Rent Share",
-            message: `Hi ${owner.name},\n\nYou've received a new booking request!\n\nListing: ${transaction.listingTitle}\nRequested by: ${renter?.name || "A user"}${dateInfo}\n${amountInfo}\n\nPlease review and respond to this request in your Rent Share dashboard.\n\nView Booking: ${appUrl.value()}/owner-bookings\n\nBest regards,\nRent Share Team`,
+            subject: "New Booking Request! 🎉 - Lendlly",
+            message: `Hi ${owner.name},\n\nYou've received a new booking request!\n\nListing: ${transaction.listingTitle}\nRequested by: ${renter?.name || "A user"}${dateInfo}\n${amountInfo}\n\nPlease review and respond to this request in your Lendlly dashboard.\n\nView Booking: ${appUrl.value()}/owner-bookings\n\nBest regards,\nLendlly Team`,
             type: "rental_request",
             read: false,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -229,8 +229,8 @@ exports.onNewMessage = functions.firestore
         // Send email notification
         await admin.firestore().collection("email_notifications").add({
           email: recipient.email,
-          subject: `New message from ${sender?.name || "a user"} - Rent Share`,
-          message: `Hi ${recipient.name},\n\nYou have a new message on Rent Share!\n\nFrom: ${sender?.name || "A user"}\nRegarding: ${chat.listingTitle || "Your listing"}\n\nMessage: "${message.text}"\n\nReply now: ${appUrl.value()}/chat/${chatId}\n\nBest regards,\nRent Share Team`,
+          subject: `New message from ${sender?.name || "a user"} - Lendlly`,
+          message: `Hi ${recipient.name},\n\nYou have a new message on Lendlly!\n\nFrom: ${sender?.name || "A user"}\nRegarding: ${chat.listingTitle || "Your listing"}\n\nMessage: "${message.text}"\n\nReply now: ${appUrl.value()}/chat/${chatId}\n\nBest regards,\nLendlly Team`,
           type: "message",
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),

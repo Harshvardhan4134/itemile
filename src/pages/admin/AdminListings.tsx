@@ -290,11 +290,11 @@ const AdminListings = () => {
             subjectPrefix = '⚠️ URGENT: Listing Removed - Safety Concern';
           }
           
-          const emailMessage = `Hi ${owner.name},\n\nYour listing "${selectedListing.title}" has been removed by our admin team.\n\nReason: ${reasonText}${additionalNotes.trim() ? `\n\nAdditional Notes: ${additionalNotes.trim()}` : ''}${strikeUser ? '\n\n⚠️ Important: Your account has received a strike due to this violation. Repeated violations may result in account suspension.' : ''}\n\nIf you believe this was done in error, please contact our support team at support@lendlly.in or call +91 8547652100.\n\nView your listings: ${window.location.origin}/profile\n\nBest regards,\nRent Share Admin Team`;
+          const emailMessage = `Hi ${owner.name},\n\nYour listing "${selectedListing.title}" has been removed by our admin team.\n\nReason: ${reasonText}${additionalNotes.trim() ? `\n\nAdditional Notes: ${additionalNotes.trim()}` : ''}${strikeUser ? '\n\n⚠️ Important: Your account has received a strike due to this violation. Repeated violations may result in account suspension.' : ''}\n\nIf you believe this was done in error, please contact our support team at support@lendlly.in or call +91 8547652100.\n\nView your listings: ${window.location.origin}/profile\n\nBest regards,\nLendlly Admin Team`;
           
           await sendEmailNotification({
             email: owner.email,
-            subject: `${subjectPrefix}: ${selectedListing.title} - Rent Share`,
+            subject: `${subjectPrefix}: ${selectedListing.title} - Lendlly`,
             message: emailMessage,
             type: 'admin_action',
             read: false,
@@ -382,8 +382,8 @@ const AdminListings = () => {
           // Send email notification
           await sendEmailNotification({
             email: owner.email,
-            subject: `Listing Approved ✅ - ${listing.title} - Rent Share`,
-            message: `Hi ${owner.name},\n\nGreat news! Your listing "${listing.title}" has been approved by our admin team and is now live on the platform.\n\nView your listing: ${window.location.origin}/item/${listing.id}\n\nBest regards,\nRent Share Team`,
+            subject: `Listing Approved ✅ - ${listing.title} - Lendlly`,
+            message: `Hi ${owner.name},\n\nGreat news! Your listing "${listing.title}" has been approved by our admin team and is now live on the platform.\n\nView your listing: ${window.location.origin}/item/${listing.id}\n\nBest regards,\nLendlly Team`,
             type: 'transaction_update',
             createdAt: new Date(),
           });

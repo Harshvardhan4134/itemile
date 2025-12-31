@@ -1710,8 +1710,8 @@ export const approveKYCVerification = async (uid: string): Promise<void> => {
     // Create email notification
     await sendEmailNotification({
       email: user.email,
-      subject: 'Verification Approved ✅ - Rent Share',
-      message: `Hi ${user.name},\n\nGreat news! Your verification has been approved. You now have full access to all Rent Share features.\n\nThank you for verifying your identity.\n\nBest regards,\nRent Share Team`,
+      subject: 'Verification Approved ✅ - Lendlly',
+      message: `Hi ${user.name},\n\nGreat news! Your verification has been approved. You now have full access to all Lendlly features.\n\nThank you for verifying your identity.\n\nBest regards,\nLendlly Team`,
       type: 'verification_approved',
       createdAt: serverTimestamp()
     });
@@ -1741,8 +1741,8 @@ export const rejectKYCVerification = async (uid: string, reason: string): Promis
     // Create email notification
     await sendEmailNotification({
       email: user.email,
-      subject: 'Verification Failed - Action Required - Rent Share',
-      message: `Hi ${user.name},\n\nUnfortunately, your verification could not be approved.\n\nReason: ${reason}\n\nPlease re-upload your documents in your profile section.\n\nIf you have any questions, contact us at support@lendlly.in.\n\nBest regards,\nRent Share Team`,
+      subject: 'Verification Failed - Action Required - Lendlly',
+      message: `Hi ${user.name},\n\nUnfortunately, your verification could not be approved.\n\nReason: ${reason}\n\nPlease re-upload your documents in your profile section.\n\nIf you have any questions, contact us at support@lendlly.in.\n\nBest regards,\nLendlly Team`,
       type: 'verification_rejected',
       createdAt: serverTimestamp()
     });
@@ -1964,8 +1964,8 @@ export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<v
         try {
           await sendEmailNotification({
             email: user.email,
-            subject: `Someone nearby needs "${request.itemName}" - Rent Share`,
-            message: `Hi ${user.name || 'there'},\n\nSomeone near you is looking for "${request.itemName}". If you have it, respond in the app to rent it out!\n\nOpen app: ${window.location.origin}/requests\n\nThanks,\nRent Share Team`,
+            subject: `Someone nearby needs "${request.itemName}" - Lendlly`,
+            message: `Hi ${user.name || 'there'},\n\nSomeone near you is looking for "${request.itemName}". If you have it, respond in the app to rent it out!\n\nOpen app: ${window.location.origin}/requests\n\nThanks,\nLendlly Team`,
             type: 'new_request_nearby',
             createdAt: serverTimestamp(),
           });
@@ -2018,8 +2018,8 @@ export const notifyAdminsAboutNewListing = async (listing: Listing): Promise<voi
           try {
             await sendEmailNotification({
               email: admin.email,
-              subject: `New Listing Pending Approval - ${listing.title} - Rent Share`,
-              message: `Hi Admin,\n\nA new listing has been submitted and requires your approval:\n\nItem: ${listing.title}\nCategory: ${listing.category}\nOwner: ${listing.ownerId}\nPrice: ₹${listing.rentPerDay}/day\n\nPlease review and approve in the admin panel: ${window.location.origin}/admin/listings\n\nBest regards,\nRent Share System`,
+              subject: `New Listing Pending Approval - ${listing.title} - Lendlly`,
+              message: `Hi Admin,\n\nA new listing has been submitted and requires your approval:\n\nItem: ${listing.title}\nCategory: ${listing.category}\nOwner: ${listing.ownerId}\nPrice: ₹${listing.rentPerDay}/day\n\nPlease review and approve in the admin panel: ${window.location.origin}/admin/listings\n\nBest regards,\nLendlly System`,
               type: 'transaction_update',
               createdAt: serverTimestamp()
             });
@@ -2065,8 +2065,8 @@ export const notifyAdminsAboutNewRequest = async (request: Request): Promise<voi
           try {
             await sendEmailNotification({
               email: admin.email,
-              subject: `New Request Posted - ${request.itemName} - Rent Share`,
-              message: `Hi Admin,\n\nA new request has been posted:\n\nItem: ${request.itemName}\nCategory: ${request.category}\nUser: ${request.userId}\nDuration: ${request.duration} days\nMax Budget: ${request.maxBudget ? `₹${request.maxBudget}` : 'Not specified'}\n\nView in admin panel: ${window.location.origin}/admin\n\nBest regards,\nRent Share System`,
+              subject: `New Request Posted - ${request.itemName} - Lendlly`,
+              message: `Hi Admin,\n\nA new request has been posted:\n\nItem: ${request.itemName}\nCategory: ${request.category}\nUser: ${request.userId}\nDuration: ${request.duration} days\nMax Budget: ${request.maxBudget ? `₹${request.maxBudget}` : 'Not specified'}\n\nView in admin panel: ${window.location.origin}/admin\n\nBest regards,\nLendlly System`,
               type: 'new_request_nearby',
               createdAt: serverTimestamp()
             });
@@ -2110,7 +2110,7 @@ export const notifyNearbyUsersAboutListing = async (listing: Listing): Promise<v
           await sendEmailNotification({
             email: user.email,
             subject: `New item near you: "${listing.title}"`,
-            message: `Hi ${user.name || 'there'},\n\nA new item "${listing.title}" is available near you. Check it out in the app!\n\nOpen app: ${window.location.origin}/item/${listing.id}\n\nThanks,\nRent Share Team`,
+            message: `Hi ${user.name || 'there'},\n\nA new item "${listing.title}" is available near you. Check it out in the app!\n\nOpen app: ${window.location.origin}/item/${listing.id}\n\nThanks,\nLendlly Team`,
             type: 'new_listing_nearby',
             createdAt: serverTimestamp(),
           });
