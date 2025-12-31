@@ -48,8 +48,7 @@ import {
   getRequestFirstMessage,
   getRestrictedMessage,
   getAllowedDirectListingCategories,
-  getAllowedRequestFirstCategories,
-  isCategoryRequiringApproval
+  getAllowedRequestFirstCategories
 } from "@/lib/categoryRules";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Info, Shield } from "lucide-react";
@@ -350,9 +349,7 @@ const PostItem = () => {
         return;
       }
 
-      // Check if category requires admin approval
-      const requiresApproval = isCategoryRequiringApproval(formData.category);
-      
+      // ALL listings require admin approval before going live
       // Create listing data
       const listingData: any = {
         ownerId: auth.currentUser.uid,
@@ -364,8 +361,11 @@ const PostItem = () => {
         location: new GeoPoint(Number(formData.lat), Number(formData.lng)),
         images: uploadedImageUrls,
         videoProof: uploadedVideoUrl,
-        available: !requiresApproval, // Set to false if approval required
+        available: false, // ALL items require approval - set to false initially
         listingType: listingType,
+        moderation: {
+          status: 'pending_review' // ALL items need admin approval
+        }
       };
 
       // Only add requestEnabled if listingType is 'request-only' (don't include undefined values)
@@ -373,26 +373,15 @@ const PostItem = () => {
         listingData.requestEnabled = requestEnabled;
       }
 
-      // Set moderation status to pending_review if approval is required
-      if (requiresApproval) {
-        listingData.moderation = {
-          status: 'pending_review'
-        };
-      }
-
       // Save to Firestore
       await createListing(listingData);
 
-      let successMessage = listingType === 'request-only' 
-        ? "Your item is now available for requests. Nearby users can request it, and you'll be notified!"
-        : "You successfully posted your item. Let's wait for renters to discover it!";
-      
-      if (requiresApproval) {
-        successMessage = "Your listing has been submitted and is pending admin approval. You'll be notified once it's approved!";
-      }
+      const successMessage = listingType === 'request-only' 
+        ? "Your item has been submitted for admin approval. Once approved, nearby users can request it, and you'll be notified!"
+        : "Your listing has been submitted and is pending admin approval. You'll be notified once it's approved!";
 
       toast({
-        title: requiresApproval ? "Listing submitted for approval!" : "Listing published!",
+        title: "Listing submitted for approval!",
         description: successMessage
       });
 

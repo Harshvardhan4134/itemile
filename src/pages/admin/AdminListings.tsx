@@ -25,9 +25,11 @@ import {
   setListingModeration,
   getUser,
   sendEmailNotification,
+  createNotification,
   type Listing,
   type User,
 } from "@/lib/firestore";
+import { isCategoryRestricted } from "@/lib/categoryRules";
 import {
   Dialog,
   DialogContent,
@@ -185,6 +187,12 @@ const AdminListings = () => {
     });
   }, [filteredListings]);
 
+  const restrictedListings = useMemo(() => {
+    return filteredListings.filter((listing) => {
+      return listing.category && isCategoryRestricted(listing.category);
+    });
+  }, [filteredListings]);
+
   const removedListings = useMemo(() => {
     return filteredListings.filter((listing) => {
       const status = resolveStatus(listing);
@@ -192,11 +200,12 @@ const AdminListings = () => {
     });
   }, [filteredListings]);
 
-  // Active listings should exclude pending and removed
+  // Active listings should exclude pending, restricted, and removed
   const trulyActiveListings = useMemo(() => {
     return filteredListings.filter((listing) => {
       const status = resolveStatus(listing);
-      return status !== "removed" && status !== "pending_review";
+      const isRestricted = listing.category && isCategoryRestricted(listing.category);
+      return status !== "removed" && status !== "pending_review" && !isRestricted;
     });
   }, [filteredListings]);
 
@@ -346,6 +355,33 @@ const AdminListings = () => {
         available: true,
       });
 
+      // Send notification to owner that their listing has been approved
+      try {
+        const owner = await getUser(listing.ownerId);
+        if (owner?.email) {
+          // Create in-app notification
+          await createNotification({
+            userId: listing.ownerId,
+            type: 'transaction_update',
+            listingId: listing.id,
+            message: `Your listing "${listing.title}" has been approved and is now live!`,
+            read: false
+          });
+
+          // Send email notification
+          await sendEmailNotification({
+            email: owner.email,
+            subject: `Listing Approved ✅ - ${listing.title} - Rent Share`,
+            message: `Hi ${owner.name},\n\nGreat news! Your listing "${listing.title}" has been approved by our admin team and is now live on the platform.\n\nView your listing: ${window.location.origin}/item/${listing.id}\n\nBest regards,\nRent Share Team`,
+            type: 'transaction_update',
+            createdAt: new Date(),
+          });
+        }
+      } catch (error) {
+        console.error('Error sending approval notification:', error);
+        // Don't fail the approval if notification fails
+      }
+
       await logAdminAction({
         actorId: user.uid,
         action: "APPROVE",
@@ -357,7 +393,7 @@ const AdminListings = () => {
 
       toast({
         title: "Listing approved",
-        description: `${listing.title} has been approved and is now active.`,
+        description: `${listing.title} has been approved and is now active. Owner has been notified.`,
       });
       await loadData();
     } catch (error) {
@@ -582,6 +618,9 @@ const AdminListings = () => {
             <TabsTrigger value="active">
               Active Listings ({trulyActiveListings.length})
             </TabsTrigger>
+            <TabsTrigger value="restricted">
+              Restricted Items ({restrictedListings.length})
+            </TabsTrigger>
             <TabsTrigger value="removed">
               Removed / Taken Down ({removedListings.length})
             </TabsTrigger>
@@ -611,6 +650,20 @@ const AdminListings = () => {
                 </Card>
               ) : (
                 trulyActiveListings.map((listing) => renderListingCard(listing))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="restricted" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {restrictedListings.length === 0 ? (
+                <Card>
+                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                    No restricted items found.
+                  </CardContent>
+                </Card>
+              ) : (
+                restrictedListings.map((listing) => renderListingCard(listing))
               )}
             </div>
           </TabsContent>
