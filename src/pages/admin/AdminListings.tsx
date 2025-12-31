@@ -26,6 +26,7 @@ import {
   getUser,
   sendEmailNotification,
   createNotification,
+  notifyNearbyUsersAboutListing,
   type Listing,
   type User,
 } from "@/lib/firestore";
@@ -144,7 +145,17 @@ const AdminListings = () => {
 
   const resolveStatus = (listing: Listing) => {
     if (listing.softDeleted) return "removed";
-    return listing.moderation?.status ?? (listing.available ? "active" : "pending_review");
+    // Prioritize moderation status - if it exists, use it
+    if (listing.moderation?.status) {
+      return listing.moderation.status;
+    }
+    // If no moderation status but available is true, it's an old item that needs review
+    // Treat it as pending_review so admin can approve it
+    if (listing.available) {
+      return "pending_review";
+    }
+    // If available is false and no moderation status, it's pending
+    return "pending_review";
   };
 
   const resolveCity = (listing: Listing) => {
@@ -379,6 +390,14 @@ const AdminListings = () => {
         }
       } catch (error) {
         console.error('Error sending approval notification:', error);
+        // Don't fail the approval if notification fails
+      }
+
+      // Notify nearby users about the newly approved listing (fire-and-forget)
+      try {
+        await notifyNearbyUsersAboutListing(listing);
+      } catch (error) {
+        console.warn('Error notifying nearby users about approved listing:', error);
         // Don't fail the approval if notification fails
       }
 

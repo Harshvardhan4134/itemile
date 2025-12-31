@@ -416,25 +416,39 @@ export const createListing = async (listingData: Omit<Listing, 'id' | 'createdAt
     createdAt: serverTimestamp()
   });
 
-  // Best-effort notify nearby users about the new listing (fire-and-forget)
+  // Notify admins about new listing that needs approval (fire-and-forget)
   try {
-    await notifyNearbyUsersAboutListing({ ...(listingData as Listing), id: docRef.id });
+    await notifyAdminsAboutNewListing({ ...(listingData as Listing), id: docRef.id });
   } catch (err) {
-    console.warn('notifyNearbyUsersAboutListing failed (non-blocking):', err);
+    console.warn('notifyAdminsAboutNewListing failed (non-blocking):', err);
   }
+
+  // Don't notify nearby users until listing is approved
+  // Nearby users will be notified after admin approval
 
   return docRef.id;
 };
 
 export const getListings = async (): Promise<Listing[]> => {
   const listingsRef = collection(db, 'listings');
+  // Only get listings that are available AND have active moderation status (approved)
   const q = query(listingsRef, where('available', '==', true), orderBy('createdAt', 'desc'));
   const querySnapshot = await getDocs(q);
   
-  return querySnapshot.docs.map(doc => ({
+  // Filter to only include items with moderation.status === 'active' (approved items)
+  const listings = querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   })) as Listing[];
+  
+  // Only return listings that are approved (moderation.status === 'active')
+  // Items without moderation status are considered pending and should not appear
+  return listings.filter(listing => {
+    const moderationStatus = listing.moderation?.status;
+    // Only show items that are explicitly approved (active status)
+    // Items with pending_review, no moderation status, or other statuses are excluded
+    return moderationStatus === 'active';
+  });
 };
 
 export const getListingsByOwner = async (ownerId: string): Promise<Listing[]> => {
@@ -1748,6 +1762,14 @@ export const createRequest = async (requestData: Omit<Request, 'id' | 'createdAt
     matched: false,
     createdAt: serverTimestamp()
   });
+  
+  // Notify admins about new request (fire-and-forget)
+  try {
+    await notifyAdminsAboutNewRequest({ ...requestData, id: docRef.id, createdAt: serverTimestamp() } as Request);
+  } catch (err) {
+    console.warn('notifyAdminsAboutNewRequest failed (non-blocking):', err);
+  }
+  
   return docRef.id;
 };
 
@@ -1957,7 +1979,110 @@ export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<v
   }
 };
 
+// Admin email list for notifications
+const ADMIN_EMAILS = [
+  'gharsha238@gmail.com',
+  'support@lendlly.in',
+  'rentshare11@gmail.com',
+  'admin@rentshare.com'
+];
+
+// Notify admins about new listing that needs approval
+export const notifyAdminsAboutNewListing = async (listing: Listing): Promise<void> => {
+  try {
+    // Get all admin users
+    const allUsers = await getAllUsers();
+    const adminUsers = allUsers.filter(user => 
+      user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+    );
+
+    // Create in-app notifications for admins
+    const batch = writeBatch(db);
+    for (const admin of adminUsers) {
+      const notificationRef = doc(collection(db, 'notifications'));
+      batch.set(notificationRef, {
+        userId: admin.uid,
+        type: 'transaction_update',
+        listingId: listing.id,
+        message: `New listing "${listing.title}" (${listing.category}) needs approval`,
+        read: false,
+        createdAt: serverTimestamp()
+      });
+    }
+    await batch.commit();
+
+    // Send email notifications to admins
+    await Promise.all(
+      adminUsers.map(async (admin) => {
+        if (admin.email) {
+          try {
+            await sendEmailNotification({
+              email: admin.email,
+              subject: `New Listing Pending Approval - ${listing.title} - Rent Share`,
+              message: `Hi Admin,\n\nA new listing has been submitted and requires your approval:\n\nItem: ${listing.title}\nCategory: ${listing.category}\nOwner: ${listing.ownerId}\nPrice: ₹${listing.rentPerDay}/day\n\nPlease review and approve in the admin panel: ${window.location.origin}/admin/listings\n\nBest regards,\nRent Share System`,
+              type: 'transaction_update',
+              createdAt: serverTimestamp()
+            });
+          } catch (error) {
+            console.warn('Failed to send admin notification email:', error);
+          }
+        }
+      })
+    );
+  } catch (error) {
+    console.error('Error notifying admins about new listing:', error);
+  }
+};
+
+// Notify admins about new request
+export const notifyAdminsAboutNewRequest = async (request: Request): Promise<void> => {
+  try {
+    // Get all admin users
+    const allUsers = await getAllUsers();
+    const adminUsers = allUsers.filter(user => 
+      user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+    );
+
+    // Create in-app notifications for admins
+    const batch = writeBatch(db);
+    for (const admin of adminUsers) {
+      const notificationRef = doc(collection(db, 'notifications'));
+      batch.set(notificationRef, {
+        userId: admin.uid,
+        type: 'new_request_nearby',
+        requestId: request.id,
+        message: `New request posted: "${request.itemName}" (${request.category})`,
+        read: false,
+        createdAt: serverTimestamp()
+      });
+    }
+    await batch.commit();
+
+    // Send email notifications to admins
+    await Promise.all(
+      adminUsers.map(async (admin) => {
+        if (admin.email) {
+          try {
+            await sendEmailNotification({
+              email: admin.email,
+              subject: `New Request Posted - ${request.itemName} - Rent Share`,
+              message: `Hi Admin,\n\nA new request has been posted:\n\nItem: ${request.itemName}\nCategory: ${request.category}\nUser: ${request.userId}\nDuration: ${request.duration} days\nMax Budget: ${request.maxBudget ? `₹${request.maxBudget}` : 'Not specified'}\n\nView in admin panel: ${window.location.origin}/admin\n\nBest regards,\nRent Share System`,
+              type: 'new_request_nearby',
+              createdAt: serverTimestamp()
+            });
+          } catch (error) {
+            console.warn('Failed to send admin notification email:', error);
+          }
+        }
+      })
+    );
+  } catch (error) {
+    console.error('Error notifying admins about new request:', error);
+  }
+};
+
 // Notify nearby users when a new listing is posted (in-app + email, best effort)
+// This should only be called AFTER a listing is approved
 export const notifyNearbyUsersAboutListing = async (listing: Listing): Promise<void> => {
   if (!listing.location) return;
   try {
