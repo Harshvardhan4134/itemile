@@ -787,10 +787,23 @@ export const updateTransactionStatus = async (transactionId: string, status: str
     const action = status === 'active' || status === 'pickup_otp_generated' ? 'approved' : status === 'declined' || status === 'cancelled' ? 'declined' : 'updated';
     const itemName = transaction.listingTitle || 'item';
     
+    // Get chat associated with this transaction for navigation
+    let chatId: string | undefined;
+    try {
+      const chat = await getChatByTransactionId(transactionId, otherUserId);
+      if (chat) {
+        chatId = chat.id;
+      }
+    } catch (error) {
+      console.warn('Could not find chat for transaction:', error);
+    }
+    
     await createNotification({
       userId: otherUserId,
       type: 'transaction_update',
       transactionId: transactionId,
+      chatId: chatId,
+      listingId: transaction.listingId,
       message: `Your rental request for "${itemName}" has been ${action}`,
       read: false
     });
