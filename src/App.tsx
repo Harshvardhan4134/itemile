@@ -37,6 +37,7 @@ import Contact from "./pages/Contact";
 import Shipping from "./pages/Shipping";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
+import VendorStore from "./pages/VendorStore";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +150,7 @@ const App = () => (
           <Route path="/shipping" element={<Shipping />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/vendor/:ownerId" element={<VendorStore />} />
           <Route
             path="/profile"
             element={

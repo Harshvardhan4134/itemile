@@ -19,6 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { decryptSensitiveData } from "@/lib/encryption";
+import { DollarSign, Eye, Copy, Check } from "lucide-react";
 
 const formatDate = (value: any) => {
   if (!value) return "—";
@@ -54,6 +56,8 @@ const AdminUsers = () => {
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [actionReason, setActionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user: adminUser } = useAuthRole();
@@ -311,6 +315,19 @@ const AdminUsers = () => {
                             >
                               View Listings
                             </Button>
+                            {user.payoutDetails && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setPayoutDialogOpen(true);
+                                }}
+                              >
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                Payout
+                              </Button>
+                            )}
                             <Button 
                               variant="destructive" 
                               size="sm"
@@ -412,6 +429,221 @@ const AdminUsers = () => {
               disabled={actionLoading || !actionReason.trim()}
             >
               {actionLoading ? "Banning..." : "Confirm Ban"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payout Details Dialog */}
+      <Dialog open={payoutDialogOpen} onOpenChange={setPayoutDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Payout Details - {selectedUser?.name}</DialogTitle>
+            <DialogDescription>
+              View and manage payout information for manual payouts. All sensitive data is decrypted for admin access only.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser?.payoutDetails ? (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Payout Method</Label>
+                  <div className="mt-1 font-medium">
+                    {selectedUser.payoutDetails.payoutMethod === 'upi' ? 'UPI' : 'Bank Account'}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Last Updated</Label>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {selectedUser.payoutDetails.lastUpdated 
+                      ? formatDate(selectedUser.payoutDetails.lastUpdated)
+                      : 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Account Holder Name</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="font-medium">
+                      {decryptSensitiveData(selectedUser.payoutDetails.accountHolderName || '')}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(decryptSensitiveData(selectedUser.payoutDetails?.accountHolderName || ''));
+                        setCopiedField('name');
+                        setTimeout(() => setCopiedField(null), 2000);
+                        toast({ title: "Copied!", description: "Account holder name copied to clipboard" });
+                      }}
+                    >
+                      {copiedField === 'name' ? (
+                        <Check className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground">Phone Number</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="font-medium">
+                      {decryptSensitiveData(selectedUser.payoutDetails.phone || '')}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(decryptSensitiveData(selectedUser.payoutDetails?.phone || ''));
+                        setCopiedField('phone');
+                        setTimeout(() => setCopiedField(null), 2000);
+                        toast({ title: "Copied!", description: "Phone number copied to clipboard" });
+                      }}
+                    >
+                      {copiedField === 'phone' ? (
+                        <Check className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {selectedUser.payoutDetails.payoutMethod === 'upi' && selectedUser.payoutDetails.upiId && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">UPI ID</Label>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="font-medium">
+                        {decryptSensitiveData(selectedUser.payoutDetails.upiId)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(decryptSensitiveData(selectedUser.payoutDetails?.upiId || ''));
+                          setCopiedField('upi');
+                          setTimeout(() => setCopiedField(null), 2000);
+                          toast({ title: "Copied!", description: "UPI ID copied to clipboard" });
+                        }}
+                      >
+                        {copiedField === 'upi' ? (
+                          <Check className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedUser.payoutDetails.payoutMethod === 'bank_account' && (
+                  <>
+                    {selectedUser.payoutDetails.accountNumber && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Account Number</Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="font-medium">
+                            {decryptSensitiveData(selectedUser.payoutDetails.accountNumber)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => {
+                              navigator.clipboard.writeText(decryptSensitiveData(selectedUser.payoutDetails?.accountNumber || ''));
+                              setCopiedField('account');
+                              setTimeout(() => setCopiedField(null), 2000);
+                              toast({ title: "Copied!", description: "Account number copied to clipboard" });
+                            }}
+                          >
+                            {copiedField === 'account' ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {selectedUser.payoutDetails.ifscCode && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">IFSC Code</Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="font-medium">
+                            {decryptSensitiveData(selectedUser.payoutDetails.ifscCode)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => {
+                              navigator.clipboard.writeText(decryptSensitiveData(selectedUser.payoutDetails?.ifscCode || ''));
+                              setCopiedField('ifsc');
+                              setTimeout(() => setCopiedField(null), 2000);
+                              toast({ title: "Copied!", description: "IFSC code copied to clipboard" });
+                            }}
+                          >
+                            {copiedField === 'ifsc' ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {selectedUser.payoutDetails.bankName && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Bank Name</Label>
+                        <div className="mt-1 font-medium">
+                          {decryptSensitiveData(selectedUser.payoutDetails.bankName)}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {selectedUser.payoutDetails.payoutReferences && selectedUser.payoutDetails.payoutReferences.length > 0 && (
+                  <div className="pt-4 border-t">
+                    <Label className="text-sm font-semibold">Payout History</Label>
+                    <div className="mt-2 space-y-2">
+                      {selectedUser.payoutDetails.payoutReferences.map((ref, index) => (
+                        <div key={index} className="p-3 bg-muted rounded-lg text-sm">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-medium">₹{ref.amount?.toLocaleString()}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {ref.utr && `UTR: ${ref.utr}`}
+                                {ref.date && ` • ${formatDate(ref.date)}`}
+                              </div>
+                            </div>
+                            <Badge variant={ref.status === 'completed' ? 'default' : ref.status === 'failed' ? 'destructive' : 'secondary'}>
+                              {ref.status || 'pending'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No payout details added yet.</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayoutDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

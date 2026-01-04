@@ -23,10 +23,9 @@ import {
   Zap,
   RefreshCw,
   Mail,
-  Facebook,
-  Twitter,
   Instagram,
   Linkedin,
+  MessageCircle as DiscordIcon,
   CheckCircle,
   MessageCircle,
 } from "lucide-react";
@@ -371,17 +370,50 @@ const Index = () => {
                 A peer-to-peer rental marketplace connecting people to rent, earn, and request items nearby.
               </p>
               <div className="flex gap-4">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Facebook className="h-5 w-5" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full"
+                  asChild
+                >
+                  <a 
+                    href="https://discord.gg/dm75Cz6Kjt" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    aria-label="Join our Discord"
+                  >
+                    <DiscordIcon className="h-5 w-5" />
+                  </a>
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Twitter className="h-5 w-5" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full"
+                  asChild
+                >
+                  <a 
+                    href="https://www.instagram.com/lendlly.in?igsh=amtkYjAyNnU4bWNj" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    aria-label="Follow us on Instagram"
+                  >
+                    <Instagram className="h-5 w-5" />
+                  </a>
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Instagram className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Linkedin className="h-5 w-5" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full"
+                  asChild
+                >
+                  <a 
+                    href="https://www.linkedin.com/company/lendlly/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    aria-label="Follow us on LinkedIn"
+                  >
+                    <Linkedin className="h-5 w-5" />
+                  </a>
                 </Button>
               </div>
             </div>

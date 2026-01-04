@@ -59,6 +59,29 @@ export interface User {
   razorpayAccountId?: string;
   razorpayAccountStatus?: string;
   razorpayAccountCreatedAt?: any;
+  // Payout bank details (encrypted)
+  payoutDetails?: {
+    accountHolderName?: string; // Encrypted
+    accountNumber?: string; // Encrypted
+    ifscCode?: string; // Encrypted
+    upiId?: string; // Encrypted
+    bankName?: string; // Encrypted
+    phone?: string; // Encrypted
+    payoutMethod?: 'upi' | 'bank_account';
+    lastUpdated?: any;
+    // For manual payouts
+    payoutReferences?: Array<{
+      utr?: string;
+      amount?: number;
+      date?: any;
+      status?: 'pending' | 'completed' | 'failed';
+    }>;
+  };
+  // Business/Fleet account fields
+  isBusinessAccount?: boolean;
+  businessName?: string;
+  businessDescription?: string;
+  listingCount?: number; // Auto-calculated, number of active listings
 }
 
 export type ModerationStatus = 'active' | 'flagged' | 'removed' | 'pending_review';

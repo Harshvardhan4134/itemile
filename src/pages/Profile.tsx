@@ -44,6 +44,9 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { KYCVerification } from "@/components/KYCVerification";
+import BankDetailsDialog from "@/components/BankDetailsDialog";
+import { maskAccountNumber, maskUPI, maskPhone } from "@/lib/encryption";
+import { Building2, Shield } from "lucide-react";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -68,6 +71,7 @@ const Profile = () => {
     category: '',
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showBankDetailsDialog, setShowBankDetailsDialog] = useState(false);
 
   const fetchUserData = async () => {
     if (!auth.currentUser) {
@@ -774,28 +778,119 @@ const Profile = () => {
           </TabsContent>
 
           {/* Payments tab */}
-          <TabsContent value="payments" className="mt-6">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <DollarSign className="h-5 w-5 mr-2" />
-                  Payment Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Payments Coming Soon</h3>
-                  <p className="text-muted-foreground mb-4">We're working on integrating Razorpay for secure payments</p>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• Secure payment processing</p>
-                    <p>• Multiple payment methods</p>
-                    <p>• Transaction history</p>
-                    <p>• Refund management</p>
+          <TabsContent value="payments" className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {/* Bank Details Card */}
+              <Card className="glass-card">
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="flex items-center text-base sm:text-lg">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+                    Payout Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+                  {user?.payoutDetails ? (
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs sm:text-sm text-muted-foreground">Payout Method:</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {user.payoutDetails.payoutMethod === 'upi' ? 'UPI' : 'Bank Account'}
+                        </Badge>
+                      </div>
+                      {user.payoutDetails.payoutMethod === 'upi' && user.payoutDetails.upiId && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs sm:text-sm text-muted-foreground">UPI ID:</span>
+                          <span className="text-xs sm:text-sm font-medium">{maskUPI(user.payoutDetails.upiId)}</span>
+                        </div>
+                      )}
+                      {user.payoutDetails.payoutMethod === 'bank_account' && (
+                        <>
+                          {user.payoutDetails.accountNumber && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs sm:text-sm text-muted-foreground">Account:</span>
+                              <span className="text-xs sm:text-sm font-medium">{maskAccountNumber(user.payoutDetails.accountNumber)}</span>
+                            </div>
+                          )}
+                          {user.payoutDetails.bankName && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs sm:text-sm text-muted-foreground">Bank:</span>
+                              <span className="text-xs sm:text-sm font-medium">{user.payoutDetails.bankName}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {user.payoutDetails.phone && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs sm:text-sm text-muted-foreground">Phone:</span>
+                          <span className="text-xs sm:text-sm font-medium">{maskPhone(user.payoutDetails.phone)}</span>
+                        </div>
+                      )}
+                      <div className="pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs sm:text-sm"
+                          onClick={() => setShowBankDetailsDialog(true)}
+                        >
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                          Update Bank Details
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 sm:space-y-3">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Add your bank details to receive rental payments securely.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs sm:text-sm"
+                        onClick={() => setShowBankDetailsDialog(true)}
+                      >
+                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        Add Bank Details
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Manual Payouts Info Card */}
+              <Card className="glass-card">
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="flex items-center text-base sm:text-lg">
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+                    Manual Payouts Phase
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
+                    <p className="text-muted-foreground">
+                      We're currently in the <strong>manual payouts phase</strong>. After you add your bank details, we'll process payouts manually via UPI or IMPS.
+                    </p>
+                    <div className="space-y-1.5 pt-2 border-t">
+                      <p className="font-semibold text-xs sm:text-sm mb-1">What you need to provide:</p>
+                      <div className="space-y-1 text-muted-foreground">
+                        <p>• Account Holder Name</p>
+                        <p>• UPI ID or Bank Account Number</p>
+                        <p>• IFSC Code (for bank account)</p>
+                        <p>• Phone Number</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 pt-2 border-t">
+                      <p className="font-semibold text-xs sm:text-sm mb-1">How it works:</p>
+                      <div className="space-y-1 text-muted-foreground">
+                        <p>• We transfer rent manually (UPI / IMPS)</p>
+                        <p>• Payout reference (UTR) is stored</p>
+                        <p>• All sensitive data is encrypted</p>
+                        <p>• Future: Automatic payouts via Razorpay Route</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Settings tab */}
@@ -821,9 +916,13 @@ const Profile = () => {
                     <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                     Privacy Settings
                   </Button>
-                  <Button variant="outline" className="w-full justify-start glass-effect h-9 sm:h-10 text-xs sm:text-sm">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start glass-effect h-9 sm:h-10 text-xs sm:text-sm"
+                    onClick={() => setShowBankDetailsDialog(true)}
+                  >
                     <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                    Payment Methods
+                    Bank Details for Payouts
                   </Button>
                   <Button variant="outline" className="w-full justify-start glass-effect h-9 sm:h-10 text-xs sm:text-sm">
                     <HelpCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
@@ -857,6 +956,84 @@ const Profile = () => {
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Bank Details Card - Only show if user has listings (is an owner) */}
+              {myListings.length > 0 && (
+                <Card className="glass-card">
+                  <CardHeader className="p-3 sm:p-6">
+                    <CardTitle className="flex items-center text-base sm:text-lg">
+                      <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+                      Payout Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+                    {user?.payoutDetails ? (
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs sm:text-sm text-muted-foreground">Payout Method:</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {user.payoutDetails.payoutMethod === 'upi' ? 'UPI' : 'Bank Account'}
+                          </Badge>
+                        </div>
+                        {user.payoutDetails.payoutMethod === 'upi' && user.payoutDetails.upiId && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs sm:text-sm text-muted-foreground">UPI ID:</span>
+                            <span className="text-xs sm:text-sm font-medium">{maskUPI(user.payoutDetails.upiId)}</span>
+                          </div>
+                        )}
+                        {user.payoutDetails.payoutMethod === 'bank_account' && (
+                          <>
+                            {user.payoutDetails.accountNumber && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs sm:text-sm text-muted-foreground">Account:</span>
+                                <span className="text-xs sm:text-sm font-medium">{maskAccountNumber(user.payoutDetails.accountNumber)}</span>
+                              </div>
+                            )}
+                            {user.payoutDetails.bankName && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs sm:text-sm text-muted-foreground">Bank:</span>
+                                <span className="text-xs sm:text-sm font-medium">{user.payoutDetails.bankName}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {user.payoutDetails.phone && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs sm:text-sm text-muted-foreground">Phone:</span>
+                            <span className="text-xs sm:text-sm font-medium">{maskPhone(user.payoutDetails.phone)}</span>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs sm:text-sm"
+                            onClick={() => setShowBankDetailsDialog(true)}
+                          >
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                            Update Bank Details
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 sm:space-y-3">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          Add your bank details to receive rental payments securely.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs sm:text-sm"
+                          onClick={() => setShowBankDetailsDialog(true)}
+                        >
+                          <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                          Add Bank Details
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
 
@@ -983,6 +1160,14 @@ const Profile = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bank Details Dialog */}
+      <BankDetailsDialog
+        open={showBankDetailsDialog}
+        onOpenChange={setShowBankDetailsDialog}
+        user={user}
+        onUpdate={fetchUserData}
+      />
     </div>
   );
 };

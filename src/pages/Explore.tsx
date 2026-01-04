@@ -31,6 +31,7 @@ import {
   addCommentToRequest,
   getUser,
   updateUserLocation,
+  User,
 } from "@/lib/firestore";
 import { 
   MapPin, 
@@ -57,6 +58,7 @@ import {
   Home,
   Shield,
   CheckCircle,
+  Building2,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -148,6 +150,8 @@ const Explore = () => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem("lendlly_selected_city");
   });
+  const [owners, setOwners] = useState<Record<string, User>>({});
+  const BUSINESS_LISTING_THRESHOLD = 5; // Show as business if owner has 5+ listings
 
   // Treat very coarse location (> this radius in meters) as too imprecise to override a chosen city
   const COARSE_ACCURACY_THRESHOLD = 20000; // 20 km
@@ -213,6 +217,18 @@ const Explore = () => {
         // Once approved by admin, all items should be visible regardless of listingType
         // The listingType only affects the initial creation flow, not visibility after approval
         const publicListings = listingsData; // All items from getListings are already approved and should be shown
+
+        // Fetch owner data for business account grouping
+        const ownerIds = [...new Set(publicListings.map(l => l.ownerId))];
+        const ownerPromises = ownerIds.map(id => getUser(id));
+        const ownerData = await Promise.all(ownerPromises);
+        const ownersMap: Record<string, User> = {};
+        ownerData.forEach((owner, index) => {
+          if (owner) {
+            ownersMap[ownerIds[index]] = owner;
+          }
+        });
+        setOwners(ownersMap);
 
         setListings(publicListings);
         setRequests(requestsData);
@@ -775,9 +791,50 @@ const Explore = () => {
     }
   };
 
+  // Group listings by owner to identify business accounts
+  const listingsByOwner: Record<string, Listing[]> = {};
+  listings.forEach(listing => {
+    if (!listingsByOwner[listing.ownerId]) {
+      listingsByOwner[listing.ownerId] = [];
+    }
+    listingsByOwner[listing.ownerId].push(listing);
+  });
+
+  // Identify business accounts (owners with 5+ listings)
+  const businessOwners = Object.keys(listingsByOwner).filter(
+    ownerId => listingsByOwner[ownerId].length >= BUSINESS_LISTING_THRESHOLD
+  );
+
+  // Separate business listings from individual listings
+  const businessListingIds = new Set(
+    businessOwners.flatMap(ownerId => listingsByOwner[ownerId].map(l => l.id))
+  );
+  const individualListings = listings.filter(l => !businessListingIds.has(l.id));
+  const businessListings = listings.filter(l => businessListingIds.has(l.id));
+
   // Combine all posts (listings, requests, message posts) and sort by date
+  // Business cards are added instead of individual listings for owners with 5+ items
   const allPosts = [
-    ...listings.map(listing => ({ type: 'listing' as const, data: listing, createdAt: listing.createdAt })),
+    // Individual listings (from owners with < 5 listings)
+    ...individualListings.map(listing => ({ type: 'listing' as const, data: listing, createdAt: listing.createdAt })),
+    // Business cards (one per owner with 5+ listings)
+    ...businessOwners.map(ownerId => {
+      const ownerListings = listingsByOwner[ownerId];
+      const owner = owners[ownerId];
+      return {
+        type: 'business' as const,
+        data: {
+          ownerId,
+          ownerName: owner?.name || 'Business',
+          businessName: owner?.businessName || owner?.name || 'Business',
+          listingCount: ownerListings.length,
+          listings: ownerListings,
+          featuredListing: ownerListings[0], // Use first listing as featured
+        },
+        createdAt: ownerListings[0]?.createdAt || new Date()
+      };
+    }),
+    // Requests and message posts
     ...requests.map(request => ({ type: 'request' as const, data: request, createdAt: request.createdAt })),
     ...messagePosts.map(post => ({ type: 'message' as const, data: post, createdAt: post.createdAt }))
   ].sort((a, b) => {
@@ -798,11 +855,21 @@ const Explore = () => {
                            listing.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !selectedCategory || listing.category === selectedCategory;
       return matchesSearch && matchesCategory;
+    } else if (post.type === 'business') {
+      const business = post.data as { ownerId: string; businessName: string; listings: Listing[] };
+      const matchesSearch = business.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           business.listings.some(l => 
+                             l.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             l.category.toLowerCase().includes(searchTerm.toLowerCase())
+                           );
+      const matchesCategory = !selectedCategory || 
+                            business.listings.some(l => l.category === selectedCategory);
+      return matchesSearch && matchesCategory;
     } else {
       const request = post.data as Request;
       const matchesSearch = request.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            request.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           request.category.toLowerCase().includes(searchTerm.toLowerCase());
+                           request.category.toLowerCase().includes(request.category.toLowerCase());
       const matchesCategory = !selectedCategory || request.category === selectedCategory;
       return matchesSearch && matchesCategory;
     }
@@ -1191,6 +1258,98 @@ const Explore = () => {
                             </div>
                           </div>
                         )}
+                      </CardContent>
+                    </Card>
+                  );
+                } else if (post.type === 'business') {
+                  const business = post.data as { 
+                    ownerId: string; 
+                    ownerName: string; 
+                    businessName: string; 
+                    listingCount: number; 
+                    listings: Listing[]; 
+                    featuredListing: Listing;
+                  };
+                  const owner = owners[business.ownerId];
+                  
+                  return (
+                    <Card 
+                      key={`business-${business.ownerId}`} 
+                      className="rounded-2xl border border-border/60 shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/vendor/${business.ownerId}`)}
+                    >
+                      <CardContent className="p-4 sm:p-5 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12 sm:h-14 sm:w-14">
+                              <AvatarImage src={owner?.profilePhotoUrl} />
+                              <AvatarFallback className="bg-primary/20 text-primary text-lg">
+                                <Building2 className="h-6 w-6" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-base sm:text-lg">{business.businessName}</p>
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
+                                  <Building2 className="h-3 w-3 mr-1" />
+                                  Business
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{business.ownerName}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(business.featuredListing.createdAt)}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="rounded-2xl border border-border/40 bg-muted/30 p-4">
+                          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+                            {business.featuredListing.images && business.featuredListing.images.length > 0 ? (
+                              <div className="w-full sm:w-32 aspect-square overflow-hidden rounded-2xl bg-muted">
+                                <img
+                                  src={business.featuredListing.images[0]}
+                                  alt={business.featuredListing.title}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/placeholder.svg';
+                                  }}
+                                />
+                              </div>
+                            ) : null}
+                            
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="secondary" className="bg-white text-foreground border">
+                                  {business.featuredListing.category}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {business.listingCount} {business.listingCount === 1 ? 'item' : 'items'} available
+                                </Badge>
+                              </div>
+                              <p className="font-semibold text-base sm:text-lg">{business.featuredListing.title}</p>
+                              <p className="text-sm text-muted-foreground line-clamp-2">{business.featuredListing.description}</p>
+                              <p className="text-base font-semibold text-primary">₹{business.featuredListing.rentPerDay}/day</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <p className="text-sm text-muted-foreground">
+                            View all {business.listingCount} {business.listingCount === 1 ? 'item' : 'items'} from this vendor
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/vendor/${business.ownerId}`);
+                            }}
+                          >
+                            <ArrowRight className="h-4 w-4 mr-2" />
+                            View Store
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   );
