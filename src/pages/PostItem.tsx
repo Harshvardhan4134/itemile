@@ -401,7 +401,7 @@ const PostItem = () => {
 
   return (
     <>
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-4 sm:py-6 md:py-8">
@@ -816,7 +816,7 @@ const PostItem = () => {
                       type="submit" 
                       size="lg"
                       disabled={submitting || uploading}
-                      className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                      className="bg-primary hover:bg-primary/90"
                     >
                       {submitting || uploading ? (
                         <>
@@ -929,7 +929,7 @@ const PostItem = () => {
             <Button
               type="button"
               onClick={handleEnableRequests}
-              className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90"
             >
               Enable Requests for This Item
             </Button>

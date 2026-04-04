@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 
 const Refund = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-8 max-w-4xl">

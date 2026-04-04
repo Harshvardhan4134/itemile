@@ -73,7 +73,7 @@ const Signup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 relative overflow-hidden flex flex-col">
+    <div className="app-shell relative overflow-hidden flex flex-col">
       <button onClick={() => window.location.href = '/'} className="absolute top-6 left-6 flex items-center text-muted-foreground hover:text-primary transition-colors z-20">
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Home
@@ -84,7 +84,7 @@ const Signup: React.FC = () => {
         <div className="absolute right-1/4 bottom-1/4 w-40 h-40 bg-secondary/10 rounded-full blur-2xl animate-float-slow" />
       </div>
       <div className="flex-1 flex items-center justify-center z-10 px-4 py-8">
-        <Card className="glass-card w-full max-w-md border-0 shadow-2xl">
+        <Card className="app-surface w-full max-w-md shadow-xl">
           <CardHeader className="text-center pb-4 sm:pb-6 px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex items-center justify-center mb-2">
               <span className="text-2xl sm:text-3xl font-bold gradient-text">Lendlly</span>
@@ -146,7 +146,7 @@ const Signup: React.FC = () => {
                 />
                 <p className="text-xs text-muted-foreground">Min 8 chars, 1 uppercase, 1 special, 1 number</p>
               </div>
-              <Button type="submit" className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity" disabled={loading}>
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
                 {loading ? 'Signing up...' : 'Sign Up'}
               </Button>
             </form>
@@ -156,7 +156,7 @@ const Signup: React.FC = () => {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
             

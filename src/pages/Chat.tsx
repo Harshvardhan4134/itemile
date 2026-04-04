@@ -121,7 +121,7 @@ const Chat = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -137,7 +137,7 @@ const Chat = () => {
 
   if (!transaction || !listing || !otherUser) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="text-center">
@@ -152,10 +152,10 @@ const Chat = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell flex flex-col overflow-hidden sm:overflow-visible">
       <Header />
       
-      <div className="container py-4 sm:py-6 md:py-8">
+      <div className="container py-3 sm:py-6 md:py-8 flex-1 flex flex-col min-h-0 sm:block sm:flex-none">
         {/* Header */}
         <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 px-2 sm:px-0">
           <Button 
@@ -174,10 +174,10 @@ const Chat = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-[calc(100vh-10rem)] sm:h-[calc(100vh-12rem)] px-2 sm:px-0">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-6 flex-1 min-h-0 lg:h-[calc(100dvh-8rem)] px-2 sm:px-0">
           {/* Transaction Info Sidebar */}
-          <div className="lg:col-span-1 order-2 lg:order-1">
-            <Card className="glass-card h-auto lg:h-full">
+          <div className="lg:col-span-1 order-2 lg:order-1 min-h-0 hidden lg:block">
+            <Card className="glass-card h-auto lg:h-full border-border bg-card">
               <CardHeader className="p-3 sm:p-6">
                 <CardTitle className="flex items-center text-base sm:text-lg">
                   <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
@@ -233,8 +233,8 @@ const Chat = () => {
           </div>
 
           {/* Chat Area */}
-          <div className="lg:col-span-3 order-1 lg:order-2">
-            <Card className="glass-card h-[calc(100vh-16rem)] sm:h-[calc(100vh-14rem)] lg:h-full flex flex-col">
+          <div className="lg:col-span-3 order-1 lg:order-2 flex flex-col min-h-0 flex-1">
+            <Card className="glass-card flex flex-col flex-1 min-h-0 border-border bg-card h-[calc(100dvh-10.5rem)] sm:h-[calc(100dvh-12rem)] lg:h-full max-h-[calc(100dvh-10.5rem)] lg:max-h-none">
               <CardHeader className="border-b p-3 sm:p-6">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Avatar className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
@@ -245,7 +245,7 @@ const Chat = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xs sm:text-sm">
+                      <AvatarFallback className="bg-primary text-white text-xs sm:text-sm">
                         {otherUser.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     )}
@@ -259,9 +259,9 @@ const Chat = () => {
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 flex flex-col p-0">
+              <CardContent className="flex-1 flex flex-col p-0 min-h-0">
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-3 sm:space-y-4">
                   {messages.length === 0 ? (
                     <div className="text-center text-muted-foreground py-6 sm:py-8 px-4">
                       <p className="text-sm sm:text-base">No messages yet. Start the conversation!</p>
@@ -296,13 +296,13 @@ const Chat = () => {
                 </div>
 
                 {/* Message Input */}
-                <div className="border-t p-3 sm:p-4">
-                  <form onSubmit={handleSendMessage} className="flex gap-2">
+                <div className="border-t p-3 sm:p-4 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                  <form onSubmit={handleSendMessage} className="flex gap-2 min-w-0">
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type your message..."
-                      className="flex-1 h-9 sm:h-10 text-sm sm:text-base"
+                      className="flex-1 min-w-0 h-9 sm:h-10 text-base sm:text-sm"
                       disabled={sending}
                     />
                     <Button 

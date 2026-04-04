@@ -175,8 +175,8 @@ export const OtpConfirmation = ({ transactionId, stage, onSuccess, onCancel, onP
         <CardTitle>Confirm {stage === 'pickup' ? 'Pickup' : 'Return'}</CardTitle>
         <CardDescription>
           {stage === 'pickup' 
-            ? "Enter the OTP provided by the owner and optionally upload photos/videos of the item condition. Payment will be processed after verification."
-            : "Enter the OTP provided by the renter and optionally upload photos/videos of the item condition."}
+            ? "Enter the OTP provided by the owner and upload 2-3 photos or a short 5-10 second video as live pickup proof. This helps verify the handover and protects both parties. Payment will be processed after verification."
+            : "Enter the OTP provided by the renter and upload 2-3 photos or a short 5-10 second video as live return proof. This helps verify the item condition."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -195,8 +195,11 @@ export const OtpConfirmation = ({ transactionId, stage, onSuccess, onCancel, onP
 
         <div className="space-y-2">
           <Label>
-            Item Condition Video <span className="text-red-500">*</span> (Required)
+            Live Pickup Proof <span className="text-red-500">*</span> (Required)
           </Label>
+          <p className="text-xs text-muted-foreground">
+            Upload 2-3 photos or a short 5-10 second video. This creates a digital handshake and evidence trail. Auto-tagged with time, location, and booking ID.
+          </p>
           <p className="text-xs text-muted-foreground mb-2">
             At least one video is required (max 100MB per file). You can also upload additional photos/videos.
           </p>

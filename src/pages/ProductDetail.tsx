@@ -230,6 +230,19 @@ const ProductDetail = () => {
       return;
     }
 
+    // Progressive verification check - require verification only at checkout
+    // Users can browse but need verification to rent
+    const currentUser = await getUser(auth.currentUser.uid);
+    if (!currentUser || currentUser.verificationStatus !== 'approved') {
+      toast({
+        title: "Verification Required",
+        description: "Please complete your verification to rent items. You can browse items without verification, but verification is required to complete a rental.",
+        variant: "destructive"
+      });
+      navigate('/profile?tab=verification');
+      return;
+    }
+
     // Validate SecurePay requirement
     if (bookingData.requiresSecurePay && bookingData.deposit === 0) {
       toast({
@@ -495,7 +508,7 @@ const ProductDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -511,7 +524,7 @@ const ProductDetail = () => {
 
   if (!listing || !owner) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="text-center">
@@ -540,7 +553,7 @@ const ProductDetail = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-4 sm:py-6">
@@ -705,7 +718,7 @@ const ProductDetail = () => {
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-primary flex items-center justify-center flex-shrink-0">
                       {owner.profilePhotoUrl ? (
                         <img 
                           src={owner.profilePhotoUrl} 
@@ -755,7 +768,7 @@ const ProductDetail = () => {
                     />
                     
                     <Button 
-                      className="w-full mt-4 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-10 sm:h-11"
+                      className="w-full mt-4 bg-primary hover:bg-primary/90 h-10 sm:h-11"
                       onClick={handleRequestRent}
                       disabled={isInRent || isRequestingRent || !bookingData || !bookingData.startDate}
                     >
@@ -952,7 +965,7 @@ const ProductDetail = () => {
                     <Card key={review.id} className="glass-card border-muted/50">
                       <CardContent className="p-4">
                         <div className="flex items-start gap-4">
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-primary flex items-center justify-center flex-shrink-0">
                             {review.reviewerPhotoUrl ? (
                               <img 
                                 src={review.reviewerPhotoUrl} 

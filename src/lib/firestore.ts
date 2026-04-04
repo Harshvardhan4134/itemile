@@ -2466,6 +2466,11 @@ export const incrementAccessCodeUsage = async (code: string): Promise<void> => {
 
 // Handover Media Interface
 export interface HandoverMedia {
+  // Auto-tagging fields
+  timestamp?: any;
+  bookingId?: string;
+  location?: GeoPoint;
+  listingTitle?: string;
   id: string;
   stage: 'pickup' | 'return';
   type: 'image' | 'video';
@@ -2586,6 +2591,37 @@ export const confirmPickupOtp = async (
       confirmedBy: userId, // Track who confirmed the pickup
     });
     
+    // Send real-time notification to owner when renter picks up
+    try {
+      const renter = await getUser(transaction.renterId);
+      const listing = transaction.listingId ? await getListing(transaction.listingId) : null;
+      
+      // Create notification for owner
+      await createNotification({
+        userId: transaction.ownerId,
+        type: 'transaction_update',
+        transactionId: transactionId,
+        message: `${renter?.name || 'A renter'} is picking up "${transaction.listingTitle || listing?.title || 'your item'}" now. Live pickup proof has been uploaded.`,
+        read: false
+      });
+      
+      // Send email notification to owner
+      const owner = await getUser(transaction.ownerId);
+      if (owner?.email) {
+        await sendEmailNotification({
+          email: owner.email,
+          subject: `Item Pickup in Progress - ${transaction.listingTitle || 'Your Item'}`,
+          message: `Hi ${owner.name},\n\n${renter?.name || 'A renter'} is currently picking up "${transaction.listingTitle || 'your item'}" from you.\n\n✅ Verification Status: ${renter?.verificationStatus === 'approved' ? 'Verified' : 'Pending'}\n📸 Live Pickup Proof: Uploaded\n📅 Expected Return: ${transaction.endDate?.toDate?.()?.toLocaleDateString() || 'N/A'}\n\nYou can view the transaction details in your dashboard.\n\nView Transaction: ${window.location.origin}/owner-bookings\n\nBest regards,\nLendlly Team`,
+          type: 'transaction_update',
+          read: false,
+          createdAt: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error('Error sending owner notification:', error);
+      // Don't fail the pickup confirmation if notification fails
+    }
+    
     return true;
   } catch (error) {
     console.error('Error confirming pickup OTP:', error);
@@ -2675,6 +2711,27 @@ export const uploadHandoverMedia = async (
     const handoverMediaRef = collection(db, 'transactions', transactionId, 'handoverMedia');
     const batch = writeBatch(db);
     
+    // Get transaction details for auto-tagging
+    const transactionRef = doc(db, 'transactions', transactionId);
+    const transactionSnap = await getDoc(transactionRef);
+    const transaction = transactionSnap.exists() ? transactionSnap.data() as Transaction : null;
+    
+    // Get user location if available (for auto-tagging)
+    let userLocation: { lat: number; lng: number } | null = null;
+    try {
+      if (navigator.geolocation) {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        });
+        userLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+      }
+    } catch (error) {
+      console.log('Could not get location for media tagging:', error);
+    }
+
     urls.forEach((url, index) => {
       const mediaDocRef = doc(handoverMediaRef);
       const file = files[index];
@@ -2685,6 +2742,11 @@ export const uploadHandoverMedia = async (
         type: isVideo ? 'video' : 'image',
         url,
         uploadedBy,
+        // Auto-tagging: time, location, booking ID
+        timestamp: serverTimestamp(),
+        bookingId: transactionId,
+        location: userLocation ? new GeoPoint(userLocation.lat, userLocation.lng) : null,
+        listingTitle: transaction?.listingTitle || null,
         createdAt: serverTimestamp()
       };
       
@@ -2701,8 +2763,7 @@ export const uploadHandoverMedia = async (
     await batch.commit();
     console.log('Batch committed successfully');
     
-    // Update transaction to indicate media exists
-    const transactionRef = doc(db, 'transactions', transactionId);
+    // Update transaction to indicate media exists (reuse transactionRef from above)
     const updateData: any = {
       updatedAt: serverTimestamp()
     };

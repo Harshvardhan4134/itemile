@@ -79,7 +79,7 @@ const PaymentPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-900">
+      <div className="app-shell flex items-center justify-center p-3 sm:p-4">
         <Card className="w-full max-w-md mx-auto">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-base sm:text-lg text-red-600">Payment Error</CardTitle>
@@ -99,7 +99,7 @@ const PaymentPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-900">
+    <div className="app-shell flex items-center justify-center p-3 sm:p-4">
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center p-4 sm:p-6">
           <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 animate-spin text-blue-600" />

@@ -89,12 +89,12 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4 relative">
+    <div className="app-shell flex items-center justify-center p-4 relative">
       <button onClick={() => window.location.href = '/login'} className="absolute top-6 left-6 flex items-center text-muted-foreground hover:text-primary transition-colors z-20">
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Sign In
       </button>
-      <Card className="glass-card w-full max-w-md border-0 shadow-2xl">
+      <Card className="app-surface w-full max-w-md shadow-xl">
         <CardHeader className="text-center pb-6">
           <CardTitle className="text-2xl font-urbanist font-bold">Forgot Password</CardTitle>
           <p className="text-muted-foreground">Enter your email or phone number to reset your password</p>

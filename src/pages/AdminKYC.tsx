@@ -101,7 +101,7 @@ export default function AdminKYC() {
 
   if (!currentUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="app-shell flex items-center justify-center">
         <p>Loading...</p>
       </div>
     );

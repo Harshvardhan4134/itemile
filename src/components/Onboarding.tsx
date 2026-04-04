@@ -79,7 +79,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
+    <div className="app-shell flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
           <Badge className="mb-4 glass-effect" variant="outline">
@@ -128,7 +128,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             size="lg"
             onClick={handleComplete}
             disabled={!selectedRole || loading}
-            className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+            className="bg-primary hover:bg-primary/90"
           >
             {loading ? (
               <>

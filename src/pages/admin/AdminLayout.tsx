@@ -18,7 +18,7 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="app-shell">
       <div className="flex h-screen">
         <aside className="hidden md:flex md:flex-col w-64 border-r bg-background">
           <div className="p-6 border-b">

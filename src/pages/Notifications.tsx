@@ -125,7 +125,7 @@ const Notifications = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -140,7 +140,7 @@ const Notifications = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-8">

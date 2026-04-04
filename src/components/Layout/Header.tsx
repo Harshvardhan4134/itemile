@@ -61,6 +61,7 @@ export const Header = () => {
   const { toast } = useToast();
 
   const isActive = (path: string) => location.pathname === path;
+  const isChatSection = location.pathname.startsWith("/chat");
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -119,96 +120,118 @@ export const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 glass-card">
-        <div className="container flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
-        {/* Logo */}
-        <Link to="/" className="flex items-center flex-shrink-0 group">
-          <div className="relative h-14 w-auto sm:h-16 flex items-center justify-center px-2 transition-transform duration-300 group-hover:scale-105">
-            <span className="text-xl sm:text-2xl font-bold gradient-text whitespace-nowrap">Lendlly</span>
-          </div>
-        </Link>
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur-md supports-[backdrop-filter]:bg-card/80">
+        <div className="container px-4 sm:px-6">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] h-14 sm:h-16 items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden h-9 w-9 shrink-0 -ml-1"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-expanded={isMenuOpen}
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <TooltipProvider>
+                <nav className="hidden md:flex items-center gap-8">
+                  <Link
+                    to="/"
+                    className={`text-sm font-medium transition-colors hover:text-foreground ${
+                      isActive("/") ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    Home
+                  </Link>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        to="/explore"
+                        className={`text-sm font-medium transition-colors hover:text-foreground ${
+                          isActive("/explore") ? "text-foreground" : "text-muted-foreground"
+                        }`}
+                      >
+                        Explore
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Browse items available for rent or swap</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  {user && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link
+                          to="/requests"
+                          className={`text-sm font-medium transition-colors hover:text-foreground ${
+                            isActive("/requests") ? "text-foreground" : "text-muted-foreground"
+                          }`}
+                        >
+                          Requests
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View item requests from other users</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </nav>
+              </TooltipProvider>
+            </div>
 
-        {/* City selector - desktop */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="hidden md:inline-flex items-center gap-2 min-w-[170px]"
-          onClick={() => setCityDialogOpen(true)}
-        >
-          <MapPin className="h-4 w-4 text-primary" />
-          <span className="truncate">
-            {selectedCity ? selectedCity : "Select your city"}
-          </span>
-        </Button>
+            <Link
+              to="/"
+              className="justify-self-center font-semibold text-base sm:text-lg tracking-tight text-foreground whitespace-nowrap hover:opacity-80 transition-opacity"
+            >
+              Lendlly
+            </Link>
 
-        {/* Search Bar - Hidden on mobile */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search items, brands, or categories..."
-              className="pl-10 glass-effect border-0 text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-        </div>
+            <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-3 min-w-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden lg:inline-flex items-center gap-2 max-w-[160px] xl:max-w-[200px]"
+                onClick={() => setCityDialogOpen(true)}
+              >
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span className="truncate text-xs xl:text-sm">
+                  {selectedCity ? selectedCity : "City"}
+                </span>
+              </Button>
 
-        {/* Navigation - Desktop */}
-        <TooltipProvider>
-          <nav className="hidden md:flex items-center space-x-6">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link 
-                  to="/explore" 
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    isActive('/explore') ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  Explore
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Browse items available for rent or swap</p>
-              </TooltipContent>
-            </Tooltip>
-            {user && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link 
-                      to="/requests" 
-                      className={`text-sm font-medium transition-colors hover:text-primary ${
-                        isActive('/requests') ? 'text-primary' : 'text-muted-foreground'
+              <div className="hidden md:flex flex-1 max-w-xs min-w-0 mx-1">
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="Search…"
+                    className="pl-9 h-9 text-sm bg-muted/50 border-border"
+                  />
+                </div>
+              </div>
+
+              <TooltipProvider>
+                <nav className="hidden lg:flex items-center gap-8 mr-1">
+                  <Link
+                    to="/contact"
+                    className={`text-sm font-medium transition-colors hover:text-foreground ${
+                      isActive("/contact") ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    Contact
+                  </Link>
+                  {user && (
+                    <Link
+                      to="/chat"
+                      className={`text-sm font-medium transition-colors hover:text-foreground ${
+                        isChatSection ? "text-foreground" : "text-muted-foreground"
                       }`}
                     >
-                      Requests
+                      Messages
                     </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View item requests from other users. Post what you need!</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link 
-                      to="/chat" 
-                      className={`text-sm font-medium transition-colors hover:text-primary ${
-                        isActive('/chat') ? 'text-primary' : 'text-muted-foreground'
-                      }`}
-                    >
-                      Chat
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Messages with item owners and renters</p>
-                  </TooltipContent>
-                </Tooltip>
-              </>
-            )}
-          </nav>
-        </TooltipProvider>
-
-        {/* Actions */}
-        <div className="flex items-center space-x-1.5 sm:space-x-3">
+                  )}
+                </nav>
+              </TooltipProvider>
           {user ? (
             <>
               <Button
@@ -248,7 +271,7 @@ export const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="hover-scale h-8 w-8 sm:h-10 sm:w-10">
                     <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xs sm:text-sm">
+                      <AvatarFallback className="bg-muted text-foreground text-xs sm:text-sm">
                         {user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -304,55 +327,52 @@ export const Header = () => {
                 </Button>
               </Link>
               <Link to="/signup" className="hidden sm:block">
-                <Button 
-                  size="sm" 
-                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity h-8 sm:h-9"
-                >
+                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 sm:h-9">
                   Sign Up
                 </Button>
               </Link>
             </>
           )}
-
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden h-8 w-8 sm:h-10 sm:w-10"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-border/40 glass-card">
-          <div className="container py-4">
+        <div className="md:hidden border-t border-border bg-card">
+          <div className="container px-4 sm:px-6 py-4">
             <div className="flex flex-col space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search items, brands, or categories..."
-                  className="pl-10 glass-effect border-0"
+                  className="pl-10 bg-muted/50 border-border"
                 />
               </div>
-              {/* Mobile city selector */}
               <Button
                 variant="outline"
                 className="justify-start gap-2"
                 onClick={() => setCityDialogOpen(true)}
               >
-                <MapPin className="h-4 w-4 text-primary" />
+                <MapPin className="h-4 w-4 shrink-0" />
                 <span className="truncate">
                   {selectedCity ? selectedCity : "Select your city"}
                 </span>
               </Button>
               <nav className="flex flex-col space-y-2">
+                <Link
+                  to="/"
+                  className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <div>
+                    <div className="font-semibold">Home</div>
+                    <div className="text-xs text-muted-foreground">Landing page</div>
+                  </div>
+                </Link>
                 <Link 
                   to="/explore" 
-                  className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                  className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <div>
@@ -360,11 +380,21 @@ export const Header = () => {
                     <div className="text-xs text-muted-foreground">Browse items to rent or swap</div>
                   </div>
                 </Link>
+                <Link
+                  to="/contact"
+                  className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <div>
+                    <div className="font-semibold">Contact</div>
+                    <div className="text-xs text-muted-foreground">Get in touch</div>
+                  </div>
+                </Link>
                 {user && (
                   <>
                     <Link 
                       to="/requests" 
-                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <div>
@@ -374,7 +404,7 @@ export const Header = () => {
                     </Link>
                     <Link 
                       to="/chat" 
-                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <div>
@@ -384,7 +414,7 @@ export const Header = () => {
                     </Link>
                     <Link 
                       to="/profile" 
-                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <div>
@@ -394,7 +424,7 @@ export const Header = () => {
                     </Link>
                     <Link 
                       to="/dashboard" 
-                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <div>
@@ -407,7 +437,7 @@ export const Header = () => {
                     <div className="flex flex-col space-y-2 pt-2 border-t border-border/40">
                       <Button 
                         size="sm" 
-                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
                         onClick={() => {
                           setIsMenuOpen(false);
                           setShowPostChooser(true);
@@ -424,14 +454,14 @@ export const Header = () => {
                   <>
                     <Link 
                       to="/login" 
-                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Sign In
                     </Link>
                     <Link 
                       to="/signup" 
-                      className="text-sm font-medium py-2 text-muted-foreground hover:text-primary transition-colors"
+                      className="text-sm font-medium py-2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Sign Up

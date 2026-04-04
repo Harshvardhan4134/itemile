@@ -346,7 +346,7 @@ const Transactions = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -361,7 +361,7 @@ const Transactions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-8">
@@ -413,7 +413,7 @@ const Transactions = () => {
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex gap-4">
-                            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+                            <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center">
                               {listing?.images?.[0] ? (
                                 <img 
                                   src={listing.images[0]} 
@@ -699,7 +699,7 @@ const Transactions = () => {
                         <Card key={listing.id} className="hover-scale cursor-pointer" onClick={() => navigate(`/item/${listing.id}`)}>
                           <CardContent className="p-3">
                             <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+                              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                                 {listing.images[0] ? (
                                   <img 
                                     src={listing.images[0]} 

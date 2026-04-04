@@ -67,16 +67,18 @@ export const CitySelectorDialog = ({
     if (!navigator.geolocation) {
       toast({
         title: "Location not supported",
-        description: "Your browser does not support geolocation.",
+        description: "Your browser does not support geolocation. Please select a city instead.",
         variant: "destructive",
       });
       return;
     }
 
     setDetecting(true);
+    
+    // Try with better options for more reliable location fetching
     navigator.geolocation.getCurrentPosition(
-      () => {
-        // We don't reverse-geocode; we just mark that the user opted-in.
+      (position) => {
+        // Successfully got location
         onSelectCity("Current Location");
         toast({
           title: "Location enabled",
@@ -86,18 +88,34 @@ export const CitySelectorDialog = ({
         setDetecting(false);
       },
       (error) => {
-        const message =
-          error.code === error.PERMISSION_DENIED
-            ? "Permission denied. Please enable location in your browser settings."
-            : "Unable to fetch location. Please try again or choose a city.";
+        setDetecting(false);
+        
+        let message = "Unable to fetch location. Please try again or choose a city.";
+        let title = "Location unavailable";
+        
+        if (error.code === error.PERMISSION_DENIED) {
+          title = "Location permission denied";
+          message = "Please enable location access in your browser settings, or select a city manually.";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          title = "Location unavailable";
+          message = "Your location could not be determined. Please select a city from the list.";
+        } else if (error.code === error.TIMEOUT) {
+          title = "Location request timed out";
+          message = "The location request took too long. Please try again or select a city.";
+        }
+        
         toast({
-          title: "Location unavailable",
+          title,
           description: message,
           variant: "destructive",
+          duration: 6000,
         });
-        setDetecting(false);
       },
-      { timeout: 8000 }
+      { 
+        enableHighAccuracy: true, // Try to get GPS location
+        timeout: 15000, // Increased timeout to 15 seconds
+        maximumAge: 60000 // Accept location up to 1 minute old
+      }
     );
   };
 
@@ -157,7 +175,7 @@ export const CitySelectorDialog = ({
                 <div className="pb-2 border-b">
                   <Button
                     variant="default"
-                    className="w-full justify-start bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                    className="w-full justify-start bg-primary hover:bg-primary/90"
                     onClick={() => {
                       onSelectCity(search.trim());
                       onOpenChange(false);

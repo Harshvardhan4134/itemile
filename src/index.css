@@ -9,56 +9,51 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Modern teal and sky blue palette */
-    --background: 215 25% 97%;
-    --foreground: 215 15% 15%;
+    /* Minimal commerce palette (neutral, high contrast) */
+    --background: 0 0% 96%;
+    --foreground: 0 0% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 15% 15%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 15% 15%;
+    --popover-foreground: 0 0% 9%;
 
-    /* Primary: Soft Teal */
-    --primary: 174 64% 45%;
+    /* Sky primary — aligns with Digital / homepage CTAs */
+    --primary: 199 89% 48%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 174 64% 60%;
+    --primary-glow: 199 89% 58%;
 
-    /* Secondary: Sky Blue */
-    --secondary: 199 89% 48%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 9%;
 
-    /* Muted variants */
-    --muted: 215 25% 94%;
-    --muted-foreground: 215 15% 45%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
 
-    /* Accent: Light blue */
-    --accent: 199 89% 70%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 9%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 215 25% 88%;
-    --input: 215 25% 92%;
-    --ring: 174 64% 45%;
+    --border: 0 0% 88%;
+    --input: 0 0% 90%;
+    --ring: 199 89% 48%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(174 64% 45%), hsl(199 89% 48%));
-    --gradient-hero: linear-gradient(135deg, hsl(174 64% 45% / 0.1), hsl(199 89% 48% / 0.1));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100% / 0.8), hsl(215 25% 97% / 0.4));
-    --gradient-glass: linear-gradient(145deg, hsl(0 0% 100% / 0.25), hsl(215 25% 97% / 0.1));
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 12%), hsl(0 0% 24%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 94%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100% / 0.95), hsl(0 0% 96% / 0.5));
+    --gradient-glass: linear-gradient(145deg, hsl(0 0% 100% / 0.9), hsl(0 0% 98% / 0.6));
     
-    /* Shadows */
-    --shadow-soft: 0 4px 20px hsl(215 25% 20% / 0.08);
-    --shadow-hover: 0 8px 30px hsl(174 64% 45% / 0.15);
-    --shadow-glow: 0 0 40px hsl(174 64% 45% / 0.2);
+    --shadow-soft: 0 4px 24px hsl(0 0% 0% / 0.06);
+    --shadow-hover: 0 10px 40px hsl(0 0% 0% / 0.1);
+    --shadow-glow: 0 0 48px hsl(0 0% 0% / 0.06);
     
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     
-    --radius: 1rem;
+    --radius: 1.25rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -71,44 +66,43 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 215 25% 8%;
-    --foreground: 215 25% 95%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 96%;
 
-    --card: 215 25% 10%;
-    --card-foreground: 215 25% 95%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 215 25% 10%;
-    --popover-foreground: 215 25% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 174 64% 55%;
-    --primary-foreground: 215 25% 8%;
-    --primary-glow: 174 64% 70%;
+    --primary: 188 86% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 188 90% 60%;
 
-    --secondary: 199 89% 58%;
-    --secondary-foreground: 215 25% 8%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 215 25% 15%;
-    --muted-foreground: 215 25% 60%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 64%;
 
-    --accent: 199 89% 65%;
-    --accent-foreground: 215 25% 8%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 96%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 215 25% 20%;
-    --input: 215 25% 15%;
-    --ring: 174 64% 55%;
-    
-    /* Dark mode gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(174 64% 55%), hsl(199 89% 58%));
-    --gradient-hero: linear-gradient(135deg, hsl(174 64% 55% / 0.15), hsl(199 89% 58% / 0.15));
-    --gradient-card: linear-gradient(145deg, hsl(215 25% 12% / 0.8), hsl(215 25% 8% / 0.4));
-    --gradient-glass: linear-gradient(145deg, hsl(215 25% 15% / 0.25), hsl(215 25% 10% / 0.1));
-    
-    --shadow-soft: 0 4px 20px hsl(215 25% 5% / 0.3);
-    --shadow-hover: 0 8px 30px hsl(174 64% 55% / 0.25);
-    --shadow-glow: 0 0 40px hsl(174 64% 55% / 0.3);
+    --border: 0 0% 18%;
+    --input: 0 0% 16%;
+    --ring: 188 86% 52%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 92%), hsl(0 0% 72%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 10%), hsl(0 0% 7%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 12% / 0.9), hsl(0 0% 8% / 0.5));
+    --gradient-glass: linear-gradient(145deg, hsl(0 0% 14% / 0.4), hsl(0 0% 8% / 0.2));
+
+    --shadow-soft: 0 4px 20px hsl(0 0% 0% / 0.35);
+    --shadow-hover: 0 8px 30px hsl(0 0% 100% / 0.08);
+    --shadow-glow: 0 0 40px hsl(0 0% 100% / 0.06);
     
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -127,7 +121,7 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply bg-neutral-200/60 text-foreground font-inter antialiased;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -137,19 +131,28 @@ All colors MUST be HSL.
 
 /* Custom utility classes */
 @layer utilities {
+  /* Full-page canvas (matches marketing home) */
+  .app-shell {
+    @apply min-h-[100dvh] bg-neutral-200/60;
+  }
+
+  /* Main content surface on gray canvas */
+  .app-surface {
+    @apply rounded-2xl border border-zinc-200/90 bg-white shadow-sm;
+  }
+
   .glass-effect {
     @apply bg-gradient-to-br from-white/25 to-white/10 backdrop-blur-lg border border-white/20;
   }
   
+  /* Solid elevated panels (Digital-style; replaces frosted glass) */
   .glass-card {
-    background: var(--gradient-glass);
-    backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--border) / 0.2);
+    @apply rounded-2xl border border-border bg-card;
     box-shadow: var(--shadow-soft);
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+    @apply bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent;
   }
   
   .hover-scale {

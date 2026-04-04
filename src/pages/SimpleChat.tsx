@@ -97,7 +97,7 @@ const SimpleChat: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -112,7 +112,7 @@ const SimpleChat: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-4 sm:py-6 md:py-8">
@@ -128,7 +128,7 @@ const SimpleChat: React.FC = () => {
           </Button>
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             <Avatar className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
-              <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xs sm:text-sm">
+              <AvatarFallback className="bg-primary text-white text-xs sm:text-sm">
                 {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>

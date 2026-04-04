@@ -71,6 +71,8 @@ const ChatInbox = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  /** After "back to list" on mobile, do not immediately auto-open the first thread again */
+  const skipAutoOpenRef = useRef(false);
 
   const handlePickAndUpload = async (file: File | null) => {
     if (!file) return;
@@ -149,10 +151,15 @@ const ChatInbox = () => {
           setCurrentChat(chat);
           loadChatData(chat);
         }
-      } else if (dedupedByUser.length > 0 && !currentChat) {
-        // Auto-select first chat if none selected
-        setCurrentChat(dedupedByUser[0]);
-        loadChatData(dedupedByUser[0]);
+      } else if (
+        dedupedByUser.length > 0 &&
+        !chatId &&
+        !skipAutoOpenRef.current
+      ) {
+        const first = dedupedByUser[0];
+        setCurrentChat(first);
+        loadChatData(first);
+        navigate(`/chat/${first.id}`, { replace: true });
       }
     });
 
@@ -262,7 +269,7 @@ const ChatInbox = () => {
   };
 
   const handleChatSelect = async (chat: Chat) => {
-    // Keep URL in sync for deep linking
+    skipAutoOpenRef.current = false;
     if (chat.id === chatId) {
       return;
     }
@@ -270,6 +277,7 @@ const ChatInbox = () => {
   };
 
   const handleBackToChatList = () => {
+    skipAutoOpenRef.current = true;
     setCurrentChat(null);
     setOtherUser(null);
     setMessages([]);
@@ -318,24 +326,33 @@ const ChatInbox = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-            <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto mb-2"></div>
-          <p className="text-gray-500">Loading chats...</p>
+      <div className="app-shell flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-muted border-t-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Loading chats…</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  const showConversationMobile = Boolean(currentChat && chatId);
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="app-shell flex flex-col overflow-hidden">
       <Header />
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Chat List Panel */}
-        <div className={`${currentChat && chatId ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 bg-white flex-col border-r border-border`}>
-          <div className="p-4 border-b border-border bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Messages</h2>
+        <div
+          className={`${
+            showConversationMobile ? "hidden sm:flex" : "flex"
+          } w-full sm:w-80 md:w-96 shrink-0 bg-card flex-col border-r border-border min-h-0`}
+        >
+          <div className="p-3 sm:p-4 border-b border-border shrink-0">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Messages</h2>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreVertical className="h-5 w-5" />
               </Button>
@@ -351,7 +368,7 @@ const ChatInbox = () => {
             </div>
           </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                 {filteredChats.length === 0 ? (
             <div className="text-center py-8 px-4">
               <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
@@ -411,38 +428,52 @@ const ChatInbox = () => {
           </div>
 
       {/* Chat Conversation Panel */}
-      <div className={`${!currentChat ? 'hidden sm:flex' : 'flex'} flex-1 flex-col bg-white relative`}>
+      <div
+        className={`${
+          !currentChat ? "hidden sm:flex" : "flex"
+        } flex-1 flex-col bg-card relative min-h-0 min-w-0`}
+      >
             {currentChat && otherUser ? (
           <>
             {/* Chat Header */}
-            <div className="bg-white border-b border-border p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Avatar className="h-10 w-10 flex-shrink-0">
+            <div className="border-b border-border p-3 sm:p-4 flex items-center justify-between gap-2 shrink-0 bg-card">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 sm:hidden h-9 w-9 -ml-1"
+                  onClick={handleBackToChatList}
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <Avatar className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
                   <AvatarImage src={otherUser.profilePhotoUrl} />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
+                  <AvatarFallback className="bg-muted text-foreground">
                     {otherUser.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-base truncate">{otherUser.name}</h3>
-                  <p className="text-sm text-green-600">Online now</p>
+                      <h3 className="font-semibold text-sm sm:text-base truncate">{otherUser.name}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Messages</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
+              <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
+                <Button variant="ghost" size="icon" className="h-9 w-9 hidden sm:inline-flex" aria-hidden>
                   <Video className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Button variant="ghost" size="icon" className="h-9 w-9 hidden sm:inline-flex" aria-hidden>
                   <Phone className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Button variant="ghost" size="icon" className="h-9 w-9 hidden md:inline-flex">
                   <Info className="h-5 w-5" />
                 </Button>
               </div>
                   </div>
 
             {/* Messages Area */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/30">
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-4 bg-muted/30">
                     {messages.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8 px-4">
                         <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -467,12 +498,12 @@ const ChatInbox = () => {
                             {formatMessageTime(message.createdAt)}
                           </div>
                         )}
-                        <div className={`flex ${isOwn ? 'justify-start' : 'justify-end'}`}>
+                        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                           <div
-                            className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                            className={`max-w-[min(85%,20rem)] sm:max-w-[70%] px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl ${
                               isOwn
-                                ? 'bg-muted text-foreground border border-border'
-                                : 'bg-primary text-primary-foreground'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted text-foreground border border-border'
                             }`}
                           >
                             {imageUrl && (
@@ -519,8 +550,8 @@ const ChatInbox = () => {
                   </div>
 
                   {/* Message Input */}
-            <div className="bg-white border-t border-border p-4">
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <div className="border-t border-border p-3 sm:p-4 shrink-0 bg-card pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -538,36 +569,39 @@ const ChatInbox = () => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-9 w-9 shrink-0 hidden sm:inline-flex"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
+                  aria-label="Attach file"
                 >
-                  <Paperclip className="h-5 w-5" />
+                  <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-9 w-9 shrink-0 hidden sm:inline-flex"
                   onClick={() => imageInputRef.current?.click()}
                   disabled={uploading}
+                  aria-label="Attach image"
                 >
-                  <ImageIcon className="h-5 w-5" />
+                  <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={uploading ? "Uploading..." : "Type your message..."}
-                  className="flex-1 border-border h-10"
+                  placeholder={uploading ? "Uploading…" : "Message…"}
+                  className="flex-1 min-w-0 border-border h-10 text-base sm:text-sm"
                   disabled={sending || uploading}
                 />
                 <Button 
                   type="submit" 
                   disabled={!newMessage.trim() || sending || uploading}
                   size="icon"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 w-9"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 w-9 shrink-0"
+                  aria-label="Send"
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </form>
             </div>

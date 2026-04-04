@@ -79,7 +79,7 @@ const VendorStore = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -101,7 +101,7 @@ const VendorStore = () => {
   const isBusiness = owner.isBusinessAccount || listings.length >= 5;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-6 sm:py-8">

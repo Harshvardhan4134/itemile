@@ -99,7 +99,7 @@ const AccessCodeDialog: React.FC<AccessCodeDialogProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="flex items-center justify-center mb-2">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
               <Lock className="w-6 h-6 text-white" />
             </div>
           </div>
@@ -137,7 +137,7 @@ const AccessCodeDialog: React.FC<AccessCodeDialogProps> = ({
             <Button
               type="submit"
               disabled={verifying || !accessCode.trim()}
-              className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90"
             >
               {verifying ? (
                 <>

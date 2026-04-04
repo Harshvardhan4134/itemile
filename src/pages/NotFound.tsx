@@ -20,7 +20,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       <div className="container py-16">
         <div className="flex flex-col items-center justify-center text-center">
@@ -34,7 +34,7 @@ const NotFound = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
             <Link to="/">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity">
+              <Button size="lg" className="bg-primary hover:bg-primary/90">
                 <Home className="h-4 w-4 mr-2" />
                 Back to Home
               </Button>

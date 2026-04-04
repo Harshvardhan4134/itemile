@@ -363,7 +363,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -379,7 +379,7 @@ const Profile = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="text-center">
@@ -394,7 +394,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
 
       {/* Cover banner */}
@@ -414,7 +414,7 @@ const Profile = () => {
       {/* Tabs wrapper over header + content */}
       <div className="container -mt-8 sm:-mt-10 md:-mt-12 relative z-10 px-2 sm:px-0">
         <Tabs defaultValue="details">
-          <div className="bg-background/80 backdrop-blur rounded-xl border p-3 sm:p-4 md:p-6">
+          <div className="bg-card/90 backdrop-blur rounded-xl border border-border p-3 sm:p-4 md:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                 <div className="relative flex-shrink-0">
@@ -422,7 +422,7 @@ const Profile = () => {
                     {user.profilePhotoUrl ? (
                       <img src={user.profilePhotoUrl} alt={user.name} className="w-full h-full object-cover" />
                     ) : (
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-lg sm:text-xl md:text-2xl">
+                      <AvatarFallback className="bg-primary text-white text-lg sm:text-xl md:text-2xl">
                         {user.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     )}
@@ -745,7 +745,7 @@ const Profile = () => {
                       <Card key={review.id} className="glass-card">
                         <CardContent className="p-3 sm:p-4">
                           <div className="flex items-start gap-3 sm:gap-4">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-primary flex items-center justify-center flex-shrink-0">
                               {review.reviewerPhotoUrl ? (
                                 <img src={review.reviewerPhotoUrl} alt={review.reviewerName} className="w-full h-full object-cover" />
                               ) : (

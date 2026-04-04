@@ -137,7 +137,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex items-center justify-center h-64">
@@ -152,7 +152,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-4 sm:py-6 md:py-8">
@@ -179,7 +179,7 @@ const Dashboard = () => {
               </Button>
             </Link>
             <Link to="/post">
-              <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity">
+              <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
@@ -429,7 +429,7 @@ const Dashboard = () => {
                       return (
                         <div key={booking.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 glass-effect rounded-lg">
                           <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                               <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -490,7 +490,7 @@ const Dashboard = () => {
                       {user?.profilePhotoUrl ? (
                         <img src={user.profilePhotoUrl} alt={user.name} className="w-full h-full object-cover" />
                       ) : (
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-lg">
+                        <AvatarFallback className="bg-primary text-white text-lg">
                           {user?.name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
                       )}

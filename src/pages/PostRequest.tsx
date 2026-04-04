@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { createRequest, notifyNearbyUsersAboutRequest, getRequest } from "@/lib/firestore";
+import { createRequest, notifyNearbyUsersAboutRequest, getRequest, getUser } from "@/lib/firestore";
 import { auth } from "@/lib/firebase";
 import { GeoPoint } from "firebase/firestore";
 import { 
@@ -150,6 +150,18 @@ const PostRequest = () => {
       return;
     }
 
+    // Progressive verification check - require verification to post requests
+    const currentUser = await getUser(auth.currentUser.uid);
+    if (!currentUser || currentUser.verificationStatus !== 'approved') {
+      toast({
+        title: "Verification Required",
+        description: "Please complete your verification to post requests. You can browse items without verification, but verification is required to post requests.",
+        variant: "destructive"
+      });
+      navigate('/profile?tab=verification');
+      return;
+    }
+
     // Validation
     if (!formData.itemName.trim()) {
       toast({
@@ -244,7 +256,7 @@ const PostRequest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-8">
@@ -463,7 +475,7 @@ const PostRequest = () => {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity px-8"
+                className="bg-primary hover:bg-primary/90 px-8"
               >
                 {submitting ? (
                   <>

@@ -129,7 +129,7 @@ const PaymentSuccess = () => {
   }, [searchParams, navigate, toast]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-900">
+    <div className="app-shell flex items-center justify-center p-3 sm:p-4">
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center p-4 sm:p-6">
           {status === 'loading' && (

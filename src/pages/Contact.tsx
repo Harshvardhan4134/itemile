@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 
 const Contact = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-8 max-w-4xl">
@@ -32,7 +32,7 @@ const Contact = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
                           <Mail className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -57,7 +57,7 @@ const Contact = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
                           <Phone className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -82,7 +82,7 @@ const Contact = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
                           <MapPin className="h-6 w-6 text-white" />
                         </div>
                         <div>

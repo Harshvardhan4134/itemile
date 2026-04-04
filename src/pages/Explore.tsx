@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useNavigate } from "react-router-dom";
 import LiveMap from "@/components/LiveMap";
 import LocationPickerMap from "@/components/LocationPickerMap";
@@ -42,10 +43,12 @@ import {
   Send,
   Grid3x3,
   List,
-  TrendingUp,
-  Filter,
   Sparkles,
   ArrowRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Star,
   Smartphone,
   Bike,
   Camera,
@@ -67,6 +70,7 @@ import { uploadMultipleImages } from "@/lib/cloudinary";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { isDirectListingAllowed } from "@/lib/categoryRules";
+import { cn } from "@/lib/utils";
 
 const TERMS_VERSION = "2025-11";
 const buildTermsKey = (uid?: string | null) =>
@@ -124,6 +128,23 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   "goa": { lat: 15.2993, lng: 74.124 },
 };
 
+/** Default map center (Bengaluru) when GPS / city is not available yet */
+const DEFAULT_MAP_CENTER = { lat: 12.9716, lng: 77.5946 };
+const LISTINGS_PER_PAGE = 9;
+
+// Calculate distance between two points using Haversine formula (in km)
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 const Explore = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -151,6 +172,8 @@ const Explore = () => {
     return localStorage.getItem("lendlly_selected_city");
   });
   const [owners, setOwners] = useState<Record<string, User>>({});
+  const [shopSort, setShopSort] = useState<"new" | "popular">("new");
+  const [listingsPage, setListingsPage] = useState(1);
   const BUSINESS_LISTING_THRESHOLD = 5; // Show as business if owner has 5+ listings
 
   // Treat very coarse location (> this radius in meters) as too imprecise to override a chosen city
@@ -216,7 +239,69 @@ const Explore = () => {
         // Show ALL approved items on the Explore page
         // Once approved by admin, all items should be visible regardless of listingType
         // The listingType only affects the initial creation flow, not visibility after approval
-        const publicListings = listingsData; // All items from getListings are already approved and should be shown
+        let publicListings = listingsData; // All items from getListings are already approved and should be shown
+        
+        // City-based filtering: Only show items from selected city (if a city is selected)
+        // If no city is selected, show all items
+        if (selectedCityFromStorage && selectedCityFromStorage !== "Current Location") {
+          const selectedCityLower = selectedCityFromStorage.toLowerCase();
+          const cityCoords = CITY_COORDS[selectedCityLower];
+          
+          publicListings = publicListings.filter(listing => {
+            // First check if listing has city field and it matches
+            if (listing.city && listing.city.toLowerCase() === selectedCityLower) {
+              return true;
+            }
+            
+            // If no city field, try to match by location coordinates (fallback)
+            // Check if listing is within city bounds (approximate 100km radius - more lenient)
+            if (!listing.city && cityCoords && listing.location) {
+              const distance = calculateDistance(
+                cityCoords.lat,
+                cityCoords.lng,
+                listing.location.latitude,
+                listing.location.longitude
+              );
+              // Include if within 100km of city center (more lenient)
+              return distance <= 100;
+            }
+            
+            // TEMPORARY: If listing has no city field and no location, include it anyway
+            // This is a fallback until all listings have city fields populated
+            if (!listing.city && !listing.location) {
+              return true; // Show items without city/location data for now
+            }
+            
+            // Exclude items that are too far from city center
+            return false;
+          });
+        } else if (selectedCityFromStorage === "Current Location") {
+          // Filter by distance when "Current Location" is selected
+          if (userLocation) {
+            // Only show items within a reasonable radius (e.g., 50km)
+            const MAX_DISTANCE_KM = 50;
+            publicListings = publicListings.filter(listing => {
+            if (!listing.location) return false;
+            
+            const listingLat = listing.location.latitude;
+            const listingLng = listing.location.longitude;
+            
+            // Calculate distance using Haversine formula
+            const distance = calculateDistance(
+              userLocation.lat,
+              userLocation.lng,
+              listingLat,
+              listingLng
+            );
+            
+            return distance <= MAX_DISTANCE_KM;
+            });
+          } else {
+            // If "Current Location" is selected but GPS not available yet, show all items temporarily
+            // This prevents showing no items while waiting for GPS
+            console.log('Current Location selected but GPS not available yet, showing all items');
+          }
+        }
 
         // Fetch owner data for business account grouping
         const ownerIds = [...new Set(publicListings.map(l => l.ownerId))];
@@ -256,12 +341,21 @@ const Explore = () => {
   useEffect(() => {
     if (userLocation) return; // don't override real GPS/manual location
     if (!selectedCityFromStorage) return;
+    
+    // Handle "Current Location" - this will trigger GPS fetch in the main location effect
+    if (selectedCityFromStorage === "Current Location") {
+      // Reset attemptedGeolocation to allow GPS fetch
+      setAttemptedGeolocation(false);
+      return;
+    }
+    
+    // For regular cities, use CITY_COORDS (don't fetch GPS)
     const key = selectedCityFromStorage.toLowerCase();
     const coords = CITY_COORDS[key];
     if (coords) {
       setUserLocation(coords);
       setLocationAccuracy(0);
-      setAttemptedGeolocation(true);
+      setAttemptedGeolocation(true); // Mark as attempted so GPS won't override
       setManualLocation(coords);
     }
   }, [selectedCityFromStorage, userLocation]);
@@ -627,16 +721,20 @@ const Explore = () => {
   };
 
   useEffect(() => {
-    // Only attempt location on initial mount
+    // Only attempt location on initial mount or when "Current Location" is selected
     // IMPORTANT: Always get fresh GPS location, never use database location
     if (!attemptedGeolocation) {
-      // Clear any existing location to ensure we get fresh GPS data
-      setUserLocation(null);
-      setLocationAccuracy(null);
-      handleLocationUpdate();
+      // If "Current Location" is selected, fetch GPS location
+      // If a regular city is selected, don't fetch GPS (city coords already set above)
+      if (selectedCityFromStorage === "Current Location" || !selectedCityFromStorage) {
+        // Clear any existing location to ensure we get fresh GPS data
+        setUserLocation(null);
+        setLocationAccuracy(null);
+        handleLocationUpdate();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedCityFromStorage]);
 
   const handleAcceptTerms = () => {
     persistTermsAcceptance(currentUser);
@@ -845,223 +943,581 @@ const Explore = () => {
 
   // Filter posts
   const filteredPosts = allPosts.filter(post => {
+    // Apply city/location filtering first (only if city is selected)
+    if (selectedCityFromStorage && selectedCityFromStorage !== "Current Location") {
+      // Filter by city name
+      const selectedCityLower = selectedCityFromStorage.toLowerCase();
+      const cityCoords = CITY_COORDS[selectedCityLower];
+      
+      if (post.type === 'listing') {
+        const listing = post.data as Listing;
+        // Check city field first
+        if (listing.city && listing.city.toLowerCase() === selectedCityLower) {
+          // City matches, include it
+        } else if (!listing.city && cityCoords && listing.location) {
+          // No city field, check distance from city center
+          const distance = calculateDistance(
+            cityCoords.lat,
+            cityCoords.lng,
+            listing.location.latitude,
+            listing.location.longitude
+          );
+          if (distance > 50) return false; // Exclude if too far
+        } else {
+          return false; // Exclude if no city match and no location
+        }
+      } else if (post.type === 'business') {
+        const business = post.data as { ownerId: string; businessName: string; listings: Listing[] };
+        // Business must have at least one listing in the selected city or nearby
+        const hasListingInCity = business.listings.some(l => {
+          if (l.city && l.city.toLowerCase() === selectedCityLower) return true;
+          if (!l.city && cityCoords && l.location) {
+            const distance = calculateDistance(
+              cityCoords.lat,
+              cityCoords.lng,
+              l.location.latitude,
+              l.location.longitude
+            );
+            return distance <= 50;
+          }
+          return false;
+        });
+        if (!hasListingInCity) {
+          return false; // Exclude business if no listings in selected city
+        }
+      }
+      // Requests and messages don't have city filtering for now
+    } else if (selectedCityFromStorage === "Current Location" && userLocation) {
+      // Filter by distance when "Current Location" is selected
+      const MAX_DISTANCE_KM = 50;
+      if (post.type === 'listing') {
+        const listing = post.data as Listing;
+        if (!listing.location) return false;
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          listing.location.latitude,
+          listing.location.longitude
+        );
+        if (distance > MAX_DISTANCE_KM) return false;
+      } else if (post.type === 'business') {
+        const business = post.data as { ownerId: string; businessName: string; listings: Listing[] };
+        // Business must have at least one listing within distance
+        const hasListingNearby = business.listings.some(l => {
+          if (!l.location) return false;
+          const distance = calculateDistance(
+            userLocation.lat,
+            userLocation.lng,
+            l.location.latitude,
+            l.location.longitude
+          );
+          return distance <= MAX_DISTANCE_KM;
+        });
+        if (!hasListingNearby) return false;
+      }
+    }
+
+    // Then apply search and category filters
+    const q = searchTerm.trim().toLowerCase();
     if (post.type === 'message') {
       const messagePost = post.data as MessagePost;
-      return messagePost.message.toLowerCase().includes(searchTerm.toLowerCase());
-    } else if (post.type === 'listing') {
+      const text = (messagePost.message || "").toLowerCase();
+      return !q || text.includes(q);
+    }
+    if (post.type === 'listing') {
       const listing = post.data as Listing;
-      const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           listing.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           listing.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch =
+        !q ||
+        (listing.title || "").toLowerCase().includes(q) ||
+        (listing.description || "").toLowerCase().includes(q) ||
+        (listing.category || "").toLowerCase().includes(q);
       const matchesCategory = !selectedCategory || listing.category === selectedCategory;
       return matchesSearch && matchesCategory;
-    } else if (post.type === 'business') {
-      const business = post.data as { ownerId: string; businessName: string; listings: Listing[] };
-      const matchesSearch = business.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           business.listings.some(l => 
-                             l.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             l.category.toLowerCase().includes(searchTerm.toLowerCase())
-                           );
-      const matchesCategory = !selectedCategory || 
-                            business.listings.some(l => l.category === selectedCategory);
-      return matchesSearch && matchesCategory;
-    } else {
-      const request = post.data as Request;
-      const matchesSearch = request.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           request.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           request.category.toLowerCase().includes(request.category.toLowerCase());
-      const matchesCategory = !selectedCategory || request.category === selectedCategory;
+    }
+    if (post.type === 'business') {
+      const business = post.data as {
+        ownerId: string;
+        businessName: string;
+        listings: Listing[];
+      };
+      const matchesSearch =
+        !q ||
+        (business.businessName || "").toLowerCase().includes(q) ||
+        business.listings.some(
+          (l) =>
+            (l.title || "").toLowerCase().includes(q) ||
+            (l.category || "").toLowerCase().includes(q) ||
+            (l.description || "").toLowerCase().includes(q)
+        );
+      const matchesCategory =
+        !selectedCategory || business.listings.some((l) => l.category === selectedCategory);
       return matchesSearch && matchesCategory;
     }
+    const request = post.data as Request;
+    const matchesSearch =
+      !q ||
+      (request.itemName || "").toLowerCase().includes(q) ||
+      (request.description || "").toLowerCase().includes(q) ||
+      (request.category || "").toLowerCase().includes(q);
+    const matchesCategory = !selectedCategory || request.category === selectedCategory;
+    return matchesSearch && matchesCategory;
   });
 
-  // Featured listings for hero section
-  const featuredListings = listings.slice(0, 6);
-  const categoryCounts = categories.map(cat => ({
+  const categoryCounts = categories.map((cat) => ({
     ...cat,
-    count: listings.filter(l => l.category === cat.value).length
+    count: listings.filter((l) => l.category === cat.value).length,
   }));
 
+  const shopItems = useMemo(() => {
+    const items = filteredPosts.filter(
+      (p) => p.type === "listing" || p.type === "business"
+    );
+    const getTime = (p: (typeof items)[number]) => {
+      const raw = p.createdAt?.toDate
+        ? p.createdAt.toDate().getTime()
+        : new Date(p.createdAt).getTime();
+      return Number.isFinite(raw) ? raw : 0;
+    };
+    const likeSum = (l: Listing) => l.likes?.length ?? 0;
+    const pop = (p: (typeof items)[number]) => {
+      if (p.type === "listing") return likeSum(p.data as Listing);
+      const b = p.data as { listings: Listing[] };
+      return b.listings.reduce((s, l) => s + likeSum(l), 0);
+    };
+    const sorted = [...items];
+    if (shopSort === "new") {
+      sorted.sort((a, b) => getTime(b) - getTime(a));
+    } else {
+      sorted.sort((a, b) => pop(b) - pop(a));
+    }
+    return sorted;
+  }, [filteredPosts, shopSort]);
+
+  const totalShopCount = shopItems.length;
+  const totalListingsPages = Math.max(1, Math.ceil(totalShopCount / LISTINGS_PER_PAGE));
+  const paginatedShopItems = shopItems.slice(
+    (listingsPage - 1) * LISTINGS_PER_PAGE,
+    listingsPage * LISTINGS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setListingsPage(1);
+  }, [searchTerm, selectedCategory, shopSort]);
+
+  const mapHeroCenter =
+    userLocation ??
+    (selectedCityFromStorage &&
+    selectedCityFromStorage !== "Current Location"
+      ? CITY_COORDS[selectedCityFromStorage.toLowerCase()]
+      : undefined) ??
+    DEFAULT_MAP_CENTER;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="relative">
-        {/* Map Background */}
-        <div className="relative h-[460px] sm:h-[540px] md:h-[620px] w-full">
+        {/* Map hero (replaces static shop hero — always visible once data is ready) */}
+        <div className="relative h-[300px] w-full overflow-hidden sm:h-[380px] md:h-[440px]">
           {loading ? (
-            <div className="h-full w-full bg-muted/20 flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-muted-foreground">Loading map...</p>
+            <div className="flex h-full w-full items-center justify-center bg-muted/30">
+              <div className="p-8 text-center">
+                <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                <p className="text-sm text-muted-foreground">Loading map…</p>
               </div>
             </div>
-          ) : attemptedGeolocation ? (
+          ) : (
             <div className="relative h-full w-full">
-              <LiveMap 
+              <LiveMap
                 listings={listings}
                 requests={requests}
                 onListingSelect={setSelectedItem}
-                center={userLocation || { lat: 37.7749, lng: -122.4194 }}
-                zoom={userLocation ? 15 : 12}
+                center={mapHeroCenter}
+                zoom={userLocation ? 14 : selectedCityFromStorage && selectedCityFromStorage !== "Current Location" ? 11 : 10}
                 userLocation={userLocation}
                 onLocationUpdate={handleLocationUpdate}
                 onManualLocationPick={() => setShowManualLocationPicker(true)}
                 isUpdatingLocation={isUpdatingLocation}
               />
-              {!userLocation && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20">
-                  <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-xl">
-                    <MapPin className="h-16 w-16 text-primary mx-auto mb-4" />
-                    <h3 className="text-xl font-bold mb-3">Location Not Found</h3>
-                    <p className="text-sm text-muted-foreground mb-6">
-                      We couldn't locate you automatically. Pick your location manually to find items nearby.
+              <div
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-black/25"
+                aria-hidden
+              />
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-6 sm:pb-10">
+                <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl">
+                  Explore
+                </h1>
+              </div>
+              {!userLocation &&
+                (!selectedCityFromStorage || selectedCityFromStorage === "Current Location") && (
+                  <div className="absolute bottom-3 left-3 right-3 z-20 max-w-md rounded-xl border border-zinc-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-sm sm:left-auto sm:right-4">
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Enable location or pick a city in the header for nearby results. The map still works for browsing.
                     </p>
-                    <Button 
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="w-full sm:w-auto"
                       onClick={() => setShowManualLocationPicker(true)}
-                      className="bg-gradient-to-r from-primary to-green-500 hover:opacity-90 text-white px-8 py-6 text-base font-semibold"
                     >
-                      Pick Location Manually
+                      Pick location
                     </Button>
                   </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="h-full w-full bg-muted/20 flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-muted-foreground">Getting your location...</p>
-              </div>
+                )}
             </div>
           )}
         </div>
 
-        {/* Search and Filter Bar - White Card Below Map */}
-        <div className="container relative z-30 -mt-12 sm:-mt-16">
-          <div className="w-full bg-white shadow-lg rounded-3xl px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="What are you looking for?"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-11 h-12 sm:h-13 text-sm sm:text-base rounded-2xl bg-muted/30 border-transparent focus-visible:ring-2 focus-visible:ring-primary"
-                />
+        {/* Search bar — reference-style panel; live filter + submit scrolls to results */}
+        <div className="container relative z-30 -mt-8 px-4 sm:-mt-10">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              document.getElementById("explore-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className="app-surface flex flex-col gap-4 rounded-2xl border border-zinc-200/90 px-4 py-4 shadow-xl sm:rounded-3xl sm:px-8 sm:py-5"
+          >
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold sm:text-xl">Find everything you need</h2>
+                <p className="text-sm text-muted-foreground">
+                  Search by title, category, or description — results update as you type.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:max-w-xl">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    name="explore-search"
+                    placeholder="Search on Lendlly"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-11 rounded-xl border-zinc-200 bg-zinc-50/80 pl-10 pr-3 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label="Search listings and posts"
+                  />
+                </div>
                 <Button
-                  variant="default"
-                  className="h-11 sm:h-12 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 px-4 sm:px-5 shadow-md"
+                  type="submit"
+                  className="h-11 shrink-0 rounded-xl bg-zinc-900 px-6 text-white hover:bg-zinc-800"
                 >
-                  <Grid3x3 className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">All Categories</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-11 sm:h-12 w-11 sm:w-12 rounded-2xl border-slate-200"
-                >
-                  <Filter className="h-4 w-4" />
+                  Search
                 </Button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+            <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-3 lg:hidden">
               <Button
+                type="button"
                 variant={selectedCategory === "" ? "default" : "outline"}
                 size="sm"
+                className="rounded-full"
                 onClick={() => setSelectedCategory("")}
-                className={`text-sm font-semibold whitespace-nowrap h-10 rounded-full px-5 ${
-                  selectedCategory === "" ? "bg-primary text-white hover:bg-primary/90" : "bg-white border-slate-200 text-foreground"
-                }`}
               >
-                All Categories
+                All
               </Button>
               {categoryCounts.map((category) => (
                 <Button
+                  type="button"
                   key={category.value}
                   variant={selectedCategory === category.value ? "default" : "outline"}
                   size="sm"
+                  className="gap-1 rounded-full"
                   onClick={() => setSelectedCategory(category.value)}
-                  className={`gap-1.5 sm:gap-2 text-sm whitespace-nowrap h-10 rounded-full px-5 ${
-                    selectedCategory === category.value ? "bg-primary text-white hover:bg-primary/90" : "bg-white border-slate-200 text-foreground"
-                  }`}
                 >
-                  <category.icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{category.name}</span>
-                  <span className="sm:hidden">{category.name.split(' ')[0]}</span>
+                  <category.icon className="h-3.5 w-3.5" />
+                  <span className="max-w-[120px] truncate">{category.name}</span>
                 </Button>
               ))}
             </div>
-          </div>
+          </form>
         </div>
       </div>
 
-      <div className="container py-4 sm:py-6">
-
-
-        {/* Featured Items Section */}
-        {!searchTerm && !selectedCategory && (
-          <div className="mb-8 sm:mb-12">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                <h2 className="text-2xl sm:text-3xl font-bold">Featured Items</h2>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {featuredListings.map((listing) => (
-                <Card key={listing.id} className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
-                  <div className="relative aspect-square overflow-hidden bg-muted">
-                    <img
-                      src={listing.images[0] || "/placeholder.svg"}
-                      alt={listing.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    {listing.swapAllowed && (
-                      <Badge className="absolute top-2 right-2 bg-green-500">
-                        SWAP
-                      </Badge>
+      <div className="container space-y-14 px-4 py-6 sm:py-10">
+        {/* Shop-style listings */}
+        <section id="explore-results" className="scroll-mt-24" aria-label="Browse listings">
+          <div className="flex flex-col gap-8 lg:flex-row lg:gap-10">
+            <aside className="hidden w-full shrink-0 lg:block lg:w-60 xl:w-64">
+              <div className="app-surface sticky top-24 space-y-1 border border-zinc-200/90 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Category
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("")}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
+                    selectedCategory === ""
+                      ? "bg-rose-50 font-semibold text-rose-900 ring-1 ring-rose-200"
+                      : "hover:bg-zinc-50"
+                  )}
+                >
+                  <span>All listings</span>
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "shrink-0 text-xs",
+                      selectedCategory === "" ? "bg-rose-200/80 text-rose-950" : ""
                     )}
-                    <Badge variant="secondary" className="absolute top-2 left-2 text-xs bg-black/70 text-white">
-                      {listing.category.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <CardContent className="p-3 sm:p-4">
-                    <h3 className="font-semibold text-base sm:text-lg mb-1 line-clamp-1">{listing.title}</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-2">{listing.description}</p>
-                    <div className="flex items-center justify-between mb-2 sm:mb-3">
-                      <div>
-                        <span className="text-xl sm:text-2xl font-bold text-primary">₹{listing.rentPerDay}</span>
-                        <span className="text-xs sm:text-sm text-muted-foreground"> / day</span>
-                      </div>
-                    </div>
-                    <Button
-                      className="w-full bg-foreground text-background hover:bg-foreground/90"
-                      onClick={() => navigate(`/item/${listing.id}`)}
+                  >
+                    {totalShopCount}
+                  </Badge>
+                </button>
+                <div className="my-2 border-t border-zinc-100" />
+                {categoryCounts.map((cat) => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.value)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
+                      selectedCategory === cat.value
+                        ? "bg-rose-50 font-medium text-rose-900 ring-1 ring-rose-200"
+                        : "hover:bg-zinc-50"
+                    )}
+                  >
+                    <cat.icon className="h-4 w-4 shrink-0 opacity-70" />
+                    <span className="min-w-0 flex-1 truncate">{cat.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{cat.count}</span>
+                  </button>
+                ))}
+                <Collapsible className="border-t border-zinc-100 pt-3">
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-sm font-medium hover:bg-zinc-50 [&[data-state=open]>svg]:rotate-180">
+                    Sort &amp; more
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShopSort("new")}
+                      className={cn(
+                        "w-full rounded-lg px-3 py-2 text-left text-sm",
+                        shopSort === "new" ? "bg-zinc-100 font-medium" : "hover:bg-zinc-50"
+                      )}
                     >
-                      View
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                      New arrivals
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShopSort("popular")}
+                      className={cn(
+                        "w-full rounded-lg px-3 py-2 text-left text-sm",
+                        shopSort === "popular" ? "bg-zinc-100 font-medium" : "hover:bg-zinc-50"
+                      )}
+                    >
+                      Most popular
+                    </button>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            </aside>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-4 lg:hidden">
+                <p className="text-sm text-muted-foreground">
+                  {totalShopCount} listings · use category chips under the search bar to filter
+                </p>
+              </div>
+
+              {paginatedShopItems.length === 0 ? (
+                <div className="app-surface rounded-2xl border border-dashed border-zinc-200 p-10 text-center">
+                  <p className="text-muted-foreground">No listings match your search or filters.</p>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="mt-2"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("");
+                    }}
+                  >
+                    Clear search and filters
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                    {paginatedShopItems.map((post) => {
+                      if (post.type === "listing") {
+                        const listing = post.data as Listing;
+                        const likes = listing.likes?.length ?? 0;
+                        const rent = listing.price?.rentPerDay ?? listing.rentPerDay;
+                        return (
+                          <Card
+                            key={listing.id}
+                            className="group overflow-hidden border-zinc-200/90 bg-zinc-50/50 shadow-sm transition-shadow hover:shadow-md"
+                          >
+                            <div className="relative aspect-square bg-zinc-100">
+                              <img
+                                src={listing.images?.[0] || "/placeholder.svg"}
+                                alt={listing.title}
+                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                                loading="lazy"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                }}
+                              />
+                              <Badge className="absolute right-2 top-2 rounded-full border-0 bg-white/95 px-2.5 py-0.5 text-xs font-medium text-zinc-800 shadow-sm">
+                                {listing.category || "Item"}
+                              </Badge>
+                              {listing.swapAllowed && (
+                                <Badge className="absolute left-2 top-2 bg-emerald-600 text-[10px] text-white">
+                                  SWAP
+                                </Badge>
+                              )}
+                            </div>
+                            <CardContent className="space-y-2 p-4">
+                              <h3 className="line-clamp-2 font-semibold leading-snug">{listing.title}</h3>
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                <span>
+                                  {likes > 0 ? `${likes} interested` : "New listing"}
+                                </span>
+                              </div>
+                              <p className="text-lg font-bold tracking-tight">
+                                ₹{rent}
+                                <span className="text-sm font-normal text-muted-foreground"> / day</span>
+                              </p>
+                              <div className="flex gap-2 pt-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="h-10 flex-1 rounded-xl border-zinc-900 bg-white text-zinc-900 hover:bg-zinc-50"
+                                  onClick={() => navigate(`/item/${listing.id}`)}
+                                >
+                                  View
+                                </Button>
+                                <Button
+                                  type="button"
+                                  className="h-10 flex-1 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800"
+                                  onClick={() => navigate(`/item/${listing.id}`)}
+                                >
+                                  Rent now
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      }
+                      const business = post.data as {
+                        ownerId: string;
+                        businessName: string;
+                        listingCount: number;
+                        listings: Listing[];
+                        featuredListing: Listing;
+                      };
+                      const feat = business.featuredListing;
+                      const img = feat?.images?.[0] || "/placeholder.svg";
+                      return (
+                        <Card
+                          key={`biz-${business.ownerId}`}
+                          className="group overflow-hidden border-zinc-200/90 bg-zinc-50/50 shadow-sm transition-shadow hover:shadow-md"
+                        >
+                          <div className="relative aspect-square bg-zinc-100">
+                            <img
+                              src={img}
+                              alt={business.businessName}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.svg";
+                              }}
+                            />
+                            <Badge className="absolute right-2 top-2 rounded-full bg-white/95 text-xs font-medium text-zinc-800 shadow-sm">
+                              Shop
+                            </Badge>
+                          </div>
+                          <CardContent className="space-y-2 p-4">
+                            <h3 className="line-clamp-2 font-semibold leading-snug">{business.businessName}</h3>
+                            <p className="text-xs text-muted-foreground sm:text-sm">
+                              {business.listingCount} items · tap to browse the store
+                            </p>
+                            <div className="flex gap-2 pt-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-10 flex-1 rounded-xl border-zinc-900 bg-white"
+                                onClick={() => navigate(`/vendor/${business.ownerId}`)}
+                              >
+                                View shop
+                              </Button>
+                              <Button
+                                type="button"
+                                className="h-10 flex-1 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800"
+                                onClick={() => navigate(`/vendor/${business.ownerId}`)}
+                              >
+                                See items
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {totalListingsPages > 1 && (
+                    <nav
+                      className="mt-10 flex flex-wrap items-center justify-center gap-2"
+                      aria-label="Listing pages"
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 rounded-full"
+                        disabled={listingsPage <= 1}
+                        onClick={() => setListingsPage((p) => Math.max(1, p - 1))}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      {Array.from({ length: totalListingsPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          type="button"
+                          variant={listingsPage === page ? "default" : "outline"}
+                          size="sm"
+                          className={cn(
+                            "min-w-[2.25rem] rounded-full",
+                            listingsPage === page ? "bg-zinc-900 text-white hover:bg-zinc-800" : ""
+                          )}
+                          onClick={() => setListingsPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 rounded-full"
+                        disabled={listingsPage >= totalListingsPages}
+                        onClick={() => setListingsPage((p) => Math.min(totalListingsPages, p + 1))}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </nav>
+                  )}
+                </>
+              )}
             </div>
           </div>
-        )}
+        </section>
 
-        {/* Community Posts Section - All Posts (Listings, Requests, Message Posts) */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3">
-            <div className="flex items-center justify-between mb-6 sm:mb-8">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
-                Community Posts
-              </h2>
-              <Badge variant="secondary" className="text-xs sm:text-sm bg-muted text-muted-foreground">
-                {filteredPosts.length} UPDATES
-              </Badge>
-            </div>
+        {/* Community feed */}
+        <section aria-label="Community posts">
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+              Community posts
+            </h2>
+            <Badge variant="secondary" className="w-fit text-xs sm:text-sm">
+              {filteredPosts.length} updates
+            </Badge>
+          </div>
 
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+            <div className="lg:col-span-3">
           {/* Info Cards explaining different post types */}
           {!searchTerm && filteredPosts.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -1651,6 +2107,7 @@ const Explore = () => {
             </Card>
           </div>
         </div>
+        </section>
       </div>
 
       {/* Post Creation Dialog */}

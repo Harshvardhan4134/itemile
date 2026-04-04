@@ -58,6 +58,21 @@ export default function PaymentDialog({
   };
 
   const handlePayment = async () => {
+    // Progressive verification check at checkout
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const { getUser } = await import('@/lib/firestore');
+      const userData = await getUser(currentUser.uid);
+      if (!userData || userData.verificationStatus !== 'approved') {
+        toast({
+          title: "Verification Required",
+          description: "Please complete your verification to proceed with payment. Verification helps us ensure a safe rental experience for everyone.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     // If SecurePay is required, only allow SecurePay
     const paymentMethod = bookingData.requiresSecurePay ? 'SecurePay' : selectedPaymentMethod;
     

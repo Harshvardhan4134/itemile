@@ -244,7 +244,7 @@ export default function OwnerBookings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">Loading bookings...</div>
@@ -254,7 +254,7 @@ export default function OwnerBookings() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="mb-4 sm:mb-6">

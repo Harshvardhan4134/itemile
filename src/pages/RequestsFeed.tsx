@@ -41,7 +41,17 @@ const RequestsFeed = () => {
     const fetchRequests = async () => {
       try {
         const data = await getAllRequests();
-        setRequests(data);
+        
+        // City-based filtering: Only show requests from selected city
+        const selectedCity = localStorage.getItem("lendlly_selected_city");
+        let filteredRequests = data;
+        if (selectedCity) {
+          // Filter requests by city if they have city information
+          // For now, we'll show all requests, but this can be enhanced with city field in requests
+          filteredRequests = data; // TODO: Add city field to requests for proper filtering
+        }
+        
+        setRequests(filteredRequests);
         
         // Fetch user data for each request
         const userPromises = data.map(request => getUser(request.userId));
@@ -255,7 +265,7 @@ const RequestsFeed = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Header />
         <div className="container py-8">
           <div className="flex justify-center items-center h-64">
@@ -270,7 +280,7 @@ const RequestsFeed = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <Header />
       
       <div className="container py-8">
@@ -287,7 +297,7 @@ const RequestsFeed = () => {
             </div>
             
             <Link to="/post-request">
-              <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity">
+              <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" />
                 Post Request
               </Button>
@@ -360,7 +370,7 @@ const RequestsFeed = () => {
               </div>
               {!searchTerm && !categoryFilter && (
                 <Link to="/post-request">
-                  <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity">
+                  <Button className="bg-primary hover:bg-primary/90">
                     Post Your First Request
                   </Button>
                 </Link>
@@ -481,7 +491,7 @@ const RequestsFeed = () => {
                         <div className="flex flex-col gap-2">
                           <Button 
                             onClick={() => handleIHaveThisItem(request)}
-                            className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                            className="w-full bg-primary hover:bg-primary/90"
                             size="sm"
                           >
                             <MessageCircle className="h-4 w-4 mr-2" />
