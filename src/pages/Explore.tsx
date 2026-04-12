@@ -145,6 +145,52 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
+/** Single source of truth for city / GPS radius — must match shop grid + category counts. */
+function applyExploreLocationFilter(
+  publicListings: Listing[],
+  selectedCityFromStorage: string | null,
+  userLocation: { lat: number; lng: number } | null
+): Listing[] {
+  if (!selectedCityFromStorage || selectedCityFromStorage === "Current Location") {
+    if (selectedCityFromStorage === "Current Location" && userLocation) {
+      const MAX_DISTANCE_KM = 50;
+      return publicListings.filter((listing) => {
+        if (!listing.location) return false;
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          listing.location.latitude,
+          listing.location.longitude
+        );
+        return distance <= MAX_DISTANCE_KM;
+      });
+    }
+    return publicListings;
+  }
+
+  const selectedCityLower = selectedCityFromStorage.toLowerCase();
+  const cityCoords = CITY_COORDS[selectedCityLower];
+
+  return publicListings.filter((listing) => {
+    if (listing.city && listing.city.toLowerCase() === selectedCityLower) {
+      return true;
+    }
+    if (!listing.city && cityCoords && listing.location) {
+      const distance = calculateDistance(
+        cityCoords.lat,
+        cityCoords.lng,
+        listing.location.latitude,
+        listing.location.longitude
+      );
+      return distance <= 100;
+    }
+    if (!listing.city && !listing.location) {
+      return true;
+    }
+    return false;
+  });
+}
+
 const Explore = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -152,7 +198,7 @@ const Explore = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listingsRaw, setListingsRaw] = useState<Listing[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
   const [messagePosts, setMessagePosts] = useState<MessagePost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,6 +217,16 @@ const Explore = () => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem("lendlly_selected_city");
   });
+
+  const listings = useMemo(
+    () =>
+      applyExploreLocationFilter(
+        listingsRaw,
+        selectedCityFromStorage,
+        userLocation
+      ),
+    [listingsRaw, selectedCityFromStorage, userLocation]
+  );
   const [owners, setOwners] = useState<Record<string, User>>({});
   const [shopSort, setShopSort] = useState<"new" | "popular">("new");
   const [listingsPage, setListingsPage] = useState(1);
@@ -236,72 +292,8 @@ const Explore = () => {
 
         if (!isMounted) return;
 
-        // Show ALL approved items on the Explore page
-        // Once approved by admin, all items should be visible regardless of listingType
-        // The listingType only affects the initial creation flow, not visibility after approval
-        let publicListings = listingsData; // All items from getListings are already approved and should be shown
-        
-        // City-based filtering: Only show items from selected city (if a city is selected)
-        // If no city is selected, show all items
-        if (selectedCityFromStorage && selectedCityFromStorage !== "Current Location") {
-          const selectedCityLower = selectedCityFromStorage.toLowerCase();
-          const cityCoords = CITY_COORDS[selectedCityLower];
-          
-          publicListings = publicListings.filter(listing => {
-            // First check if listing has city field and it matches
-            if (listing.city && listing.city.toLowerCase() === selectedCityLower) {
-              return true;
-            }
-            
-            // If no city field, try to match by location coordinates (fallback)
-            // Check if listing is within city bounds (approximate 100km radius - more lenient)
-            if (!listing.city && cityCoords && listing.location) {
-              const distance = calculateDistance(
-                cityCoords.lat,
-                cityCoords.lng,
-                listing.location.latitude,
-                listing.location.longitude
-              );
-              // Include if within 100km of city center (more lenient)
-              return distance <= 100;
-            }
-            
-            // TEMPORARY: If listing has no city field and no location, include it anyway
-            // This is a fallback until all listings have city fields populated
-            if (!listing.city && !listing.location) {
-              return true; // Show items without city/location data for now
-            }
-            
-            // Exclude items that are too far from city center
-            return false;
-          });
-        } else if (selectedCityFromStorage === "Current Location") {
-          // Filter by distance when "Current Location" is selected
-          if (userLocation) {
-            // Only show items within a reasonable radius (e.g., 50km)
-            const MAX_DISTANCE_KM = 50;
-            publicListings = publicListings.filter(listing => {
-            if (!listing.location) return false;
-            
-            const listingLat = listing.location.latitude;
-            const listingLng = listing.location.longitude;
-            
-            // Calculate distance using Haversine formula
-            const distance = calculateDistance(
-              userLocation.lat,
-              userLocation.lng,
-              listingLat,
-              listingLng
-            );
-            
-            return distance <= MAX_DISTANCE_KM;
-            });
-          } else {
-            // If "Current Location" is selected but GPS not available yet, show all items temporarily
-            // This prevents showing no items while waiting for GPS
-            console.log('Current Location selected but GPS not available yet, showing all items');
-          }
-        }
+        // Store full listing set; city/GPS scoping runs in useMemo (applyExploreLocationFilter)
+        const publicListings = listingsData;
 
         // Fetch owner data for business account grouping
         const ownerIds = [...new Set(publicListings.map(l => l.ownerId))];
@@ -315,7 +307,7 @@ const Explore = () => {
         });
         setOwners(ownersMap);
 
-        setListings(publicListings);
+        setListingsRaw(publicListings);
         setRequests(requestsData);
         setMessagePosts(postsData);
       } catch (error) {
@@ -829,7 +821,7 @@ const Explore = () => {
       } else if (type === 'listing') {
         await likeListing(postId, currentUser.uid);
         const listingsData = await getListings();
-        setListings(listingsData);
+        setListingsRaw(listingsData);
       } else if (type === 'request') {
         await likeRequest(postId, currentUser.uid);
         const requestsData = await getAllRequests();
@@ -859,7 +851,7 @@ const Explore = () => {
       } else if (type === 'listing') {
         await addCommentToListing(postId, commentData);
         const listingsData = await getListings();
-        setListings(listingsData);
+        setListingsRaw(listingsData);
       } else if (type === 'request') {
         await addCommentToRequest(postId, commentData);
         const requestsData = await getAllRequests();
@@ -941,82 +933,8 @@ const Explore = () => {
     return bTime - aTime; // Newest first
   });
 
-  // Filter posts
+  // Filter posts (listings/businesses already scoped by `listings` + applyExploreLocationFilter)
   const filteredPosts = allPosts.filter(post => {
-    // Apply city/location filtering first (only if city is selected)
-    if (selectedCityFromStorage && selectedCityFromStorage !== "Current Location") {
-      // Filter by city name
-      const selectedCityLower = selectedCityFromStorage.toLowerCase();
-      const cityCoords = CITY_COORDS[selectedCityLower];
-      
-      if (post.type === 'listing') {
-        const listing = post.data as Listing;
-        // Check city field first
-        if (listing.city && listing.city.toLowerCase() === selectedCityLower) {
-          // City matches, include it
-        } else if (!listing.city && cityCoords && listing.location) {
-          // No city field, check distance from city center
-          const distance = calculateDistance(
-            cityCoords.lat,
-            cityCoords.lng,
-            listing.location.latitude,
-            listing.location.longitude
-          );
-          if (distance > 50) return false; // Exclude if too far
-        } else {
-          return false; // Exclude if no city match and no location
-        }
-      } else if (post.type === 'business') {
-        const business = post.data as { ownerId: string; businessName: string; listings: Listing[] };
-        // Business must have at least one listing in the selected city or nearby
-        const hasListingInCity = business.listings.some(l => {
-          if (l.city && l.city.toLowerCase() === selectedCityLower) return true;
-          if (!l.city && cityCoords && l.location) {
-            const distance = calculateDistance(
-              cityCoords.lat,
-              cityCoords.lng,
-              l.location.latitude,
-              l.location.longitude
-            );
-            return distance <= 50;
-          }
-          return false;
-        });
-        if (!hasListingInCity) {
-          return false; // Exclude business if no listings in selected city
-        }
-      }
-      // Requests and messages don't have city filtering for now
-    } else if (selectedCityFromStorage === "Current Location" && userLocation) {
-      // Filter by distance when "Current Location" is selected
-      const MAX_DISTANCE_KM = 50;
-      if (post.type === 'listing') {
-        const listing = post.data as Listing;
-        if (!listing.location) return false;
-        const distance = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          listing.location.latitude,
-          listing.location.longitude
-        );
-        if (distance > MAX_DISTANCE_KM) return false;
-      } else if (post.type === 'business') {
-        const business = post.data as { ownerId: string; businessName: string; listings: Listing[] };
-        // Business must have at least one listing within distance
-        const hasListingNearby = business.listings.some(l => {
-          if (!l.location) return false;
-          const distance = calculateDistance(
-            userLocation.lat,
-            userLocation.lng,
-            l.location.latitude,
-            l.location.longitude
-          );
-          return distance <= MAX_DISTANCE_KM;
-        });
-        if (!hasListingNearby) return false;
-      }
-    }
-
     // Then apply search and category filters
     const q = searchTerm.trim().toLowerCase();
     if (post.type === 'message') {
@@ -1102,7 +1020,7 @@ const Explore = () => {
 
   useEffect(() => {
     setListingsPage(1);
-  }, [searchTerm, selectedCategory, shopSort]);
+  }, [searchTerm, selectedCategory, shopSort, selectedCityFromStorage]);
 
   const mapHeroCenter =
     userLocation ??
@@ -1140,14 +1058,9 @@ const Explore = () => {
                 isUpdatingLocation={isUpdatingLocation}
               />
               <div
-                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-black/25"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/20"
                 aria-hidden
               />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-6 sm:pb-10">
-                <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl">
-                  Explore
-                </h1>
-              </div>
               {!userLocation &&
                 (!selectedCityFromStorage || selectedCityFromStorage === "Current Location") && (
                   <div className="absolute bottom-3 left-3 right-3 z-20 max-w-md rounded-xl border border-zinc-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-sm sm:left-auto sm:right-4">
