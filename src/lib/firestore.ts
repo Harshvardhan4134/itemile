@@ -404,11 +404,22 @@ export const createUser = async (userData: CreateUserInput): Promise<void> => {
   delete restForPayload.referralCode;
   delete restForPayload.referredByUid;
 
+  // Existing profiles: do not merge fields that Firestore rules reserve for admins, or that
+  // would incorrectly reset balances. Touching `verified` on update is always denied for users
+  // (see firestore.rules); legacy docs without `verified` would also add that key and fail.
+  if (!isNew) {
+    delete restForPayload.verified;
+    delete restForPayload.wallet;
+    delete restForPayload.rating;
+  }
+
   const basePayload: Record<string, unknown> = {
     ...restForPayload,
-    verified: safeVerified,
     createdAt: existing?.createdAt ?? serverTimestamp(),
   };
+  if (isNew) {
+    basePayload.verified = safeVerified;
+  }
   if (referredByUid) {
     basePayload.referredByUid = referredByUid;
   }
