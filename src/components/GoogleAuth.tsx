@@ -13,6 +13,8 @@ interface GoogleAuthProps {
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
+  /** Applied only when a new Firestore user is created at Google sign-in */
+  pendingReferralCode?: string;
 }
 
 const GoogleAuth: React.FC<GoogleAuthProps> = ({ 
@@ -21,7 +23,8 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
   children,
   variant = 'default',
   size = 'default',
-  className = ''
+  className = '',
+  pendingReferralCode,
 }) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -52,7 +55,10 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
         phone: user.phoneNumber || '',
         verified: false,
         wallet: 0,
-        rating: 0
+        rating: 0,
+        ...(pendingReferralCode?.trim()
+          ? { pendingReferralCode: pendingReferralCode.trim() }
+          : {}),
       });
       
       // Check if this was a new user or existing user

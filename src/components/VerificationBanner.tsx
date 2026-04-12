@@ -6,10 +6,16 @@ import { useNavigate } from 'react-router-dom';
 interface VerificationBannerProps {
   verificationStatus?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
+  /** Admin exempted this user from KYC — hide nags */
+  kycExempt?: boolean;
 }
 
-export function VerificationBanner({ verificationStatus, rejectionReason }: VerificationBannerProps) {
+export function VerificationBanner({ verificationStatus, rejectionReason, kycExempt }: VerificationBannerProps) {
   const navigate = useNavigate();
+
+  if (kycExempt) {
+    return null;
+  }
 
   if (!verificationStatus || verificationStatus === 'approved') {
     return null;

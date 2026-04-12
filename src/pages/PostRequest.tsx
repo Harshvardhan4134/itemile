@@ -29,6 +29,7 @@ import {
   getAllowedDirectListingCategories,
   getAllowedRequestFirstCategories
 } from "@/lib/categoryRules";
+import { passesVerificationGate } from "@/lib/verificationPolicy";
 
 const PostRequest = () => {
   const navigate = useNavigate();
@@ -152,7 +153,7 @@ const PostRequest = () => {
 
     // Progressive verification check - require verification to post requests
     const currentUser = await getUser(auth.currentUser.uid);
-    if (!currentUser || currentUser.verificationStatus !== 'approved') {
+    if (!passesVerificationGate(currentUser)) {
       toast({
         title: "Verification Required",
         description: "Please complete your verification to post requests. You can browse items without verification, but verification is required to post requests.",

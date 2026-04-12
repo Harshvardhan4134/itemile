@@ -36,10 +36,12 @@ import {
   Search,
   Clock,
   Tag,
-  Smile
+  Smile,
+  Gift,
+  Copy,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing, getReviewsByUser, Review, getRequestsByUser, Request, deleteRequest, getChatByRequestId } from "@/lib/firestore";
+import { getUser, updateUser, updateUserProfilePhoto, getListingsByOwner, deleteListing, updateListing, User as UserType, Listing, getReviewsByUser, Review, getRequestsByUser, Request, deleteRequest, getChatByRequestId, ensureUserReferralCode, countReferralsForUser } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +74,8 @@ const Profile = () => {
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showBankDetailsDialog, setShowBankDetailsDialog] = useState(false);
+  const [referralJoinCount, setReferralJoinCount] = useState(0);
+  const [copiedReferral, setCopiedReferral] = useState(false);
 
   const fetchUserData = async () => {
     if (!auth.currentUser) {
@@ -87,13 +91,22 @@ const Profile = () => {
       console.log('✅ Verified status:', userData?.verified);
       console.log('📋 Verification status:', userData?.verificationStatus);
       
-      if (userData) {
-        setUser(userData);
-        setEditForm({
-          name: userData.name,
-          email: userData.email,
-          phone: userData.phone,
-        });
+      if (userData && auth.currentUser) {
+        await ensureUserReferralCode(auth.currentUser.uid);
+        const fresh = await getUser(auth.currentUser.uid);
+        if (fresh) {
+          try {
+            setReferralJoinCount(await countReferralsForUser(auth.currentUser.uid));
+          } catch {
+            setReferralJoinCount(0);
+          }
+          setUser(fresh);
+          setEditForm({
+            name: fresh.name,
+            email: fresh.email,
+            phone: fresh.phone,
+          });
+        }
       }
     } catch (error) {
       console.error('❌ Error fetching user data:', error);
@@ -548,6 +561,58 @@ const Profile = () => {
                   <CardHeader className="p-3 sm:p-6"><CardTitle className="text-base sm:text-lg">User details</CardTitle></CardHeader>
                   <CardContent className="space-y-3 p-3 sm:p-6">
                     <Button variant="secondary" className="w-full justify-center h-9 sm:h-10 text-sm sm:text-base" onClick={() => setEditing(true)}>Edit info</Button>
+                  </CardContent>
+                </Card>
+                <Card className="glass-card border-primary/15">
+                  <CardHeader className="p-3 sm:p-6 pb-2">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-primary shrink-0" />
+                      Invite friends
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 p-3 sm:p-6 pt-0">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Share your code or link. When someone signs up with it, they&apos;re counted below.
+                    </p>
+                    {user.referralCode ? (
+                      <>
+                        <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 font-mono text-sm tracking-wide">
+                          <span className="flex-1 truncate">{user.referralCode}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(user.referralCode!);
+                              setCopiedReferral(true);
+                              toast({ title: "Copied", description: "Referral code copied to clipboard." });
+                              setTimeout(() => setCopiedReferral(false), 2000);
+                            }}
+                            aria-label="Copy referral code"
+                          >
+                            {copiedReferral ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full text-sm"
+                          onClick={async () => {
+                            const url = `${window.location.origin}/signup?ref=${encodeURIComponent(user.referralCode!)}`;
+                            await navigator.clipboard.writeText(url);
+                            toast({ title: "Link copied", description: "Signup link with your code is on the clipboard." });
+                          }}
+                        >
+                          Copy signup link
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">{referralJoinCount}</span> joined with your referral
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Loading your referral code…</p>
+                    )}
                   </CardContent>
                 </Card>
               </div>

@@ -40,6 +40,7 @@ import TenureSelector, { BookingData } from "@/components/TenureSelector";
 import PaymentDialog from "@/components/PaymentDialog";
 import BookingCalendar from "@/components/BookingCalendar";
 import UserAgreementDialog from "@/components/UserAgreementDialog";
+import { passesVerificationGate } from "@/lib/verificationPolicy";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -233,7 +234,7 @@ const ProductDetail = () => {
     // Progressive verification check - require verification only at checkout
     // Users can browse but need verification to rent
     const currentUser = await getUser(auth.currentUser.uid);
-    if (!currentUser || currentUser.verificationStatus !== 'approved') {
+    if (!passesVerificationGate(currentUser)) {
       toast({
         title: "Verification Required",
         description: "Please complete your verification to rent items. You can browse items without verification, but verification is required to complete a rental.",

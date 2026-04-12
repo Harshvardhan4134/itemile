@@ -29,7 +29,7 @@ service cloud.firestore {
       allow update: if request.auth != null && 
         request.auth.uid == userId &&
         !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['verified', 'verificationStatus', 'verifiedAt']);
+          .hasAny(['verified', 'verificationStatus', 'verifiedAt', 'kycExempt', 'kycRequiredDocKeys']);
       
       // Users can submit KYC documents
       allow update: if request.auth != null && 
@@ -43,6 +43,15 @@ service cloud.firestore {
         request.auth.uid == userId &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['hasAccess', 'accessGrantedAt']);
+    }
+    
+    // Referral codes: code string -> uid (single-doc lookup for signup validation)
+    match /referralCodes/{code} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null &&
+        request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
     }
     
     // Access Codes collection - for waitlist management

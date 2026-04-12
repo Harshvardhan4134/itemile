@@ -62,8 +62,9 @@ export default function PaymentDialog({
     const currentUser = auth.currentUser;
     if (currentUser) {
       const { getUser } = await import('@/lib/firestore');
+      const { passesVerificationGate } = await import('@/lib/verificationPolicy');
       const userData = await getUser(currentUser.uid);
-      if (!userData || userData.verificationStatus !== 'approved') {
+      if (!passesVerificationGate(userData)) {
         toast({
           title: "Verification Required",
           description: "Please complete your verification to proceed with payment. Verification helps us ensure a safe rental experience for everyone.",

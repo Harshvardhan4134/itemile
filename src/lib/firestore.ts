@@ -50,6 +50,10 @@ export interface User {
   selfieUrl?: string;
   verificationStatus?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
+  /** Admin: user does not need to complete KYC */
+  kycExempt?: boolean;
+  /** When verification is required, which uploads are mandatory (subset of aadharFront|aadharBack|pan|selfie) */
+  kycRequiredDocKeys?: string[];
   submittedAt?: any;
   verifiedAt?: any;
   // Access code fields
@@ -82,6 +86,10 @@ export interface User {
   businessName?: string;
   businessDescription?: string;
   listingCount?: number; // Auto-calculated, number of active listings
+  /** Unique shareable code (e.g. LENDL8X3K) — maps in referralCodes collection */
+  referralCode?: string;
+  /** Set once at signup when user joined via someone's referral code */
+  referredByUid?: string;
 }
 
 export type ModerationStatus = 'active' | 'flagged' | 'removed' | 'pending_review';
@@ -332,28 +340,135 @@ export interface AdminAction {
 }
 
 
+const REFERRAL_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // skip 0,O,I,1
+
+function randomReferralCodeSegment(length: number): string {
+  let s = "";
+  for (let i = 0; i < length; i++) {
+    s += REFERRAL_CODE_ALPHABET[Math.floor(Math.random() * REFERRAL_CODE_ALPHABET.length)];
+  }
+  return s;
+}
+
+/** Normalize user-entered referral codes for lookup */
+export function normalizeReferralCodeInput(input: string): string {
+  return input.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/** Resolve a referral code to the referrer's user id (public read on referralCodes/{code}) */
+export const getUidForReferralCode = async (rawCode: string): Promise<string | null> => {
+  const code = normalizeReferralCodeInput(rawCode);
+  if (code.length < 4) return null;
+  const codeRef = doc(db, "referralCodes", code);
+  const snap = await getDoc(codeRef);
+  if (!snap.exists()) return null;
+  const uid = (snap.data() as { uid?: string }).uid;
+  return typeof uid === "string" ? uid : null;
+};
+
+export type CreateUserInput = Omit<User, "createdAt"> & {
+  /** Optional code typed at signup — resolved to referredByUid for new users only */
+  pendingReferralCode?: string;
+};
+
 // User functions
-export const createUser = async (userData: Omit<User, 'createdAt'>): Promise<void> => {
-  const userRef = doc(db, 'users', userData.uid);
+export const createUser = async (userData: CreateUserInput): Promise<void> => {
+  const { pendingReferralCode, referredByUid: incomingReferredByUid, ...restIn } = userData;
+  const rest = restIn as Omit<User, "createdAt">;
+  const userRef = doc(db, "users", rest.uid);
 
-  // Read current doc to avoid overwriting verified=true back to false on sign-in
   const existingSnap = await getDoc(userRef);
+  const existing = existingSnap.exists() ? (existingSnap.data() as DocumentData) : null;
+  const isNew = !existingSnap.exists();
 
-  // Determine verified flag safely:
-  // - If user already exists, preserve existing 'verified' value
-  // - If new user, default to provided value or false
-  const existingVerified = existingSnap.exists() ? (existingSnap.data() as any).verified : undefined;
-  const safeVerified = existingVerified !== undefined
-    ? existingVerified
-    : (userData as any).verified ?? false;
+  const existingVerified = existing ? existing.verified : undefined;
+  const safeVerified =
+    existingVerified !== undefined ? existingVerified : (rest as any).verified ?? false;
 
-  const payload = {
-    ...userData,
+  // Own code only from existing profile or explicit rest.referralCode (never from pendingReferralCode)
+  let referralCode =
+    (existing?.referralCode as string | undefined) || rest.referralCode;
+  let referredByUid =
+    (existing?.referredByUid as string | undefined) ||
+    incomingReferredByUid ||
+    rest.referredByUid;
+
+  if (isNew && pendingReferralCode?.trim()) {
+    const refUid = await getUidForReferralCode(pendingReferralCode);
+    if (refUid && refUid !== rest.uid) {
+      referredByUid = refUid;
+    }
+  }
+
+  const restForPayload = { ...(rest as Record<string, unknown>) };
+  delete restForPayload.referralCode;
+  delete restForPayload.referredByUid;
+
+  const basePayload: Record<string, unknown> = {
+    ...restForPayload,
     verified: safeVerified,
-    createdAt: existingSnap.exists() ? (existingSnap.data() as any).createdAt ?? serverTimestamp() : serverTimestamp()
-  } as any;
+    createdAt: existing?.createdAt ?? serverTimestamp(),
+  };
+  if (referredByUid) {
+    basePayload.referredByUid = referredByUid;
+  }
 
-  await setDoc(userRef, payload, { merge: true });
+  if (!referralCode) {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const code = randomReferralCodeSegment(8);
+      const codeRef = doc(db, "referralCodes", code);
+      const codeSnap = await getDoc(codeRef);
+      if (codeSnap.exists()) continue;
+      const batch = writeBatch(db);
+      batch.set(
+        userRef,
+        { ...basePayload, referralCode: code },
+        { merge: true }
+      );
+      batch.set(codeRef, { uid: rest.uid, createdAt: serverTimestamp() });
+      await batch.commit();
+      return;
+    }
+    throw new Error("Could not assign a unique referral code. Try again.");
+  }
+
+  basePayload.referralCode = referralCode;
+
+  const batch = writeBatch(db);
+  batch.set(userRef, basePayload, { merge: true });
+
+  if (!existing?.referralCode && referralCode) {
+    const codeRef = doc(db, "referralCodes", referralCode);
+    const codeSnap = await getDoc(codeRef);
+    if (!codeSnap.exists()) {
+      batch.set(codeRef, { uid: rest.uid, createdAt: serverTimestamp() });
+    }
+  }
+
+  await batch.commit();
+};
+
+/** Ensure legacy users get a referral code (call from Profile after login). */
+export const ensureUserReferralCode = async (uid: string): Promise<string | null> => {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return null;
+  const data = snap.data() as DocumentData;
+  if (typeof data.referralCode === "string" && data.referralCode.length > 0) {
+    return data.referralCode;
+  }
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const code = randomReferralCodeSegment(8);
+    const codeRef = doc(db, "referralCodes", code);
+    const codeSnap = await getDoc(codeRef);
+    if (codeSnap.exists()) continue;
+    const batch = writeBatch(db);
+    batch.set(codeRef, { uid, createdAt: serverTimestamp() });
+    batch.set(userRef, { referralCode: code }, { merge: true });
+    await batch.commit();
+    return code;
+  }
+  return null;
 };
 
 export const getUser = async (uid: string): Promise<User | null> => {
@@ -395,6 +510,13 @@ export const getAllUsers = async (): Promise<User[]> => {
     const bDate = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
     return bDate - aDate;
   });
+};
+
+/** How many accounts signed up with this user's referral (same as admin table count). */
+export const countReferralsForUser = async (referrerUid: string): Promise<number> => {
+  const q = query(collection(db, "users"), where("referredByUid", "==", referrerUid));
+  const snapshot = await getDocs(q);
+  return snapshot.size;
 };
 
 export const adjustUserTrustMetrics = async (
@@ -1681,17 +1803,20 @@ export const canUserReview = async (transactionId: string, userId: string): Prom
 };
 
 // KYC Functions
-export const submitKYCDocuments = async (uid: string, documents: {
-  aadharFrontUrl: string;
-  aadharBackUrl: string;
-  panUrl: string;
-  selfieUrl?: string;
-}): Promise<void> => {
+export const submitKYCDocuments = async (
+  uid: string,
+  documents: Partial<{
+    aadharFrontUrl: string;
+    aadharBackUrl: string;
+    panUrl: string;
+    selfieUrl: string;
+  }>
+): Promise<void> => {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, {
     ...documents,
     verificationStatus: 'pending',
-    submittedAt: serverTimestamp()
+    submittedAt: serverTimestamp(),
   });
 };
 

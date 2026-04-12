@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { auth } from '../lib/firebase';
 import { createUser } from '../lib/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -16,13 +16,22 @@ const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])(?=.
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferralCode(ref.trim().toUpperCase());
+    }
+  }, [searchParams]);
 
   const validate = () => {
     if (!name.trim()) return 'Name is required.';
@@ -55,7 +64,10 @@ const Signup: React.FC = () => {
         phone: mobile,
         verified: false,
         wallet: 0,
-        rating: 0
+        rating: 0,
+        ...(referralCode.trim()
+          ? { pendingReferralCode: referralCode.trim() }
+          : {}),
       });
       
       setMessage('Signup successful! Welcome to Lendlly!');
@@ -146,6 +158,21 @@ const Signup: React.FC = () => {
                 />
                 <p className="text-xs text-muted-foreground">Min 8 chars, 1 uppercase, 1 special, 1 number</p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="referral">Referral code (optional)</Label>
+                <Input
+                  id="referral"
+                  type="text"
+                  placeholder="Friend's code, e.g. LENDL8X3K"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  autoComplete="off"
+                  className="font-mono tracking-wide"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Have a friend on Lendlly? Enter their code — you can still sign up without one.
+                </p>
+              </div>
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
                 {loading ? 'Signing up...' : 'Sign Up'}
               </Button>
@@ -162,6 +189,7 @@ const Signup: React.FC = () => {
             
             <GoogleAuth 
               className="w-full" 
+              pendingReferralCode={referralCode.trim() || undefined}
               onSuccess={() => navigate('/explore', { state: { triggerTerms: true } })}
             />
             

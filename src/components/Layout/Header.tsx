@@ -507,6 +507,7 @@ export const Header = () => {
         <VerificationBanner 
           verificationStatus={userData.verificationStatus}
           rejectionReason={userData.rejectionReason}
+          kycExempt={userData.kycExempt}
         />
       )}
     </>

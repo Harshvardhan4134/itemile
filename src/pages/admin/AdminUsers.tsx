@@ -4,7 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAllUsers, adjustUserTrustMetrics, logAdminAction, type User } from "@/lib/firestore";
+import {
+  getAllUsers,
+  adjustUserTrustMetrics,
+  logAdminAction,
+  type User,
+} from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthRole } from "@/hooks/useAuthRole";
 import {
@@ -17,10 +22,18 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { decryptSensitiveData } from "@/lib/encryption";
-import { DollarSign, Eye, Copy, Check } from "lucide-react";
+import {
+  KYC_DOC_LABELS,
+  KYC_DOC_ORDER,
+  normalizeKycDocKeys,
+  type KycDocKey,
+} from "@/lib/verificationPolicy";
+import { DollarSign, Eye, Copy, Check, Shield } from "lucide-react";
 
 const formatDate = (value: any) => {
   if (!value) return "—";
@@ -39,10 +52,12 @@ const filterUsers = (users: User[], term: string) => {
   const value = term.toLowerCase();
   return users.filter((user) => {
     const phone = typeof user.phone === "string" ? user.phone : "";
+    const code = (user.referralCode || "").toLowerCase();
     return (
       user.email.toLowerCase().includes(value) ||
       user.name.toLowerCase().includes(value) ||
-      phone.toLowerCase().includes(value)
+      phone.toLowerCase().includes(value) ||
+      code.includes(value)
     );
   });
 };
@@ -58,6 +73,16 @@ const AdminUsers = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [kycDialogOpen, setKycDialogOpen] = useState(false);
+  const [kycPolicyUser, setKycPolicyUser] = useState<User | null>(null);
+  const [verificationRequired, setVerificationRequired] = useState<"yes" | "no">("yes");
+  const [docChoice, setDocChoice] = useState<Record<KycDocKey, boolean>>({
+    aadharFront: true,
+    aadharBack: true,
+    pan: true,
+    selfie: false,
+  });
+  const [kycSaving, setKycSaving] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user: adminUser } = useAuthRole();
@@ -88,9 +113,104 @@ const AdminUsers = () => {
     [users, search]
   );
 
+  /** Signups attributed to each referrer (referredByUid → count) */
+  const referralCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const u of users) {
+      if (u.referredByUid) {
+        m.set(u.referredByUid, (m.get(u.referredByUid) ?? 0) + 1);
+      }
+    }
+    return m;
+  }, [users]);
+
   const handleViewListings = (user: User) => {
     // Navigate to admin listings page with owner filter
     navigate(`/admin/listings?owner=${user.uid}`);
+  };
+
+  const openKycPolicyDialog = (user: User) => {
+    setKycPolicyUser(user);
+    const exempt = user.kycExempt === true;
+    setVerificationRequired(exempt ? "no" : "yes");
+    const keys = normalizeKycDocKeys(user.kycRequiredDocKeys);
+    setDocChoice({
+      aadharFront: keys.includes("aadharFront"),
+      aadharBack: keys.includes("aadharBack"),
+      pan: keys.includes("pan"),
+      selfie: keys.includes("selfie"),
+    });
+    setKycDialogOpen(true);
+  };
+
+  const handleSaveKycPolicy = async () => {
+    if (!kycPolicyUser || !adminUser) return;
+
+    if (verificationRequired === "yes") {
+      const selected = KYC_DOC_ORDER.filter((k) => docChoice[k]);
+      if (selected.length === 0) {
+        toast({
+          title: "Pick at least one document",
+          description: "When verification is required, choose which documents the user must upload.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setKycSaving(true);
+      try {
+        await updateDoc(doc(db, "users", kycPolicyUser.uid), {
+          kycExempt: false,
+          kycRequiredDocKeys: selected,
+        });
+        await logAdminAction({
+          actorId: adminUser.uid,
+          action: "VERIFY",
+          targetType: "user",
+          targetId: kycPolicyUser.uid,
+          reason: "KYC policy: verification required",
+          metadata: { kycRequiredDocKeys: selected },
+        });
+        toast({
+          title: "Saved",
+          description: "This user must complete verification with the selected documents.",
+        });
+        setKycDialogOpen(false);
+        await loadUsers();
+      } catch (e) {
+        console.error(e);
+        toast({ title: "Save failed", variant: "destructive" });
+      } finally {
+        setKycSaving(false);
+      }
+      return;
+    }
+
+    setKycSaving(true);
+    try {
+      await updateDoc(doc(db, "users", kycPolicyUser.uid), {
+        kycExempt: true,
+        kycRequiredDocKeys: [],
+      });
+      await logAdminAction({
+        actorId: adminUser.uid,
+        action: "VERIFY",
+        targetType: "user",
+        targetId: kycPolicyUser.uid,
+        reason: "KYC policy: verification not required",
+        metadata: {},
+      });
+      toast({
+        title: "Saved",
+        description: "This user does not need to submit verification.",
+      });
+      setKycDialogOpen(false);
+      await loadUsers();
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Save failed", variant: "destructive" });
+    } finally {
+      setKycSaving(false);
+    }
   };
 
   const openWarnDialog = (user: User) => {
@@ -230,8 +350,8 @@ const AdminUsers = () => {
         </div>
         <div className="flex gap-2">
           <Input
-            placeholder="Search by email, name, or phone"
-            className="w-64"
+            placeholder="Search name, email, phone, or referral code"
+            className="w-64 max-w-full sm:max-w-xs md:w-72"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -250,6 +370,7 @@ const AdminUsers = () => {
                 <thead className="bg-muted/40 text-muted-foreground">
                   <tr>
                     <th className="text-left font-medium px-4 py-2">User</th>
+                    <th className="text-left font-medium px-4 py-2">Referral</th>
                     <th className="text-left font-medium px-4 py-2">Trust</th>
                     <th className="text-left font-medium px-4 py-2">Flags</th>
                     <th className="text-left font-medium px-4 py-2">Role</th>
@@ -264,7 +385,7 @@ const AdminUsers = () => {
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-4 py-6 text-center text-sm text-muted-foreground"
                       >
                         No users found. Try adjusting your filters.
@@ -277,6 +398,30 @@ const AdminUsers = () => {
                           <div className="font-semibold">{user.name}</div>
                           <div className="text-xs text-muted-foreground">
                             {user.email}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <div className="font-mono text-xs">
+                            {user.referralCode || "—"}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {referralCounts.get(user.uid) ?? 0} signups via code
+                          </div>
+                          {user.referredByUid && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[140px]" title={user.referredByUid}>
+                              Referred by: {user.referredByUid.slice(0, 8)}…
+                            </div>
+                          )}
+                          <div className="mt-1.5">
+                            {user.kycExempt ? (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                KYC exempt
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                KYC required
+                              </Badge>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -307,6 +452,16 @@ const AdminUsers = () => {
                               disabled={user.banned}
                             >
                               Warn
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openKycPolicyDialog(user)}
+                              disabled={user.banned}
+                              title="Verification required or exempt, and required documents"
+                            >
+                              <Shield className="h-4 w-4 mr-1" />
+                              KYC
                             </Button>
                             <Button 
                               variant="secondary" 
@@ -347,6 +502,83 @@ const AdminUsers = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* KYC policy: exempt vs required + document checklist */}
+      <Dialog open={kycDialogOpen} onOpenChange={setKycDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verification policy</DialogTitle>
+            <DialogDescription>
+              User:{" "}
+              <span className="font-medium text-foreground">{kycPolicyUser?.name}</span> (
+              {kycPolicyUser?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <RadioGroup
+              value={verificationRequired}
+              onValueChange={(v) => setVerificationRequired(v as "yes" | "no")}
+              className="gap-3"
+            >
+              <div className="flex items-start gap-2">
+                <RadioGroupItem value="yes" id="kyc-req-yes" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="kyc-req-yes" className="font-medium cursor-pointer">
+                    Yes — verification required
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    User must submit documents before renting, paying, or posting requests.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <RadioGroupItem value="no" id="kyc-req-no" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="kyc-req-no" className="font-medium cursor-pointer">
+                    No — verification not required
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    User can use the app without submitting KYC documents.
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+
+            {verificationRequired === "yes" && (
+              <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                <p className="text-sm font-medium">Required documents</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Choose which uploads are mandatory before review.
+                </p>
+                <div className="grid gap-2">
+                  {KYC_DOC_ORDER.map((key) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`kyc-doc-${key}`}
+                        checked={docChoice[key]}
+                        onCheckedChange={(checked) =>
+                          setDocChoice((prev) => ({ ...prev, [key]: !!checked }))
+                        }
+                      />
+                      <Label htmlFor={`kyc-doc-${key}`} className="text-sm font-normal cursor-pointer">
+                        {KYC_DOC_LABELS[key]}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKycDialogOpen(false)} disabled={kycSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveKycPolicy} disabled={kycSaving}>
+              {kycSaving ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Warning Dialog */}
       <Dialog open={warnDialogOpen} onOpenChange={setWarnDialogOpen}>
