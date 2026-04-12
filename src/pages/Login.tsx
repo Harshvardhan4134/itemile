@@ -110,6 +110,7 @@ const Login: React.FC = () => {
             
             <GoogleAuth 
               className="w-full" 
+              forLoginPage
               onSuccess={() => navigate(fromPath, { replace: true })}
             />
             

@@ -15,6 +15,11 @@ interface GoogleAuthProps {
   className?: string;
   /** Applied only when a new Firestore user is created at Google sign-in */
   pendingReferralCode?: string;
+  /**
+   * Login/signup screens: always show the Google sign-in button.
+   * Otherwise a leftover Firebase session shows "Sign Out" here, which is confusing.
+   */
+  forLoginPage?: boolean;
 }
 
 const GoogleAuth: React.FC<GoogleAuthProps> = ({ 
@@ -25,6 +30,7 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
   size = 'default',
   className = '',
   pendingReferralCode,
+  forLoginPage = false,
 }) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -46,6 +52,11 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
       
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+
+      // Ensure Auth + Firestore see this session before any secured Firestore calls (avoids
+      // permission-denied right after popup sign-in).
+      await auth.authStateReady();
+      await user.getIdToken(true);
       
       // Create or update user in Firestore (setDoc with merge handles both cases)
       await createUser({
@@ -89,6 +100,9 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
         errorMessage = 'Popup was blocked by browser. Please allow popups and try again.';
       } else if (error.code === 'auth/unauthorized-domain') {
         errorMessage = 'This domain is not authorized for Google sign-in';
+      } else if (error.code === 'permission-denied' || `${error.message || ''}`.includes('Missing or insufficient permissions')) {
+        errorMessage =
+          'Could not save your profile. If this persists, confirm Firestore rules are deployed and your domain is authorized in Firebase.';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -121,7 +135,7 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
     }
   };
 
-  if (auth.currentUser) {
+  if (auth.currentUser && !forLoginPage) {
     return (
       <Button 
         variant={variant}

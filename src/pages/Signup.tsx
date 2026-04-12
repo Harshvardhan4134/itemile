@@ -189,6 +189,7 @@ const Signup: React.FC = () => {
             
             <GoogleAuth 
               className="w-full" 
+              forLoginPage
               pendingReferralCode={referralCode.trim() || undefined}
               onSuccess={() => navigate('/explore', { state: { triggerTerms: true } })}
             />
