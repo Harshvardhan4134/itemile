@@ -424,20 +424,40 @@ export const createUser = async (userData: CreateUserInput): Promise<void> => {
     basePayload.referredByUid = referredByUid;
   }
 
+  /** Existing users: only merge safe fields so Firestore rules never see admin-only keys in the diff. */
+  const existingUserPayload = (code: string): Record<string, unknown> => ({
+    name: rest.name,
+    email: rest.email,
+    phone: rest.phone,
+    uid: rest.uid,
+    createdAt: existing?.createdAt ?? serverTimestamp(),
+    ...(referredByUid ? { referredByUid } : {}),
+    referralCode: code,
+  });
+
+  const writeReferralMapping = async (code: string) => {
+    const codeRef = doc(db, "referralCodes", code);
+    try {
+      await setDoc(codeRef, { uid: rest.uid, createdAt: serverTimestamp() });
+    } catch (e) {
+      // Profile is already saved; mapping is needed for reverse lookup by code. Deploy
+      // firestore.rules (referralCodes match) if this logs in production.
+      console.error("[createUser] referralCodes write failed", e);
+    }
+  };
+
   if (!referralCode) {
     for (let attempt = 0; attempt < 40; attempt++) {
       const code = randomReferralCodeSegment(8);
       const codeRef = doc(db, "referralCodes", code);
       const codeSnap = await getDoc(codeRef);
       if (codeSnap.exists()) continue;
-      const batch = writeBatch(db);
-      batch.set(
+      await setDoc(
         userRef,
-        { ...basePayload, referralCode: code },
+        isNew ? { ...basePayload, referralCode: code } : existingUserPayload(code),
         { merge: true }
       );
-      batch.set(codeRef, { uid: rest.uid, createdAt: serverTimestamp() });
-      await batch.commit();
+      await writeReferralMapping(code);
       return;
     }
     throw new Error("Could not assign a unique referral code. Try again.");
@@ -445,18 +465,19 @@ export const createUser = async (userData: CreateUserInput): Promise<void> => {
 
   basePayload.referralCode = referralCode;
 
-  const batch = writeBatch(db);
-  batch.set(userRef, basePayload, { merge: true });
+  await setDoc(
+    userRef,
+    isNew ? basePayload : existingUserPayload(referralCode),
+    { merge: true }
+  );
 
   if (!existing?.referralCode && referralCode) {
     const codeRef = doc(db, "referralCodes", referralCode);
     const codeSnap = await getDoc(codeRef);
     if (!codeSnap.exists()) {
-      batch.set(codeRef, { uid: rest.uid, createdAt: serverTimestamp() });
+      await writeReferralMapping(referralCode);
     }
   }
-
-  await batch.commit();
 };
 
 /** Ensure legacy users get a referral code (call from Profile after login). */
@@ -473,10 +494,12 @@ export const ensureUserReferralCode = async (uid: string): Promise<string | null
     const codeRef = doc(db, "referralCodes", code);
     const codeSnap = await getDoc(codeRef);
     if (codeSnap.exists()) continue;
-    const batch = writeBatch(db);
-    batch.set(codeRef, { uid, createdAt: serverTimestamp() });
-    batch.set(userRef, { referralCode: code }, { merge: true });
-    await batch.commit();
+    await setDoc(userRef, { referralCode: code }, { merge: true });
+    try {
+      await setDoc(codeRef, { uid, createdAt: serverTimestamp() });
+    } catch (e) {
+      console.error("[ensureUserReferralCode] referralCodes write failed", e);
+    }
     return code;
   }
   return null;
