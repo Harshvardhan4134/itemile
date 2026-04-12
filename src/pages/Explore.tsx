@@ -149,13 +149,20 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 function applyExploreLocationFilter(
   publicListings: Listing[],
   selectedCityFromStorage: string | null,
-  userLocation: { lat: number; lng: number } | null
+  userLocation: { lat: number; lng: number } | null,
+  attemptedGeolocation: boolean,
+  isUpdatingLocation: boolean
 ): Listing[] {
   if (!selectedCityFromStorage || selectedCityFromStorage === "Current Location") {
-    if (selectedCityFromStorage === "Current Location" && userLocation) {
-      const MAX_DISTANCE_KM = 50;
+    if (selectedCityFromStorage === "Current Location") {
+      // Avoid "everything appears then vanishes": while GPS is resolving, keep the full catalog.
+      // After GPS, prefer nearby items but keep listings with no coordinates visible.
+      if (!attemptedGeolocation || isUpdatingLocation || !userLocation) {
+        return publicListings;
+      }
+      const MAX_DISTANCE_KM = 120;
       return publicListings.filter((listing) => {
-        if (!listing.location) return false;
+        if (!listing.location) return true;
         const distance = calculateDistance(
           userLocation.lat,
           userLocation.lng,
@@ -223,9 +230,17 @@ const Explore = () => {
       applyExploreLocationFilter(
         listingsRaw,
         selectedCityFromStorage,
-        userLocation
+        userLocation,
+        attemptedGeolocation,
+        isUpdatingLocation
       ),
-    [listingsRaw, selectedCityFromStorage, userLocation]
+    [
+      listingsRaw,
+      selectedCityFromStorage,
+      userLocation,
+      attemptedGeolocation,
+      isUpdatingLocation,
+    ]
   );
   const [owners, setOwners] = useState<Record<string, User>>({});
   const [shopSort, setShopSort] = useState<"new" | "popular">("new");
