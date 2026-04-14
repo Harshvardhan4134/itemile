@@ -1,10 +1,29 @@
-import { useState } from 'react';
-import { signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
+import { useState, useRef } from 'react';
+import {
+  signInWithPopup,
+  signOut,
+  GoogleAuthProvider,
+  getAdditionalUserInfo,
+} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { createUser, getUser } from '@/lib/firestore';
+import {
+  createUser,
+  getUser,
+  applyReferralCodeIfEligible,
+} from '@/lib/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Gift } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface GoogleAuthProps {
   onSuccess?: () => void;
@@ -13,7 +32,7 @@ interface GoogleAuthProps {
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
-  /** Applied only when a new Firestore user is created at Google sign-in */
+  /** Applied when creating the Firestore profile at Google sign-in */
   pendingReferralCode?: string;
   /**
    * Login/signup screens: always show the Google sign-in button.
@@ -22,9 +41,9 @@ interface GoogleAuthProps {
   forLoginPage?: boolean;
 }
 
-const GoogleAuth: React.FC<GoogleAuthProps> = ({ 
-  onSuccess, 
-  onError, 
+const GoogleAuth: React.FC<GoogleAuthProps> = ({
+  onSuccess,
+  onError,
   children,
   variant = 'default',
   size = 'default',
@@ -33,32 +52,45 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
   forLoginPage = false,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [referralDialogOpen, setReferralDialogOpen] = useState(false);
+  const [referralInput, setReferralInput] = useState('');
+  const [referralSaving, setReferralSaving] = useState(false);
+  const [newUserUid, setNewUserUid] = useState<string | null>(null);
+  const authFlowFinishedRef = useRef(false);
   const { toast } = useToast();
+
+  const finishAuthFlow = () => {
+    if (authFlowFinishedRef.current) return;
+    authFlowFinishedRef.current = true;
+    setReferralDialogOpen(false);
+    setReferralInput('');
+    setNewUserUid(null);
+    onSuccess?.();
+  };
 
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      
-      // Create Google provider with explicit client ID
+      authFlowFinishedRef.current = false;
+
       const provider = new GoogleAuthProvider();
       const clientId = import.meta.env.VITE_FIREBASE_GOOGLE_CLIENT_ID;
-      
+
       if (clientId) {
         provider.setCustomParameters({
           client_id: clientId,
-          prompt: 'select_account'
+          prompt: 'select_account',
         });
       }
-      
+
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      const additionalInfo = getAdditionalUserInfo(result);
+      const isFirebaseNewUser = additionalInfo?.isNewUser === true;
 
-      // Ensure Auth + Firestore see this session before any secured Firestore calls (avoids
-      // permission-denied right after popup sign-in).
       await auth.authStateReady();
       await user.getIdToken(true);
-      
-      // Create or update user in Firestore (setDoc with merge handles both cases)
+
       await createUser({
         uid: user.uid,
         name: user.displayName || 'Unknown User',
@@ -71,50 +103,122 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
           ? { pendingReferralCode: pendingReferralCode.trim() }
           : {}),
       });
-      
-      // Check if this was a new user or existing user
-      const existingUser = await getUser(user.uid);
-      
-      if (existingUser && existingUser.createdAt) {
+
+      const profile = await getUser(user.uid);
+      const hasReferrer = !!profile?.referredByUid;
+      const cameFromSignupFormWithCode = !!pendingReferralCode?.trim();
+
+      const shouldOfferReferralPrompt =
+        isFirebaseNewUser &&
+        !hasReferrer &&
+        !cameFromSignupFormWithCode;
+
+      if (shouldOfferReferralPrompt) {
+        setNewUserUid(user.uid);
+        setReferralDialogOpen(true);
         toast({
-          title: "Welcome back!",
-          description: "You've been signed in successfully."
+          title: 'Welcome!',
+          description: 'Your account is ready. Add a referral code if someone invited you.',
         });
       } else {
-        toast({
-          title: "Welcome!",
-          description: "Your account has been created successfully."
-        });
+        if (profile && profile.createdAt) {
+          toast({
+            title: 'Welcome back!',
+            description: "You've been signed in successfully.",
+          });
+        } else {
+          toast({
+            title: 'Welcome!',
+            description: 'Your account has been created successfully.',
+          });
+        }
+        finishAuthFlow();
       }
-      
-      onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Google sign-in error:', error);
-      
-      // Handle specific error cases
+      const err = error as { code?: string; message?: string };
+
       let errorMessage = 'Failed to sign in with Google';
-      
-      if (error.code === 'auth/popup-closed-by-user') {
+
+      if (err.code === 'auth/popup-closed-by-user') {
         errorMessage = 'Sign-in was cancelled';
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup was blocked by browser. Please allow popups and try again.';
-      } else if (error.code === 'auth/unauthorized-domain') {
+      } else if (err.code === 'auth/popup-blocked') {
+        errorMessage =
+          'Popup was blocked by browser. Please allow popups and try again.';
+      } else if (err.code === 'auth/unauthorized-domain') {
         errorMessage = 'This domain is not authorized for Google sign-in';
-      } else if (error.code === 'permission-denied' || `${error.message || ''}`.includes('Missing or insufficient permissions')) {
+      } else if (
+        err.code === 'permission-denied' ||
+        `${err.message || ''}`.includes('Missing or insufficient permissions')
+      ) {
         errorMessage =
           'Could not save your profile. If this persists, confirm Firestore rules are deployed and your domain is authorized in Firebase.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
-      
+
       onError?.(errorMessage);
       toast({
-        title: "Sign-in failed",
+        title: 'Sign-in failed',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReferralSkip = () => {
+    finishAuthFlow();
+  };
+
+  const handleReferralSubmit = async () => {
+    const uid = newUserUid;
+    if (!uid) return;
+    const raw = referralInput.trim();
+    if (!raw) {
+      toast({
+        title: 'Enter a code or skip',
+        description: 'Type a referral code, or tap Skip if you were not referred.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setReferralSaving(true);
+    try {
+      const res = await applyReferralCodeIfEligible(uid, raw);
+      if (res.ok) {
+        toast({
+          title: 'Referral saved',
+          description: 'Thanks — your referrer has been linked to your account.',
+        });
+        finishAuthFlow();
+      } else if (res.reason === 'already_referred') {
+        toast({ title: 'Already set', description: 'A referrer is already linked.' });
+        finishAuthFlow();
+      } else if (res.reason === 'invalid_code') {
+        toast({
+          title: 'Invalid code',
+          description: 'That referral code was not found. Check and try again, or skip.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Could not apply code',
+          description: 'Try again or skip for now.',
+          variant: 'destructive',
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: 'Something went wrong',
+        description: 'Could not save the referral code. You can try again from support later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setReferralSaving(false);
     }
   };
 
@@ -122,22 +226,22 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
     try {
       await signOut(auth);
       toast({
-        title: "Signed out",
-        description: "You've been signed out successfully."
+        title: 'Signed out',
+        description: "You've been signed out successfully.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign-out error:', error);
       toast({
-        title: "Sign-out failed",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive"
+        title: 'Sign-out failed',
+        description: 'Failed to sign out. Please try again.',
+        variant: 'destructive',
       });
     }
   };
 
   if (auth.currentUser && !forLoginPage) {
     return (
-      <Button 
+      <Button
         variant={variant}
         size={size}
         onClick={handleSignOut}
@@ -149,22 +253,74 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
   }
 
   return (
-    <Button 
-      variant={variant}
-      size={size}
-      onClick={handleGoogleSignIn}
-      disabled={loading}
-      className={className}
-    >
-      {loading ? (
-        <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          Signing in...
-        </>
-      ) : (
-        children || 'Sign in with Google'
-      )}
-    </Button>
+    <>
+      <Button
+        variant={variant}
+        size={size}
+        onClick={handleGoogleSignIn}
+        disabled={loading}
+        className={className}
+      >
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          children || 'Sign in with Google'
+        )}
+      </Button>
+
+      <Dialog
+        open={referralDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleReferralSkip();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-primary" />
+              Were you referred?
+            </DialogTitle>
+            <DialogDescription>
+              If someone shared Lendlly with you, enter their referral code once. You can skip
+              if you do not have one.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="google-referral-code">Referral code (optional)</Label>
+            <Input
+              id="google-referral-code"
+              placeholder="e.g. CXJ6NT8S"
+              value={referralInput}
+              onChange={(e) => setReferralInput(e.target.value)}
+              autoComplete="off"
+              className="font-mono uppercase"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0 flex-col sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReferralSkip}
+              disabled={referralSaving}
+            >
+              Skip
+            </Button>
+            <Button
+              type="button"
+              onClick={handleReferralSubmit}
+              disabled={referralSaving || !referralInput.trim()}
+            >
+              {referralSaving ? 'Saving…' : 'Apply code'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

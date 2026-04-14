@@ -366,6 +366,46 @@ export const getUidForReferralCode = async (rawCode: string): Promise<string | n
   return typeof uid === "string" ? uid : null;
 };
 
+/**
+ * Attach a referrer by code after account creation (e.g. Google one-time popup).
+ * Only succeeds when the profile has no referredByUid yet.
+ */
+export const applyReferralCodeIfEligible = async (
+  uid: string,
+  rawCode: string
+): Promise<
+  | { ok: true }
+  | {
+      ok: false;
+      reason:
+        | "empty"
+        | "no_user"
+        | "already_referred"
+        | "invalid_code"
+        | "self";
+    }
+> => {
+  const code = normalizeReferralCodeInput(rawCode);
+  if (code.length < 4) {
+    return { ok: false, reason: "empty" };
+  }
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) {
+    return { ok: false, reason: "no_user" };
+  }
+  const data = snap.data() as DocumentData;
+  if (data.referredByUid) {
+    return { ok: false, reason: "already_referred" };
+  }
+  const refUid = await getUidForReferralCode(code);
+  if (!refUid || refUid === uid) {
+    return { ok: false, reason: "invalid_code" };
+  }
+  await updateDoc(userRef, { referredByUid: refUid });
+  return { ok: true };
+};
+
 export type CreateUserInput = Omit<User, "createdAt"> & {
   /** Optional code typed at signup — resolved to referredByUid for new users only */
   pendingReferralCode?: string;

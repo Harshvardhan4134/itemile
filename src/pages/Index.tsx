@@ -12,12 +12,7 @@ import {
 } from "@/components/ui/accordion";
 import { Link } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { MarketingImage } from "@/components/MarketingImage";
-import imgSwapSports from "@/assets/marketing/swap-sports.jpg";
-import imgSwapCamera from "@/assets/marketing/swap-camera.jpg";
-import imgSwapBooks from "@/assets/marketing/swap-books.jpg";
-import imgSwapTools from "@/assets/marketing/swap-tools.jpg";
-import { 
+import {
   MapPin,
   Sparkles,
   ArrowRight,
@@ -47,11 +42,17 @@ import {
   CreditCard,
   ShieldCheck,
   Leaf,
+  Package,
+  Mouse,
+  Volume2,
+  Headphones,
+  Watch,
+  Battery,
+  Backpack,
+  Laptop,
 } from "lucide-react";
 
-const m = (file: string) => `${import.meta.env.BASE_URL}marketing/${file}`;
-
-/** Static marketing grid — inspired by Commerce X home layout */
+/** Example rental categories — icons only (no stock product photos). */
 const SHOWCASE_FILTERS = ["All", "Technology", "Gear", "Audio"] as const;
 type ShowcaseFilter = (typeof SHOWCASE_FILTERS)[number];
 
@@ -60,99 +61,82 @@ const SHOWCASE_PRODUCTS: {
   title: string;
   category: Exclude<ShowcaseFilter, "All">;
   priceLabel: string;
-  image: string;
+  icon: LucideIcon;
 }[] = [
   {
     id: "1",
     title: "Wireless Mouse",
     category: "Technology",
     priceLabel: "from ₹49 / day",
-    image: m("p-mouse.jpg"),
+    icon: Mouse,
   },
   {
     id: "2",
     title: "Bluetooth Speaker",
     category: "Audio",
     priceLabel: "from ₹120 / day",
-    image: m("p-speaker.jpg"),
+    icon: Volume2,
   },
   {
     id: "3",
     title: "Studio Headphones",
     category: "Audio",
     priceLabel: "from ₹89 / day",
-    image: m("p-headphones.jpg"),
+    icon: Headphones,
   },
   {
     id: "4",
     title: "Smartwatch",
     category: "Technology",
     priceLabel: "from ₹199 / day",
-    image: m("p-watch.jpg"),
+    icon: Watch,
   },
   {
     id: "5",
     title: "Wireless Earbuds",
     category: "Audio",
     priceLabel: "from ₹79 / day",
-    image: m("p-airpods.jpg"),
+    icon: Headphones,
   },
   {
     id: "6",
     title: "Power Bank",
     category: "Technology",
     priceLabel: "from ₹35 / day",
-    image: m("p-powerbank.jpg"),
+    icon: Battery,
   },
   {
     id: "7",
     title: "Daypack",
     category: "Gear",
     priceLabel: "from ₹45 / day",
-    image: m("p-backpack.jpg"),
+    icon: Backpack,
   },
   {
     id: "8",
     title: "Laptop Workstation",
     category: "Technology",
     priceLabel: "from ₹299 / day",
-    image: m("p-desk.jpg"),
+    icon: Laptop,
   },
 ];
 
-/** Bundled swap tiles — always resolve in production (no /public 404s). */
 function SwapDiscoveryTile({
-  src,
   title,
   sub,
   icon: Icon,
 }: {
-  src: string;
   title: string;
   sub: string;
   icon: LucideIcon;
 }) {
-  const [broken, setBroken] = useState(false);
-
   return (
     <div className="group rounded-xl overflow-hidden border border-zinc-700/70 bg-zinc-900/80 hover:border-sky-500/35 transition-colors duration-200">
-      <div className="relative aspect-[5/4] bg-zinc-800">
-        {!broken ? (
-          <img
-            src={src}
-            alt=""
-            width={480}
-            height={384}
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-            onError={() => setBroken(true)}
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-zinc-800 text-zinc-500">
-            <Icon className="h-10 w-10 sm:h-12 sm:w-12" strokeWidth={1.15} />
-          </div>
-        )}
+      <div className="relative aspect-[5/4] bg-zinc-800 flex items-center justify-center">
+        <Icon
+          className="h-10 w-10 sm:h-12 sm:w-12 text-zinc-500 group-hover:text-sky-400 transition-colors"
+          strokeWidth={1.15}
+        />
       </div>
       <div className="px-3 py-3 sm:px-3.5 sm:py-3.5 border-t border-zinc-800 bg-zinc-950 text-left">
         <p className="font-semibold text-sm text-zinc-50 tracking-tight">{title}</p>
@@ -218,25 +202,25 @@ const Index = () => {
       name: "Technology",
       blurb: "Phones, laptops, and gadgets from people near you.",
       value: "Electronics",
-      image: m("cat-tech.jpg"),
+      Icon: Smartphone,
     },
     {
       name: "Audio",
       blurb: "Speakers, headphones, and instruments for your next project.",
       value: "Music",
-      image: m("cat-audio.jpg"),
+      Icon: Music,
     },
     {
       name: "Gear",
       blurb: "Sports, outdoor, and everyday carry — on flexible rental terms.",
       value: "Sports",
-      image: m("cat-gear.jpg"),
+      Icon: Bike,
     },
     {
       name: "Computers",
       blurb: "Laptops, monitors, and desk setups for work or study.",
       value: "Electronics",
-      image: m("cat-computer.jpg"),
+      Icon: Laptop,
     },
   ];
 
@@ -308,18 +292,16 @@ const Index = () => {
                   </a>
                 </div>
               </div>
-              <div className="order-1 lg:order-2 relative min-h-[240px] sm:min-h-[320px] lg:min-h-[420px]">
-                <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/50 via-zinc-950 to-zinc-950 lg:hidden pointer-events-none z-[1]" />
-                <MarketingImage
-                  src={m("hero.jpg")}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover object-center"
-                  width={1600}
-                  height={1200}
-                  loading="eager"
-                  decoding="async"
-                />
-                <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-t from-zinc-950/90 via-transparent to-sky-500/5 lg:from-zinc-950/40" />
+              <div className="order-1 lg:order-2 relative min-h-[240px] sm:min-h-[320px] lg:min-h-[420px] flex items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(56,189,248,0.12),transparent_50%)] pointer-events-none" />
+                <div className="relative z-[2] flex flex-col items-center justify-center gap-4 p-8 text-center">
+                  <div className="rounded-2xl border border-sky-500/25 bg-sky-500/10 p-8 sm:p-10">
+                    <Package className="h-16 w-16 sm:h-20 sm:w-20 text-sky-400" strokeWidth={1.25} />
+                  </div>
+                  <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
+                    Browse real listings from people near you — no stock photos.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -360,35 +342,30 @@ const Index = () => {
           </div>
 
           <h2 id="showcase-heading" className="sr-only">
-            Curated rental examples
+            Example rental categories
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
-            {filteredShowcase.map((p) => (
-              <Link key={p.id} to="/explore" className="group block">
-                <div className="rounded-xl bg-zinc-50 border border-zinc-200/90 overflow-hidden transition-all group-hover:shadow-md group-hover:border-zinc-300">
-                  <div className="aspect-[4/3] overflow-hidden bg-zinc-200">
-                    <MarketingImage
-                      src={p.image}
-                      alt=""
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      width={800}
-                      height={600}
-                      loading="lazy"
-                      decoding="async"
-                    />
+            {filteredShowcase.map((p) => {
+              const Icon = p.icon;
+              return (
+                <Link key={p.id} to="/explore" className="group block">
+                  <div className="rounded-xl bg-zinc-50 border border-zinc-200/90 overflow-hidden transition-all group-hover:shadow-md group-hover:border-zinc-300">
+                    <div className="aspect-[4/3] overflow-hidden bg-zinc-100 flex items-center justify-center">
+                      <Icon className="h-14 w-14 sm:h-16 sm:w-16 text-zinc-400 group-hover:text-sky-600 transition-colors" strokeWidth={1.15} />
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 px-0.5">
-                  <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    {p.category}
-                  </p>
-                  <p className="font-semibold text-zinc-900 truncate group-hover:text-sky-600 transition-colors">
-                    {p.title}
-                  </p>
-                  <p className="text-sm text-zinc-500">{p.priceLabel}</p>
-                </div>
-              </Link>
-            ))}
+                  <div className="mt-3 px-0.5">
+                    <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      {p.category}
+                    </p>
+                    <p className="font-semibold text-zinc-900 truncate group-hover:text-sky-600 transition-colors">
+                      {p.title}
+                    </p>
+                    <p className="text-sm text-zinc-500">{p.priceLabel}</p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
           {filteredShowcase.length === 0 && (
             <p className="text-center text-zinc-500 py-12 text-sm">
@@ -425,42 +402,36 @@ const Index = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-            {featuredCategories.map((cat) => (
-              <Link
-                key={cat.name + cat.value}
-                to={`/explore?category=${encodeURIComponent(cat.value)}`}
-                className="group"
-              >
-                <Card className="h-full border-zinc-800 bg-zinc-900/80 hover:border-zinc-600 transition-all rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-black/20">
-                  <CardContent className="p-0 flex flex-col sm:flex-row sm:items-stretch min-h-[200px] sm:min-h-[240px]">
-                    <div className="flex-1 flex flex-col justify-center text-left min-w-0 p-6 sm:p-8 sm:pr-4 order-2 sm:order-1">
-                      <h3 className="text-lg sm:text-xl font-semibold tracking-tight mb-2 text-white">
-                        {cat.name}
-                      </h3>
-                      <p className="text-sm text-zinc-400 mb-4 leading-relaxed">
-                        {cat.blurb}
-                      </p>
-                      <span className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 group-hover:gap-2 transition-all">
-                        Explore category
-                        <ArrowRight className="h-4 w-4" />
-                      </span>
-                    </div>
-                    <div className="relative w-full sm:w-[45%] min-h-[180px] sm:min-h-0 shrink-0 order-1 sm:order-2">
-                      <MarketingImage
-                        src={cat.image}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover opacity-95 group-hover:opacity-100 transition-opacity"
-                        width={900}
-                        height={900}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-l from-zinc-900/90 via-transparent to-transparent sm:from-zinc-900/70 pointer-events-none" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+            {featuredCategories.map((cat) => {
+              const CatIcon = cat.Icon;
+              return (
+                <Link
+                  key={cat.name + cat.value}
+                  to={`/explore?category=${encodeURIComponent(cat.value)}`}
+                  className="group"
+                >
+                  <Card className="h-full border-zinc-800 bg-zinc-900/80 hover:border-zinc-600 transition-all rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+                    <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-6 min-h-[180px] sm:min-h-[200px]">
+                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800/80 text-sky-400 group-hover:border-sky-500/40 transition-colors">
+                        <CatIcon className="h-8 w-8 sm:h-10 sm:w-10" strokeWidth={1.15} />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center text-left min-w-0">
+                        <h3 className="text-lg sm:text-xl font-semibold tracking-tight mb-2 text-white">
+                          {cat.name}
+                        </h3>
+                        <p className="text-sm text-zinc-400 mb-4 leading-relaxed">
+                          {cat.blurb}
+                        </p>
+                        <span className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 group-hover:gap-2 transition-all">
+                          Explore category
+                          <ArrowRight className="h-4 w-4" />
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
@@ -644,25 +615,21 @@ const Index = () => {
                 </p>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <SwapDiscoveryTile
-                    src={imgSwapSports}
                     title="Sports"
                     sub="Bikes & training gear"
                     icon={Bike}
                   />
                   <SwapDiscoveryTile
-                    src={imgSwapCamera}
                     title="Cameras"
                     sub="Photo & video kits"
                     icon={Camera}
                   />
                   <SwapDiscoveryTile
-                    src={imgSwapBooks}
                     title="Books"
                     sub="Read & pass along"
                     icon={Book}
                   />
                   <SwapDiscoveryTile
-                    src={imgSwapTools}
                     title="Tools"
                     sub="DIY & home projects"
                     icon={Wrench}
@@ -675,19 +642,11 @@ const Index = () => {
 
         {/* Newsletter — static marketing */}
         <section className="py-6 sm:py-10 mb-12 sm:mb-16" aria-labelledby="newsletter-heading">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-stretch rounded-2xl sm:rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
-            <div className="relative min-h-[220px] sm:min-h-[280px] lg:min-h-full order-2 lg:order-1 bg-zinc-200">
-              <MarketingImage
-                src={m("newsletter.jpg")}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-                width={1200}
-                height={900}
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-            <div className="flex flex-col justify-center p-8 sm:p-10 lg:p-12 order-1 lg:order-2">
+          <div className="rounded-2xl sm:rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
+            <div className="flex flex-col justify-center p-8 sm:p-10 lg:p-12 max-w-2xl mx-auto text-center sm:text-left">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground mb-5 mx-auto sm:mx-0">
+                <Mail className="h-6 w-6" strokeWidth={1.5} />
+              </div>
               <h2
                 id="newsletter-heading"
                 className="text-2xl sm:text-3xl font-semibold tracking-tight mb-3"
@@ -707,7 +666,7 @@ const Index = () => {
                     e.preventDefault();
                     if (newsletterEmail.trim()) setNewsletterDone(true);
                   }}
-                  className="flex flex-col sm:flex-row gap-3 max-w-md"
+                  className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto sm:mx-0"
                 >
                   <Input
                     type="email"

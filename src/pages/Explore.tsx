@@ -145,33 +145,12 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
-/** Single source of truth for city / GPS radius — must match shop grid + category counts. */
+/** Single source of truth for city scoping — shop grid + category counts. "Current Location" does not filter by radius (map is for positioning only). */
 function applyExploreLocationFilter(
   publicListings: Listing[],
-  selectedCityFromStorage: string | null,
-  userLocation: { lat: number; lng: number } | null,
-  attemptedGeolocation: boolean,
-  isUpdatingLocation: boolean
+  selectedCityFromStorage: string | null
 ): Listing[] {
   if (!selectedCityFromStorage || selectedCityFromStorage === "Current Location") {
-    if (selectedCityFromStorage === "Current Location") {
-      // Avoid "everything appears then vanishes": while GPS is resolving, keep the full catalog.
-      // After GPS, prefer nearby items but keep listings with no coordinates visible.
-      if (!attemptedGeolocation || isUpdatingLocation || !userLocation) {
-        return publicListings;
-      }
-      const MAX_DISTANCE_KM = 120;
-      return publicListings.filter((listing) => {
-        if (!listing.location) return true;
-        const distance = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          listing.location.latitude,
-          listing.location.longitude
-        );
-        return distance <= MAX_DISTANCE_KM;
-      });
-    }
     return publicListings;
   }
 
@@ -226,21 +205,8 @@ const Explore = () => {
   });
 
   const listings = useMemo(
-    () =>
-      applyExploreLocationFilter(
-        listingsRaw,
-        selectedCityFromStorage,
-        userLocation,
-        attemptedGeolocation,
-        isUpdatingLocation
-      ),
-    [
-      listingsRaw,
-      selectedCityFromStorage,
-      userLocation,
-      attemptedGeolocation,
-      isUpdatingLocation,
-    ]
+    () => applyExploreLocationFilter(listingsRaw, selectedCityFromStorage),
+    [listingsRaw, selectedCityFromStorage]
   );
   const [owners, setOwners] = useState<Record<string, User>>({});
   const [shopSort, setShopSort] = useState<"new" | "popular">("new");

@@ -33,7 +33,18 @@ import {
   normalizeKycDocKeys,
   type KycDocKey,
 } from "@/lib/verificationPolicy";
-import { DollarSign, Eye, Copy, Check, Shield } from "lucide-react";
+import {
+  DollarSign,
+  Copy,
+  Check,
+  Shield,
+  Users,
+  Filter,
+  ListOrdered,
+} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 const formatDate = (value: any) => {
   if (!value) return "—";
@@ -62,6 +73,38 @@ const filterUsers = (users: User[], term: string) => {
   });
 };
 
+type StatusFilter = "all" | "active" | "banned";
+type RoleFilter = "all" | "user" | "moderator" | "admin";
+type KycFilter = "all" | "required" | "exempt";
+type ReferralAttrFilter = "all" | "has_signups" | "was_referred";
+
+const applyUserFilters = (
+  list: User[],
+  opts: {
+    status: StatusFilter;
+    role: RoleFilter;
+    kyc: KycFilter;
+    referral: ReferralAttrFilter;
+    referralCounts: Map<string, number>;
+  }
+) => {
+  let out = list;
+  if (opts.status === "active") out = out.filter((u) => !u.banned);
+  if (opts.status === "banned") out = out.filter((u) => u.banned);
+  if (opts.role !== "all") {
+    out = out.filter((u) => (u.systemRole ?? "user") === opts.role);
+  }
+  if (opts.kyc === "required") out = out.filter((u) => !u.kycExempt);
+  if (opts.kyc === "exempt") out = out.filter((u) => u.kycExempt === true);
+  if (opts.referral === "has_signups") {
+    out = out.filter((u) => (opts.referralCounts.get(u.uid) ?? 0) > 0);
+  }
+  if (opts.referral === "was_referred") {
+    out = out.filter((u) => !!u.referredByUid);
+  }
+  return out;
+};
+
 const AdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +126,13 @@ const AdminUsers = () => {
     selfie: false,
   });
   const [kycSaving, setKycSaving] = useState(false);
+  const [referralDialogUser, setReferralDialogUser] = useState<User | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [kycFilter, setKycFilter] = useState<KycFilter>("all");
+  const [referralAttrFilter, setReferralAttrFilter] =
+    useState<ReferralAttrFilter>("all");
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user: adminUser } = useAuthRole();
@@ -108,11 +158,6 @@ const AdminUsers = () => {
     loadUsers();
   }, []);
 
-  const filteredUsers = useMemo(
-    () => filterUsers(users, search),
-    [users, search]
-  );
-
   /** Signups attributed to each referrer (referredByUid → count) */
   const referralCounts = useMemo(() => {
     const m = new Map<string, number>();
@@ -123,6 +168,70 @@ const AdminUsers = () => {
     }
     return m;
   }, [users]);
+
+  const referralsByReferrer = useMemo(() => {
+    const m = new Map<string, User[]>();
+    for (const u of users) {
+      if (!u.referredByUid) continue;
+      const list = m.get(u.referredByUid) ?? [];
+      list.push(u);
+      m.set(u.referredByUid, list);
+    }
+    for (const [, list] of m) {
+      list.sort((a, b) => {
+        const ta =
+          typeof a.createdAt?.toDate === "function"
+            ? a.createdAt.toDate().getTime()
+            : new Date(a.createdAt as string).getTime() || 0;
+        const tb =
+          typeof b.createdAt?.toDate === "function"
+            ? b.createdAt.toDate().getTime()
+            : new Date(b.createdAt as string).getTime() || 0;
+        return tb - ta;
+      });
+    }
+    return m;
+  }, [users]);
+
+  const usersByUid = useMemo(
+    () => new Map(users.map((u) => [u.uid, u])),
+    [users]
+  );
+
+  const filteredUsers = useMemo(() => {
+    const searched = filterUsers(users, search);
+    return applyUserFilters(searched, {
+      status: statusFilter,
+      role: roleFilter,
+      kyc: kycFilter,
+      referral: referralAttrFilter,
+      referralCounts,
+    });
+  }, [
+    users,
+    search,
+    statusFilter,
+    roleFilter,
+    kycFilter,
+    referralAttrFilter,
+    referralCounts,
+  ]);
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (statusFilter !== "all") n++;
+    if (roleFilter !== "all") n++;
+    if (kycFilter !== "all") n++;
+    if (referralAttrFilter !== "all") n++;
+    return n;
+  }, [statusFilter, roleFilter, kycFilter, referralAttrFilter]);
+
+  const resetFilters = () => {
+    setStatusFilter("all");
+    setRoleFilter("all");
+    setKycFilter("all");
+    setReferralAttrFilter("all");
+  };
 
   const handleViewListings = (user: User) => {
     // Navigate to admin listings page with owner filter
@@ -348,14 +457,101 @@ const AdminUsers = () => {
             Audit member activity, trust levels, and take actions when needed.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <Input
             placeholder="Search name, email, phone, or referral code"
             className="w-64 max-w-full sm:max-w-xs md:w-72"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <Button variant="outline">Filters</Button>
+          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2 shrink-0">
+                <Filter className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-0.5 rounded-full px-1.5 py-0 text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-3">
+                <div className="font-medium text-sm">Filter users</div>
+                <p className="text-xs text-muted-foreground">
+                  Combined with the search box above.
+                </p>
+                <div className="space-y-2">
+                  <Label className="text-xs">Account status</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    value={statusFilter}
+                    onChange={(e) =>
+                      setStatusFilter(e.target.value as StatusFilter)
+                    }
+                  >
+                    <option value="all">All</option>
+                    <option value="active">Active only</option>
+                    <option value="banned">Banned only</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Role</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    value={roleFilter}
+                    onChange={(e) =>
+                      setRoleFilter(e.target.value as RoleFilter)
+                    }
+                  >
+                    <option value="all">All roles</option>
+                    <option value="user">User</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">KYC</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    value={kycFilter}
+                    onChange={(e) => setKycFilter(e.target.value as KycFilter)}
+                  >
+                    <option value="all">All</option>
+                    <option value="required">Verification required</option>
+                    <option value="exempt">KYC exempt</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Referrals</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    value={referralAttrFilter}
+                    onChange={(e) =>
+                      setReferralAttrFilter(e.target.value as ReferralAttrFilter)
+                    }
+                  >
+                    <option value="all">All</option>
+                    <option value="has_signups">Has referral signups</option>
+                    <option value="was_referred">Signed up with a code</option>
+                  </select>
+                </div>
+                <Separator />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    resetFilters();
+                  }}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       <Card>
@@ -407,9 +603,28 @@ const AdminUsers = () => {
                           <div className="text-xs text-muted-foreground mt-1">
                             {referralCounts.get(user.uid) ?? 0} signups via code
                           </div>
+                          {(referralCounts.get(user.uid) ?? 0) > 0 && (
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="h-auto p-0 text-xs text-primary"
+                              onClick={() => setReferralDialogUser(user)}
+                            >
+                              <ListOrdered className="h-3 w-3 mr-1 inline" />
+                              View signups
+                            </Button>
+                          )}
                           {user.referredByUid && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[140px]" title={user.referredByUid}>
-                              Referred by: {user.referredByUid.slice(0, 8)}…
+                            <div
+                              className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]"
+                              title={
+                                usersByUid.get(user.referredByUid)?.email ??
+                                user.referredByUid
+                              }
+                            >
+                              Referred by:{" "}
+                              {usersByUid.get(user.referredByUid)?.name ??
+                                `${user.referredByUid.slice(0, 8)}…`}
                             </div>
                           )}
                           <div className="mt-1.5">
@@ -502,6 +717,64 @@ const AdminUsers = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!referralDialogUser}
+        onOpenChange={(open) => !open && setReferralDialogUser(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Referral signups
+            </DialogTitle>
+            <DialogDescription>
+              People who joined using{" "}
+              <span className="font-mono font-medium text-foreground">
+                {referralDialogUser?.referralCode ?? "—"}
+              </span>{" "}
+              from{" "}
+              <span className="font-medium text-foreground">
+                {referralDialogUser?.name}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[min(360px,50vh)] pr-3">
+            <ul className="space-y-3 text-sm">
+              {(() => {
+                const signups = referralDialogUser
+                  ? referralsByReferrer.get(referralDialogUser.uid) ?? []
+                  : [];
+                if (signups.length === 0) {
+                  return (
+                    <li className="text-muted-foreground text-sm py-4 text-center list-none">
+                      No signups recorded.
+                    </li>
+                  );
+                }
+                return signups.map((u) => (
+                  <li
+                    key={u.uid}
+                    className="rounded-lg border bg-muted/30 px-3 py-2"
+                  >
+                    <div className="font-medium">{u.name}</div>
+                    <div className="text-xs text-muted-foreground">{u.email}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      Joined {formatDate(u.createdAt)} · uid {u.uid.slice(0, 8)}…
+                    </div>
+                  </li>
+                ));
+              })()}
+            </ul>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReferralDialogUser(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* KYC policy: exempt vs required + document checklist */}
       <Dialog open={kycDialogOpen} onOpenChange={setKycDialogOpen}>
