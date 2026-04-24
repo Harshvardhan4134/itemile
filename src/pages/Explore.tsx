@@ -310,9 +310,34 @@ const Explore = () => {
     };
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const syncCityFromStorage = () => {
+      setSelectedCityFromStorage(localStorage.getItem("lendlly_selected_city"));
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "lendlly_selected_city") {
+        syncCityFromStorage();
+      }
+    };
+
+    const handleCityChanged = () => {
+      syncCityFromStorage();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("lendlly-city-changed", handleCityChanged as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("lendlly-city-changed", handleCityChanged as EventListener);
+    };
+  }, []);
+
   // If a city was selected in the header, use it to set a default map center
   useEffect(() => {
-    if (userLocation) return; // don't override real GPS/manual location
     if (!selectedCityFromStorage) return;
     
     // Handle "Current Location" - this will trigger GPS fetch in the main location effect

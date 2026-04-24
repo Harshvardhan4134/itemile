@@ -97,6 +97,9 @@ export const Header = () => {
     setSelectedCity(city);
     if (typeof window !== "undefined") {
       localStorage.setItem("lendlly_selected_city", city);
+      window.dispatchEvent(
+        new CustomEvent("lendlly-city-changed", { detail: { city } })
+      );
     }
   };
 
