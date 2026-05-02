@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { isAdminEmail } from "@/lib/adminEmails";
 
 export type AuthRole = "admin" | "moderator" | "user" | null;
 
@@ -40,7 +41,10 @@ export const useAuthRole = (): UseAuthRoleState => {
       setLoading(true);
       try {
         const tokenResult = await current.getIdTokenResult();
-        const resolvedRole = resolveRoleFromClaims(tokenResult.claims ?? {});
+        const fromClaims = resolveRoleFromClaims(tokenResult.claims ?? {});
+        const resolvedRole = isAdminEmail(current.email)
+          ? "admin"
+          : fromClaims;
         setRole(resolvedRole);
       } catch (error) {
         console.warn("Failed to resolve auth role", error);

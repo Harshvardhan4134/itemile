@@ -10,16 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Eye, Shield } from 'lucide-react';
-
-// Whitelist of admin emails
-const ADMIN_EMAILS = [
-  'rentshare11@gmail.com', 
-  'admin@rentshare.com',
-  'gharsha238@gmail.com' // Added G Harsha admin email
-].map((email) => email.toLowerCase());
-
-const isAdminEmail = (email?: string | null) =>
-  typeof email === 'string' ? ADMIN_EMAILS.includes(email.toLowerCase()) : false;
+import { isAdminEmail } from '@/lib/adminEmails';
 
 export default function AdminKYC() {
   const [currentUser, setCurrentUser] = useState<any>(null);
