@@ -162,9 +162,9 @@ const App = () => (
           <Route
             path="/admin/verify-users"
             element={
-              <ProtectedRoute>
+              <AdminRoute allowModerator={false}>
                 <AdminKYC />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route

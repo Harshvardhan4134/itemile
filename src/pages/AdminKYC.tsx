@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { auth } from '@/lib/firebase';
 import { getPendingKYCVerifications, approveKYCVerification, rejectKYCVerification, User } from '@/lib/firestore';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Eye, Shield } from 'lucide-react';
-import { isAdminEmail } from '@/lib/adminEmails';
 
 export default function AdminKYC() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -20,21 +18,18 @@ export default function AdminKYC() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const navigate = useNavigate();
 
+  // Access control: parent AdminRoute (useAuthRole + adminEmails whitelist or JWT admin role)
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user || !isAdminEmail(user.email)) {
-        toast.error('Unauthorized access');
-        navigate('/');
-      } else {
+      if (user) {
         setCurrentUser(user);
         loadPendingVerifications();
       }
     });
 
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const loadPendingVerifications = async () => {
     try {
