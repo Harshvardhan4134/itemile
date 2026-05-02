@@ -23,7 +23,7 @@ To become the leading platform for peer-to-peer rentals and swaps, creating a wo
 
 **Company Name:** Lendlly  
 **Platform:** Web Application  
-**Website:** https://lendlly.vercel.app/  
+**Website:** https://www.lendlly.in/  
 **Email:** rentshare11@gmail.com  
 **Year Founded:** 2024
 
@@ -282,7 +282,7 @@ This is a private project. For inquiries about contributions or partnerships, pl
 ## 📞 Support
 
 **Email:** rentshare11@gmail.com  
-**Website:** https://lendlly.vercel.app/  
+**Website:** https://www.lendlly.in/  
 **Response Time:** 24-48 hours
 
 ---
