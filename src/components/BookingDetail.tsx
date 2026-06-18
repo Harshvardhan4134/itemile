@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatCurrency } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -257,7 +258,7 @@ export const BookingDetail = ({
               <DollarSign className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Amount</p>
-                <p className="font-medium">₹{currentBooking.amount?.toLocaleString() || currentBooking.totalRent?.toLocaleString()}</p>
+                <p className="font-medium">{formatCurrency(currentBooking.amount?.toLocaleString() || currentBooking.totalRent?.toLocaleString())}</p>
               </div>
             </div>
             {currentBooking.startDate && (

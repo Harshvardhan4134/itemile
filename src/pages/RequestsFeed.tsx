@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useNavigate, Link } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getAllRequests, getRequest, markRequestAsMatched, getUser, createRequestTransactionAndChat, sendMessage, getChatByRequestId, getOrCreateRequestChat } from "@/lib/firestore";
 import { Request, User } from "@/lib/firestore";
 import { auth } from "@/lib/firebase";
+import { STORAGE_KEYS } from "@/lib/constants";
 import { 
   MapPin, 
   Search, 
@@ -43,7 +45,7 @@ const RequestsFeed = () => {
         const data = await getAllRequests();
         
         // City-based filtering: Only show requests from selected city
-        const selectedCity = localStorage.getItem("lendlly_selected_city");
+        const selectedCity = localStorage.getItem(STORAGE_KEYS.selectedCity);
         let filteredRequests = data;
         if (selectedCity) {
           // Filter requests by city if they have city information
@@ -427,7 +429,7 @@ const RequestsFeed = () => {
                       {request.maxBudget && (
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-4 w-4" />
-                          <span>Up to ₹{request.maxBudget}/day</span>
+                          <span>Up to {formatCurrency(request.maxBudget)}/day</span>
                         </div>
                       )}
                     </div>

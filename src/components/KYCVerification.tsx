@@ -8,8 +8,10 @@ import type { User } from "@/lib/firestore";
 import {
   getKycRequiredKeys,
   KYC_DOC_LABELS,
+  urlFieldForDocKey,
   type KycDocKey,
 } from "@/lib/verificationPolicy";
+import { CLOUDINARY_FOLDERS } from "@/lib/constants";
 import { toast } from "sonner";
 import { Upload, CheckCircle, XCircle, Clock, AlertCircle, ShieldOff } from "lucide-react";
 
@@ -18,28 +20,18 @@ interface KYCVerificationProps {
   onVerificationSubmitted?: () => void;
 }
 
-function urlFieldForDocKey(
-  key: KycDocKey
-): "aadharFrontUrl" | "aadharBackUrl" | "panUrl" | "selfieUrl" {
-  const map: Record<KycDocKey, "aadharFrontUrl" | "aadharBackUrl" | "panUrl" | "selfieUrl"> = {
-    aadharFront: "aadharFrontUrl",
-    aadharBack: "aadharBackUrl",
-    pan: "panUrl",
-    selfie: "selfieUrl",
-  };
-  return map[key];
-}
 
 export function KYCVerification({ user, onVerificationSubmitted }: KYCVerificationProps) {
   const requiredKeys = useMemo(() => getKycRequiredKeys(user), [user]);
 
-  const [uploading, setUploading] = useState(false);
-  const [documents, setDocuments] = useState<Record<KycDocKey, File | null>>({
-    aadharFront: null,
-    aadharBack: null,
-    pan: null,
+  const emptyDocs = (): Record<KycDocKey, File | null> => ({
+    driversLicenseFront: null,
+    driversLicenseBack: null,
     selfie: null,
   });
+
+  const [uploading, setUploading] = useState(false);
+  const [documents, setDocuments] = useState<Record<KycDocKey, File | null>>(emptyDocs);
 
   const handleFileChange = (field: KycDocKey, file: File | null) => {
     if (file && file.size > 5 * 1024 * 1024) {
@@ -60,15 +52,14 @@ export function KYCVerification({ user, onVerificationSubmitted }: KYCVerificati
     setUploading(true);
     try {
       const payload: Partial<{
-        aadharFrontUrl: string;
-        aadharBackUrl: string;
-        panUrl: string;
+        driversLicenseFrontUrl: string;
+        driversLicenseBackUrl: string;
         selfieUrl: string;
       }> = {};
 
       for (const key of requiredKeys) {
         const file = documents[key]!;
-        const result = await uploadToCloudinary(file, "rent-share/kyc");
+        const result = await uploadToCloudinary(file, CLOUDINARY_FOLDERS.kyc);
         const field = urlFieldForDocKey(key);
         payload[field] = result.secure_url;
       }
@@ -247,7 +238,7 @@ export function KYCVerification({ user, onVerificationSubmitted }: KYCVerificati
   return (
     <Card>
       <CardHeader>
-        <CardTitle>KYC Verification</CardTitle>
+        <CardTitle>Identity verification</CardTitle>
         <CardDescription>
           Upload the documents requested for your account. Required items are marked with{" "}
           <span className="text-red-500">*</span>.

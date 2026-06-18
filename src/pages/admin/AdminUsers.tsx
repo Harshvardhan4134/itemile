@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -120,10 +121,9 @@ const AdminUsers = () => {
   const [kycPolicyUser, setKycPolicyUser] = useState<User | null>(null);
   const [verificationRequired, setVerificationRequired] = useState<"yes" | "no">("yes");
   const [docChoice, setDocChoice] = useState<Record<KycDocKey, boolean>>({
-    aadharFront: true,
-    aadharBack: true,
-    pan: true,
-    selfie: false,
+    driversLicenseFront: true,
+    driversLicenseBack: true,
+    selfie: true,
   });
   const [kycSaving, setKycSaving] = useState(false);
   const [referralDialogUser, setReferralDialogUser] = useState<User | null>(null);
@@ -244,9 +244,8 @@ const AdminUsers = () => {
     setVerificationRequired(exempt ? "no" : "yes");
     const keys = normalizeKycDocKeys(user.kycRequiredDocKeys);
     setDocChoice({
-      aadharFront: keys.includes("aadharFront"),
-      aadharBack: keys.includes("aadharBack"),
-      pan: keys.includes("pan"),
+      driversLicenseFront: keys.includes("driversLicenseFront"),
+      driversLicenseBack: keys.includes("driversLicenseBack"),
       selfie: keys.includes("selfie"),
     });
     setKycDialogOpen(true);
@@ -905,7 +904,7 @@ const AdminUsers = () => {
               Permanently ban{" "}
               <span className="font-semibold">{selectedUser?.email}</span> from the
               platform. This will set their trust score to 0 and prevent them from
-              using RentShare. This action should only be used for serious violations.
+              using Itemile. This action should only be used for serious violations.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1123,7 +1122,7 @@ const AdminUsers = () => {
                         <div key={index} className="p-3 bg-muted rounded-lg text-sm">
                           <div className="flex justify-between items-center">
                             <div>
-                              <div className="font-medium">₹{ref.amount?.toLocaleString()}</div>
+                              <div className="font-medium">{formatCurrency(ref.amount?.toLocaleString())}</div>
                               <div className="text-xs text-muted-foreground">
                                 {ref.utr && `UTR: ${ref.utr}`}
                                 {ref.date && ` • ${formatDate(ref.date)}`}

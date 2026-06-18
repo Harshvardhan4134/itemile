@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { createListing } from "@/lib/firestore";
 import { uploadToCloudinary, uploadMultipleImages } from "@/lib/cloudinary";
+import { CLOUDINARY_FOLDERS } from "@/lib/constants";
 import { auth } from "@/lib/firebase";
 import { GeoPoint } from "firebase/firestore";
 import {
@@ -313,12 +314,12 @@ const PostItem = () => {
     try {
       // Upload images to Cloudinary
       setUploading(true);
-      const uploadedImageUrls = await uploadMultipleImages(images, 'rent-share/listings');
+      const uploadedImageUrls = await uploadMultipleImages(images, CLOUDINARY_FOLDERS.listings);
       
       // Upload video if provided
       let uploadedVideoUrl = "";
       if (videoFile) {
-        const videoResult = await uploadToCloudinary(videoFile, 'rent-share/videos');
+        const videoResult = await uploadToCloudinary(videoFile, CLOUDINARY_FOLDERS.videos);
         uploadedVideoUrl = videoResult.secure_url;
       }
 
@@ -485,7 +486,7 @@ const PostItem = () => {
 
                 <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="rentPerDay" className="text-sm sm:text-base">Daily Rate (₹) *</Label>
+                    <Label htmlFor="rentPerDay" className="text-sm sm:text-base">Daily rate (USD) *</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       <Input

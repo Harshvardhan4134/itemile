@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -203,7 +204,7 @@ const PaymentSuccess = () => {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Amount Paid:</span>
                       <span className="font-medium text-green-600 dark:text-green-400">
-                        ₹{((transaction.totalRent || transaction.amount || 0) + (transaction.deposit || 0) + (transaction.serviceFee || 0)).toLocaleString()}
+                        {formatCurrency(((transaction.totalRent || transaction.amount || 0) + (transaction.deposit || 0) + (transaction.serviceFee || 0)).toLocaleString())}
                       </span>
                     </div>
                   </div>

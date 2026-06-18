@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Button } from "@/components/ui/button";
@@ -272,8 +273,8 @@ const Transactions = () => {
         try {
           await sendEmailNotification({
             email: owner.email,
-            subject: "Booking Cancelled by Renter - Rent Share",
-            message: `Hi ${owner.name},\n\nThe booking for "${transactionToCancel.listingTitle}" has been cancelled by the renter.\n\nRefund Amount: ₹${refundAmount}\n\nView Details: ${window.location.origin}/owner-bookings\n\nBest regards,\nRent Share Team`,
+            subject: "Booking Cancelled by Renter - Itemile",
+            message: `Hi ${owner.name},\n\nThe booking for "${transactionToCancel.listingTitle}" has been cancelled by the renter.\n\nRefund Amount: ${formatCurrency(refundAmount)}\n\nView Details: ${window.location.origin}/owner-bookings\n\nBest regards,\nItemile Team`,
             type: 'rental_request',
             read: false,
             createdAt: new Date(),
@@ -285,7 +286,7 @@ const Transactions = () => {
 
       toast({
         title: "Booking Cancelled",
-        description: `Your booking has been cancelled. Refund of ₹${refundAmount} will be processed within 5-7 business days.`,
+        description: `Your booking has been cancelled. Refund of ${formatCurrency(refundAmount)} will be processed within 5-7 business days.`,
       });
 
       setCancelDialogOpen(false);
@@ -462,7 +463,7 @@ const Transactions = () => {
                                 <div className="flex items-center gap-2">
                                   <DollarSign className="h-4 w-4" />
                                   <span>
-                                    ₹{transaction.amount} ({transaction.paymentMode})
+                                    {formatCurrency(transaction.amount)} ({transaction.paymentMode})
                                   </span>
                                 </div>
                               </div>
@@ -472,7 +473,7 @@ const Transactions = () => {
                           <div className="flex flex-col items-end gap-3">
                             <div className="text-right">
                               <div className="text-2xl font-bold text-primary">
-                                ₹{transaction.amount}
+                                {formatCurrency(transaction.amount)}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {transaction.type === 'rent' ? 'Total Rent' : 'Swap Value'}
@@ -720,7 +721,7 @@ const Transactions = () => {
                                 </p>
                                 <div className="flex items-center justify-between">
                                   <span className="font-bold text-primary text-sm">
-                                    ₹{listing.rentPerDay}/day
+                                    {formatCurrency(listing.rentPerDay)}/day
                                   </span>
                                   <Badge variant="secondary" className="text-xs">
                                     {listing.category}
@@ -764,7 +765,7 @@ const Transactions = () => {
                   <br /><br />
                   <strong>Listing:</strong> {transactionToCancel.listingTitle}
                   <br />
-                  <strong>Refund Amount:</strong> ₹{((transactionToCancel.totalRent || transactionToCancel.amount || 0) + (transactionToCancel.deposit || 0)).toLocaleString()}
+                  <strong>Refund Amount:</strong> {formatCurrency(((transactionToCancel.totalRent || transactionToCancel.amount || 0) + (transactionToCancel.deposit || 0)).toLocaleString())}
                   <br /><br />
                   Your refund will be processed within 5-7 business days.
                 </>
@@ -824,7 +825,7 @@ const Transactions = () => {
 
                   toast({
                     title: "Processing Payment",
-                    description: `Please complete the payment of ₹${totalAmount.toLocaleString()}`,
+                    description: `Please complete the payment of ${formatCurrency(totalAmount.toLocaleString())}`,
                   });
 
                   // Check if Razorpay is configured

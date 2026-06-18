@@ -2,6 +2,7 @@ import { Outlet, NavLink } from "react-router-dom";
 import { Map, Shield, Users, FileWarning, Settings, LogOut, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
+import { APP_NAME } from "@/lib/constants";
 
 const navItems = [
   { to: "/admin", label: "Dashboard", icon: Shield, end: true },
@@ -22,7 +23,7 @@ const AdminLayout = () => {
       <div className="flex h-screen">
         <aside className="hidden md:flex md:flex-col w-64 border-r bg-background">
           <div className="p-6 border-b">
-            <div className="font-urbanist font-bold text-xl">Lendlly Admin</div>
+            <div className="font-semibold text-xl">{APP_NAME} Admin</div>
             <p className="text-xs text-muted-foreground mt-1">
               Moderation & Trust Center
             </p>
@@ -64,7 +65,7 @@ const AdminLayout = () => {
         <main className="flex-1 overflow-y-auto">
           <header className="flex flex-col gap-3 border-b bg-background px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-lg font-semibold">RentShare Admin Console</h1>
+              <h1 className="text-lg font-semibold">{APP_NAME} Admin Console</h1>
               <p className="text-sm text-muted-foreground">
                 Manage users, listings, and trust operations
               </p>

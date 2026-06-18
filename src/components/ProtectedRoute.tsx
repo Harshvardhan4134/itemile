@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import LocationPermissionDialog from "./LocationPermissionDialog";
+import { STORAGE_KEYS } from "@/lib/constants";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -33,7 +34,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
       if (user) {
         // Show location permission dialog after login if not already shown
-        const hasRequestedLocation = localStorage.getItem(`location_permission_requested_${user.uid}`);
+        const hasRequestedLocation = localStorage.getItem(
+          STORAGE_KEYS.locationPermissionRequested(user.uid)
+        );
         
         // Check if geolocation permission is already granted
         if (!hasRequestedLocation && navigator.geolocation) {
@@ -56,10 +59,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
                 }, 500);
               } else if (result.state === 'granted') {
                 // Permission already granted, mark as requested so we don't show dialog again
-                localStorage.setItem(`location_permission_requested_${user.uid}`, 'true');
-              } else if (result.state === 'denied') {
-                // Permission denied, mark as requested to respect user's decision
-                localStorage.setItem(`location_permission_requested_${user.uid}`, 'true');
+                localStorage.setItem(
+                  STORAGE_KEYS.locationPermissionRequested(user.uid),
+                  "true"
+                );
+              } else if (result.state === "denied") {
+                localStorage.setItem(
+                  STORAGE_KEYS.locationPermissionRequested(user.uid),
+                  "true"
+                );
               }
             }).catch(() => {
               if (!isMountedRef.current) return;

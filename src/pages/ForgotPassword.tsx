@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert } from '@/components/ui/alert';
 import { ArrowLeft } from 'lucide-react';
+import { APP_NAME, US_PHONE_DIGITS_REGEX, normalizeUSPhone } from '@/lib/constants';
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ const ForgotPassword: React.FC = () => {
 
   // Helper to check if input is email or phone
   const isEmail = (val: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val);
-  // Accept only 10-digit numbers for phone, and treat as Indian (+91)
-  const isPhone = (val: string) => /^\d{10}$/.test(val.trim());
+  // US phone: 10-digit numbers normalized to +1 in normalizeUSPhone
+  const isPhone = (val: string) => US_PHONE_DIGITS_REGEX.test(val.replace(/\D/g, ""));
 
   // Handle submit (send reset email or OTP)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,8 +49,7 @@ const ForgotPassword: React.FC = () => {
     } else if (isPhone(input)) {
       setLoading(true);
       try {
-        // Always prepend +91 for Indian numbers
-        const phoneWithCountry = '+91' + input.trim();
+        const phoneWithCountry = normalizeUSPhone(input);
         const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
         });
@@ -62,7 +62,7 @@ const ForgotPassword: React.FC = () => {
         setLoading(false);
       }
     } else {
-      setErr('Please enter a valid email or 10-digit Indian phone number.');
+      setErr('Please enter a valid email or US phone number (10 digits).');
     }
   };
 
@@ -96,8 +96,8 @@ const ForgotPassword: React.FC = () => {
       </button>
       <Card className="app-surface w-full max-w-md shadow-xl">
         <CardHeader className="text-center pb-6">
-          <CardTitle className="text-2xl font-urbanist font-bold">Forgot Password</CardTitle>
-          <p className="text-muted-foreground">Enter your email or phone number to reset your password</p>
+          <CardTitle className="text-2xl font-semibold">Forgot password</CardTitle>
+          <p className="text-muted-foreground">Reset via email, or use SMS if phone sign-in is enabled</p>
         </CardHeader>
         <CardContent>
           <div id="recaptcha-container"></div>

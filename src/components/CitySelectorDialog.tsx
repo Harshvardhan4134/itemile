@@ -12,32 +12,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, LocateFixed, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { US_POPULAR_CITIES } from "@/lib/constants";
 
-const POPULAR_CITIES = [
-  "Bengaluru",
-  "Mumbai",
-  "Delhi",
-  "Hyderabad",
-  "Chennai",
-  "Pune",
-  "Kolkata",
-  "Ahmedabad",
-  "Jaipur",
-  "Lucknow",
-  "Surat",
-  "Indore",
-  "Chandigarh",
-  "Noida",
-  "Gurugram",
-  "Visakhapatnam",
-  "Vizag",
-  "Bhopal",
-  "Coimbatore",
-  "Kochi",
-  "Thiruvananthapuram",
-  "Nagpur",
-  "Goa",
-];
+const POPULAR_CITIES = [...US_POPULAR_CITIES];
 
 type CitySelectorDialogProps = {
   open: boolean;

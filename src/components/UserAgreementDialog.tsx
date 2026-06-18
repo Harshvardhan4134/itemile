@@ -85,7 +85,7 @@ export default function UserAgreementDialog({
               <div>
                 <h4 className="font-semibold mb-2">5. Dispute Resolution</h4>
                 <p className="text-muted-foreground">
-                  In case of disputes regarding item condition or damage, Lendlly may review the 
+                  In case of disputes regarding item condition or damage, Itemile may review the 
                   documentation and make a final decision. You agree to comply with such decisions.
                 </p>
               </div>

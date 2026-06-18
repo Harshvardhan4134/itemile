@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 interface LocationPermissionDialogProps {
   open: boolean;
@@ -71,7 +72,7 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({
 
       // Store that we've requested location permission for this user
       if (auth.currentUser) {
-        localStorage.setItem(`location_permission_requested_${auth.currentUser.uid}`, 'true');
+        localStorage.setItem(STORAGE_KEYS.locationPermissionRequested(auth.currentUser.uid), 'true');
       }
 
       toast({
@@ -85,7 +86,7 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({
       // The important thing is that we triggered the permission prompt
       
       if (auth.currentUser) {
-        localStorage.setItem(`location_permission_requested_${auth.currentUser.uid}`, 'true');
+        localStorage.setItem(STORAGE_KEYS.locationPermissionRequested(auth.currentUser.uid), 'true');
       }
 
       if (error.code === error.PERMISSION_DENIED) {
@@ -112,7 +113,7 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({
   const handleSkip = () => {
     // Store that user skipped the location request
     if (auth.currentUser) {
-      localStorage.setItem(`location_permission_requested_${auth.currentUser.uid}`, 'true');
+      localStorage.setItem(STORAGE_KEYS.locationPermissionRequested(auth.currentUser.uid), 'true');
     }
     onOpenChange(false);
   };
@@ -128,7 +129,7 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({
           </div>
           <DialogTitle className="text-center">Enable Location Access</DialogTitle>
           <DialogDescription className="text-center pt-2">
-            Allow location access to find items and requests near you, get accurate distance calculations, and improve your experience on Lendlly.
+            Allow location access to find items and requests near you, get accurate distance calculations, and improve your experience on Itemile.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">

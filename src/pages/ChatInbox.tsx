@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Button } from "@/components/ui/button";
@@ -693,7 +694,7 @@ const ChatInbox = () => {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{currentChat.listingTitle}</p>
                     <p className="text-sm text-muted-foreground">
-                      ₹{currentTransaction.totalRent || currentTransaction.amount || 0} / day
+                      {formatCurrency(currentTransaction.totalRent || currentTransaction.amount || 0)} / day
                     </p>
                   </div>
                 </div>

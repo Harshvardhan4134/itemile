@@ -11,6 +11,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import GoogleAuth from '@/components/GoogleAuth';
 import { ArrowLeft } from 'lucide-react';
+import { APP_NAME, APP_TAGLINE, US_PHONE_DIGITS_REGEX, normalizeUSPhone } from '@/lib/constants';
 
 const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])(?=.*\d).{8,}$/;
 
@@ -36,7 +37,9 @@ const Signup: React.FC = () => {
   const validate = () => {
     if (!name.trim()) return 'Name is required.';
     if (!email.trim()) return 'Email is required.';
-    if (!mobile.trim() || !/^\d{10}$/.test(mobile)) return 'Mobile number must be 10 digits.';
+    if (!mobile.trim() || !US_PHONE_DIGITS_REGEX.test(mobile.replace(/\D/g, ''))) {
+      return 'Enter a valid US phone number (10 digits).';
+    }
     if (!passwordRegex.test(password)) return 'Password must be at least 8 characters, include 1 uppercase, 1 special character, and 1 number.';
     return '';
   };
@@ -61,7 +64,7 @@ const Signup: React.FC = () => {
         uid: user.uid,
         name,
         email,
-        phone: mobile,
+        phone: normalizeUSPhone(mobile),
         verified: false,
         wallet: 0,
         rating: 0,
@@ -70,7 +73,7 @@ const Signup: React.FC = () => {
           : {}),
       });
       
-      setMessage('Signup successful! Welcome to Lendlly!');
+      setMessage(`Signup successful! Welcome to ${APP_NAME}!`);
       setName(''); setEmail(''); setMobile(''); setPassword('');
       
       // Redirect to explore after successful signup
@@ -99,11 +102,11 @@ const Signup: React.FC = () => {
         <Card className="app-surface w-full max-w-md shadow-xl">
           <CardHeader className="text-center pb-4 sm:pb-6 px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex items-center justify-center mb-2">
-              <span className="text-2xl sm:text-3xl font-bold gradient-text">Lendlly</span>
+              <span className="text-2xl sm:text-3xl font-bold gradient-text">{APP_NAME}</span>
             </div>
-            <Badge className="mb-2 glass-effect text-xs sm:text-sm" variant="outline">✨ Join the Future of Sharing</Badge>
-            <CardTitle className="text-xl sm:text-2xl font-urbanist font-bold">Create Your Account</CardTitle>
-            <p className="text-sm sm:text-base text-muted-foreground">Sign up to start sharing and renting today</p>
+            <Badge className="mb-2 glass-effect text-xs sm:text-sm" variant="outline">Join the community</Badge>
+            <CardTitle className="text-xl sm:text-2xl font-semibold">Create your account</CardTitle>
+            <p className="text-sm sm:text-base text-muted-foreground">{APP_TAGLINE}</p>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
             <form onSubmit={handleSignUp} className="space-y-4">
@@ -136,7 +139,7 @@ const Signup: React.FC = () => {
                 <Input
                   id="mobile"
                   type="tel"
-                  placeholder="Enter your 10-digit mobile number"
+                  placeholder="(555) 123-4567"
                   value={mobile}
                   onChange={e => setMobile(e.target.value.replace(/[^\d]/g, ''))}
                   required
@@ -170,7 +173,7 @@ const Signup: React.FC = () => {
                   className="font-mono tracking-wide"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Have a friend on Lendlly? Enter their code — you can still sign up without one.
+                  Have a friend on {APP_NAME}? Enter their code — optional.
                 </p>
               </div>
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>

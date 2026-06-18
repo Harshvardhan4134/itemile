@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Button } from "@/components/ui/button";
@@ -212,7 +213,7 @@ const Chat = () => {
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                    <span className="truncate">₹{transaction.amount} ({transaction.paymentMode})</span>
+                    <span className="truncate">{formatCurrency(transaction.amount)} ({transaction.paymentMode})</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />

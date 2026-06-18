@@ -38,12 +38,14 @@ import Shipping from "./pages/Shipping";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
 import VendorStore from "./pages/VendorStore";
+import { FirebaseSetupBanner } from "./components/FirebaseSetupBanner";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <FirebaseSetupBanner />
       <Toaster />
       <Sonner />
       <BrowserRouter>

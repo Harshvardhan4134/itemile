@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/accordion";
 import { Link } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
+import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import {
   MapPin,
   Sparkles,
@@ -67,56 +68,56 @@ const SHOWCASE_PRODUCTS: {
     id: "1",
     title: "Wireless Mouse",
     category: "Technology",
-    priceLabel: "from ₹49 / day",
+    priceLabel: "from $49 / day",
     icon: Mouse,
   },
   {
     id: "2",
     title: "Bluetooth Speaker",
     category: "Audio",
-    priceLabel: "from ₹120 / day",
+    priceLabel: "from $120 / day",
     icon: Volume2,
   },
   {
     id: "3",
     title: "Studio Headphones",
     category: "Audio",
-    priceLabel: "from ₹89 / day",
+    priceLabel: "from $89 / day",
     icon: Headphones,
   },
   {
     id: "4",
     title: "Smartwatch",
     category: "Technology",
-    priceLabel: "from ₹199 / day",
+    priceLabel: "from $199 / day",
     icon: Watch,
   },
   {
     id: "5",
     title: "Wireless Earbuds",
     category: "Audio",
-    priceLabel: "from ₹79 / day",
+    priceLabel: "from $79 / day",
     icon: Headphones,
   },
   {
     id: "6",
     title: "Power Bank",
     category: "Technology",
-    priceLabel: "from ₹35 / day",
+    priceLabel: "from $35 / day",
     icon: Battery,
   },
   {
     id: "7",
     title: "Daypack",
     category: "Gear",
-    priceLabel: "from ₹45 / day",
+    priceLabel: "from $45 / day",
     icon: Backpack,
   },
   {
     id: "8",
     title: "Laptop Workstation",
     category: "Technology",
-    priceLabel: "from ₹299 / day",
+    priceLabel: "from $299 / day",
     icon: Laptop,
   },
 ];
@@ -149,7 +150,7 @@ function SwapDiscoveryTile({
 const FAQ_ITEMS = [
   {
     q: "Do you support pickups in my city?",
-    a: "Lendlly is built around local handoffs. Choose your city in the header, then browse listings near you. Exact pickup spots are arranged in chat with the owner.",
+    a: "Itemile is built around local handoffs. Choose your city in the header, then browse listings near you. Exact pickup spots are arranged in chat with the owner.",
   },
   {
     q: "How do payments work?",
@@ -435,16 +436,16 @@ const Index = () => {
           </div>
         </section>
 
-        {/* What is Lendlly Section */}
+        {/* What is Itemile Section */}
         <section className="py-6 sm:py-8 mb-8 sm:mb-12">
           <Card className="border-border bg-card shadow-sm rounded-2xl sm:rounded-3xl">
             <CardContent className="p-6 sm:p-8 md:p-10">
               <div className="text-center max-w-3xl mx-auto">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">
-                  What is <span className="gradient-text">Lendlly</span>?
+                  What is <span className="gradient-text">Itemile</span>?
                 </h2>
                 <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
-                  Lendlly is a community-driven peer-to-peer rental platform. People can rent items to others in their city, earn money from things they already own, and request items they need instead of buying them.
+                  Itemile is a community-driven peer-to-peer rental platform. People can rent items to others in their city, earn money from things they already own, and request items they need instead of buying them.
                 </p>
               </div>
             </CardContent>
@@ -485,7 +486,7 @@ const Index = () => {
         <section id="how-it-works" className="py-6 sm:py-8 md:py-12 mb-8 sm:mb-12 scroll-mt-24">
           <div className="text-center mb-6 sm:mb-8 px-4">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
-              How <span className="gradient-text">Lendlly</span> Works
+              How <span className="gradient-text">Itemile</span> Works
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
               Three simple ways to get what you need
@@ -701,7 +702,7 @@ const Index = () => {
             Frequently asked questions
           </h2>
           <p className="text-muted-foreground text-center mb-8 text-sm sm:text-base px-2">
-            Straight answers about renting locally on Lendlly — for policy details, use the links in the footer.
+            Straight answers about renting locally on Itemile — for policy details, use the links in the footer.
           </p>
           <Accordion type="single" collapsible className="w-full border-t border-border">
             {FAQ_ITEMS.map((item, i) => (
@@ -718,7 +719,7 @@ const Index = () => {
         </section>
 
         {/* Trust strip */}
-        <section className="mb-12 sm:mb-16" aria-label="Why rent with Lendlly">
+        <section className="mb-12 sm:mb-16" aria-label="Why rent with Itemile">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
             {[
               {
@@ -760,7 +761,7 @@ const Index = () => {
         <section className="py-6 sm:py-8 md:py-12 mb-8 sm:mb-12">
           <div className="text-center mb-6 sm:mb-8 px-4">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
-              Why Choose <span className="gradient-text">Lendlly</span>?
+              Why Choose <span className="gradient-text">Itemile</span>?
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               We've built the most intuitive and secure platform for the sharing economy
@@ -816,7 +817,7 @@ const Index = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
             {/* Brand Section */}
             <div className="space-y-4">
-              <h3 className="text-2xl font-semibold tracking-tight">Lendlly</h3>
+              <h3 className="text-2xl font-semibold tracking-tight">Itemile</h3>
               <p className="text-sm text-muted-foreground">
                 A peer-to-peer rental marketplace connecting people to rent, earn, and request items nearby.
               </p>
@@ -937,7 +938,7 @@ const Index = () => {
                   <span className="text-muted-foreground">Built with ❤️ for the sharing community</span>
                 </li>
                 <li>
-                  <span className="text-muted-foreground">© 2026 Lendlly. All rights reserved.</span>
+                  <span className="text-muted-foreground">© 2026 Itemile. All rights reserved.</span>
                 </li>
               </ul>
             </div>

@@ -26,7 +26,7 @@ const TermsAndConditions = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
                 <p className="text-muted-foreground mb-4">
-                  Welcome to Lendlly. These Terms and Conditions ("Terms") govern your access to and use of our rental and swap marketplace platform ("Platform" or "Service"). By accessing or using Lendlly, you agree to be bound by these Terms.
+                  Welcome to Itemile. These Terms and Conditions ("Terms") govern your access to and use of our rental and swap marketplace platform ("Platform" or "Service"). By accessing or using Itemile, you agree to be bound by these Terms.
                 </p>
                 <p className="text-muted-foreground">
                   If you do not agree to these Terms, you may not access or use our Platform. We reserve the right to modify these Terms at any time, and such modifications shall be effective immediately upon posting.
@@ -36,7 +36,7 @@ const TermsAndConditions = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">2. Eligibility</h2>
                 <p className="text-muted-foreground mb-4">
-                  To use Lendlly, you must:
+                  To use Itemile, you must:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground mb-4">
                   <li>Be at least 18 years of age</li>
@@ -73,17 +73,17 @@ const TermsAndConditions = () => {
                 <h2 className="text-2xl font-semibold mb-4">4. Platform Services</h2>
                 <h3 className="text-xl font-semibold mb-3">4.1 Rental Services</h3>
                 <p className="text-muted-foreground mb-4">
-                  Lendlly facilitates peer-to-peer rentals of items. We act as an intermediary platform connecting item owners ("Owners") with renters ("Renters"). We are not a party to rental agreements between users.
+                  Itemile facilitates peer-to-peer rentals of items. We act as an intermediary platform connecting item owners ("Owners") with renters ("Renters"). We are not a party to rental agreements between users.
                 </p>
 
                 <h3 className="text-xl font-semibold mb-3">4.2 Swap Services</h3>
                 <p className="text-muted-foreground mb-4">
-                  Our Platform also enables users to swap items with each other. Swaps are agreements between users, and Lendlly facilitates the connection but is not a party to swap agreements.
+                  Our Platform also enables users to swap items with each other. Swaps are agreements between users, and Itemile facilitates the connection but is not a party to swap agreements.
                 </p>
 
                 <h3 className="text-xl font-semibold mb-3">4.3 Platform Role</h3>
                 <p className="text-muted-foreground">
-                  Lendlly is a marketplace platform. We do not own, sell, or rent items listed on our Platform. We are not responsible for the quality, safety, or legality of items listed, the accuracy of listings, or the ability of users to complete transactions.
+                  Itemile is a marketplace platform. We do not own, sell, or rent items listed on our Platform. We are not responsible for the quality, safety, or legality of items listed, the accuracy of listings, or the ability of users to complete transactions.
                 </p>
               </section>
 
@@ -139,12 +139,12 @@ const TermsAndConditions = () => {
 
                 <h3 className="text-xl font-semibold mb-3">6.2 Service Fees</h3>
                 <p className="text-muted-foreground mb-4">
-                  Lendlly may charge service fees for transactions. These fees will be clearly disclosed before you complete a transaction. Service fees are non-refundable except as required by law.
+                  Itemile may charge service fees for transactions. These fees will be clearly disclosed before you complete a transaction. Service fees are non-refundable except as required by law.
                 </p>
 
                 <h3 className="text-xl font-semibold mb-3">6.3 Refunds and Cancellations</h3>
                 <p className="text-muted-foreground mb-4">
-                  Refund and cancellation policies are determined by the terms agreed upon between users. Lendlly may facilitate refunds in accordance with our policies and applicable law.
+                  Refund and cancellation policies are determined by the terms agreed upon between users. Itemile may facilitate refunds in accordance with our policies and applicable law.
                 </p>
 
                 <h3 className="text-xl font-semibold mb-3">6.4 Damages and Security Deposits</h3>
@@ -160,22 +160,22 @@ const TermsAndConditions = () => {
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground mb-4">
                   <li>Users should first attempt to resolve disputes directly</li>
-                  <li>Lendlly may provide mediation services to help resolve disputes</li>
+                  <li>Itemile may provide mediation services to help resolve disputes</li>
                   <li>We reserve the right to suspend or terminate accounts involved in disputes</li>
                   <li>Users may be required to provide documentation and evidence</li>
                 </ul>
                 <p className="text-muted-foreground">
-                  Lendlly's decisions regarding disputes are final, but we are not obligated to resolve all disputes. Users may pursue legal remedies independently.
+                  Itemile's decisions regarding disputes are final, but we are not obligated to resolve all disputes. Users may pursue legal remedies independently.
                 </p>
               </section>
 
               <section>
                 <h2 className="text-2xl font-semibold mb-4">8. Intellectual Property</h2>
                 <p className="text-muted-foreground mb-4">
-                  The Platform and its original content, features, and functionality are owned by Lendlly and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
+                  The Platform and its original content, features, and functionality are owned by Itemile and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
                 </p>
                 <p className="text-muted-foreground">
-                  You retain ownership of content you post on the Platform, but you grant Lendlly a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and distribute your content for the purpose of operating and promoting the Platform.
+                  You retain ownership of content you post on the Platform, but you grant Itemile a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and distribute your content for the purpose of operating and promoting the Platform.
                 </p>
               </section>
 
@@ -185,7 +185,7 @@ const TermsAndConditions = () => {
                   TO THE MAXIMUM EXTENT PERMITTED BY LAW, LENDLLY SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES.
                 </p>
                 <p className="text-muted-foreground mb-4">
-                  Lendlly is not responsible for:
+                  Itemile is not responsible for:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                   <li>The quality, safety, or legality of items listed</li>
@@ -199,7 +199,7 @@ const TermsAndConditions = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">10. Indemnification</h2>
                 <p className="text-muted-foreground">
-                  You agree to indemnify, defend, and hold harmless Lendlly, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses, including reasonable attorneys' fees, arising out of or in any way connected with your use of the Platform, your violation of these Terms, or your violation of any rights of another.
+                  You agree to indemnify, defend, and hold harmless Itemile, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses, including reasonable attorneys' fees, arising out of or in any way connected with your use of the Platform, your violation of these Terms, or your violation of any rights of another.
                 </p>
               </section>
 
@@ -236,15 +236,15 @@ const TermsAndConditions = () => {
                   If you have any questions about these Terms and Conditions, please contact us:
                 </p>
                 <ul className="list-none space-y-2 text-muted-foreground">
-                  <li><strong>Email:</strong> support@lendlly.in</li>
-                  <li><strong>Website:</strong> https://lendlly.vercel.app/</li>
+                  <li><strong>Email:</strong> support@itemile.com</li>
+                  <li><strong>Website:</strong> https://itemile.com</li>
                 </ul>
               </section>
 
               <section>
                 <h2 className="text-2xl font-semibold mb-4">15. Acknowledgment</h2>
                 <p className="text-muted-foreground">
-                  By using Lendlly, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree to these Terms, you must not use our Platform.
+                  By using Itemile, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree to these Terms, you must not use our Platform.
                 </p>
               </section>
             </div>

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Eye, Shield } from 'lucide-react';
+import { KYC_DOC_ORDER, KYC_DOC_LABELS, getKycDocUrl } from '@/lib/verificationPolicy';
 
 export default function AdminKYC() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -191,7 +192,7 @@ export default function AdminKYC() {
       <Dialog open={!!selectedUser && !showRejectDialog} onOpenChange={() => setSelectedUser(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>KYC Documents - {selectedUser?.name}</DialogTitle>
+            <DialogTitle>Identity documents — {selectedUser?.name}</DialogTitle>
             <DialogDescription>
               Review the uploaded documents carefully before approving or rejecting
             </DialogDescription>
@@ -220,75 +221,23 @@ export default function AdminKYC() {
 
               {/* Documents */}
               <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Aadhaar Card - Front</h4>
-                  {selectedUser.aadharFrontUrl ? (
-                    <>
-                      <img
-                        src={typeof selectedUser.aadharFrontUrl === 'string' 
-                          ? selectedUser.aadharFrontUrl 
-                          : (selectedUser.aadharFrontUrl as any).secure_url}
-                        alt="Aadhaar Front"
-                        className="w-full rounded-lg border"
-                        onError={(e) => {
-                          console.error('Failed to load Aadhaar Front');
-                          e.currentTarget.style.display = 'none';
-                          const errorDiv = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (errorDiv) errorDiv.classList.remove('hidden');
-                        }}
-                      />
-                      <div className="hidden p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-yellow-800 text-sm mb-2">⚠️ Image failed to load</p>
-                        <p className="text-xs text-yellow-700">Old data detected. Please re-upload documents.</p>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground">Not uploaded</p>
-                  )}
-                </div>
-
-                <div>
-                  <h4 className="font-medium mb-2">Aadhaar Card - Back</h4>
-                  {selectedUser.aadharBackUrl ? (
-                    <img
-                      src={typeof selectedUser.aadharBackUrl === 'string' 
-                        ? selectedUser.aadharBackUrl 
-                        : (selectedUser.aadharBackUrl as any).secure_url}
-                      alt="Aadhaar Back"
-                      className="w-full rounded-lg border"
-                    />
-                  ) : (
-                    <p className="text-muted-foreground">Not uploaded</p>
-                  )}
-                </div>
-
-                <div>
-                  <h4 className="font-medium mb-2">PAN Card</h4>
-                  {selectedUser.panUrl ? (
-                    <img
-                      src={typeof selectedUser.panUrl === 'string' 
-                        ? selectedUser.panUrl 
-                        : (selectedUser.panUrl as any).secure_url}
-                      alt="PAN Card"
-                      className="w-full rounded-lg border"
-                    />
-                  ) : (
-                    <p className="text-muted-foreground">Not uploaded</p>
-                  )}
-                </div>
-
-                {selectedUser.selfieUrl && (
-                  <div>
-                    <h4 className="font-medium mb-2">Selfie (Optional)</h4>
-                    <img
-                      src={typeof selectedUser.selfieUrl === 'string' 
-                        ? selectedUser.selfieUrl 
-                        : (selectedUser.selfieUrl as any).secure_url}
-                      alt="Selfie"
-                      className="w-full rounded-lg border"
-                    />
-                  </div>
-                )}
+                {KYC_DOC_ORDER.map((key) => {
+                  const url = selectedUser ? getKycDocUrl(selectedUser, key) : undefined;
+                  return (
+                    <div key={key}>
+                      <h4 className="font-medium mb-2">{KYC_DOC_LABELS[key]}</h4>
+                      {url ? (
+                        <img
+                          src={url}
+                          alt={KYC_DOC_LABELS[key]}
+                          className="w-full rounded-lg border"
+                        />
+                      ) : (
+                        <p className="text-muted-foreground">Not uploaded</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -1,155 +1,113 @@
-# Rent Share MVP - Setup Instructions
+# Itemile — Firebase setup
 
-## Environment Variables
+Use a **new** Firebase project (do not share Lendlly's `rentshare-5c5eb`).
 
-Create a `.env` file in the root directory with the following variables:
+## 1. Create the project
+
+1. Open [Firebase Console](https://console.firebase.google.com) → **Add project**
+2. Suggested project ID: `itemile-prod` (must match `.firebaserc` or run `firebase use <your-id>`)
+3. Enable Google Analytics (optional)
+
+## 2. Enable services
+
+### Authentication
+
+- **Build → Authentication → Sign-in method**
+- Enable **Email/Password**
+- Enable **Google** (add support email)
+- **Authorized domains:** `localhost`, your production domain
+
+### Firestore
+
+- **Build → Firestore Database → Create database**
+- Start in **production mode** (rules deploy from this repo)
+- Region: `us-central1` or nearest US region
+
+### Storage (optional)
+
+- Enable if you plan to use Firebase Storage later (app uses Cloudinary by default)
+
+## 3. Register the web app
+
+1. **Project settings → Your apps → Web** (`</>`)
+2. App nickname: `Itemile Web`
+3. Copy config into `.env`:
 
 ```env
-# Firebase Configuration
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-
-# Google Maps API Key
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-
-# Cloudinary Configuration
-VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset_name
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
 
-## Firebase Setup
+4. For Google sign-in, copy **OAuth 2.0 Client ID** (Web client) into `VITE_FIREBASE_GOOGLE_CLIENT_ID`
 
-1. Create a Firebase project at https://console.firebase.google.com
-2. Enable Authentication with Email/Password and Google providers
-3. Create a Firestore database
-4. Set up the following Firestore collections:
+## 4. CLI login & deploy rules
 
-### Collections Structure
-
-**users/{uid}**
-- name (string)
-- email (string)
-- phone (string)
-- verified (boolean)
-- wallet (number)
-- rating (number)
-- createdAt (timestamp)
-- role (string) - "rent" | "swap" | "both"
-- idProofUrl (string) - optional
-
-**listings/{listingId}**
-- ownerId (string)
-- title (string)
-- description (string)
-- rentPerDay (number)
-- swapAllowed (boolean)
-- category (string)
-- location (geopoint)
-- images (array of strings)
-- videoProof (string) - optional
-- available (boolean)
-- createdAt (timestamp)
-
-**transactions/{transactionId}**
-- itemId (string)
-- ownerId (string)
-- renterId (string)
-- type (string) - "rent" | "swap"
-- status (string) - "pending" | "active" | "completed" | "disputed"
-- startDate (timestamp)
-- endDate (timestamp)
-- amount (number)
-- paymentMode (string) - "online" | "offline"
-- createdAt (timestamp)
-
-**transactions/{transactionId}/messages/{messageId}**
-- senderId (string)
-- text (string)
-- createdAt (timestamp)
-
-**reviews/{reviewId}**
-- reviewerId (string)
-- reviewerName (string)
-- reviewerPhotoUrl (string) - optional
-- revieweeId (string)
-- transactionId (string)
-- listingId (string)
-- listingTitle (string)
-- rating (number) - 1-5 stars
-- comment (string)
-- createdAt (timestamp)
-- updatedAt (timestamp) - optional
-
-## Google Maps Setup
-
-1. Go to Google Cloud Console
-2. Enable Maps JavaScript API
-3. Create an API key
-4. Add the API key to your environment variables
-
-## Cloudinary Setup
-
-1. Create a Cloudinary account
-2. Create an unsigned upload preset
-3. Add your cloud name and upload preset to environment variables
-
-## Features Implemented
-
-✅ **Map Integration (Google Maps)**
-- Fetch listings from Firestore
-- Display pins on map with popup cards
-- Floating filters (category, price range, swap only)
-
-✅ **Add Listing Page**
-- Image and video upload to Cloudinary
-- Save to Firestore with proper schema
-- Location coordinates input
-
-✅ **Transactions Page**
-- Fetch user transactions (owner/renter)
-- Tabs: Active | History | Swaps
-- Status management (accept/decline/complete)
-
-✅ **Chat Page**
-- Real-time messaging with Firestore
-- Transaction context display
-- Message bubbles (sender/receiver)
-
-✅ **Google OAuth**
-- Firebase Authentication integration
-- User creation in Firestore
-- Onboarding flow
-
-✅ **Enhanced Authentication**
-- Email/password login
-- Google OAuth
-- User registration with Firestore
-
-## Running the Application
-
-1. Install dependencies:
 ```bash
 npm install
+npm run firebase:login
+firebase use itemile-prod   # or your project ID
+npm run firebase:deploy:rules
 ```
 
-2. Set up environment variables (see above)
+This deploys `firestore.rules` and composite indexes from `firestore.indexes.json`.
 
-3. Start the development server:
+## 5. Admin access (JWT claims)
+
+Admin routes use **custom claims**, not Firestore `systemRole` alone.
+
+1. Sign up once in the app, copy your user **UID** from Firebase Console → Authentication
+2. Download service account: **Project settings → Service accounts → Generate new private key**
+3. Save as `scripts/service-account.json` (gitignored)
+4. Run:
+
 ```bash
+npm run admin:set-role -- <YOUR_UID>
+```
+
+Sign out and sign in again. `/admin` should load.
+
+For moderators: edit `scripts/set-admin-role.js` to set `{ role: "moderator" }`.
+
+## 6. Cloud Functions (optional for now)
+
+Functions still contain Razorpay/email logic from Lendlly. Deploy after Stripe migration:
+
+```bash
+cd functions && npm install && cd ..
+npm run firebase:deploy:functions
+```
+
+Set function env vars in Firebase Console (EMAIL_USER, APP_URL, etc.).
+
+## 7. Local dev
+
+```bash
+npm run firebase:sync-config   # updates firebase-messaging-sw.js from .env
 npm run dev
 ```
 
-## Next Steps
+### Emulators (optional)
 
-The following features are ready for backend integration:
-- All Firestore collections are properly structured
-- Cloudinary uploads are configured
-- Google Maps integration is complete
-- Real-time chat functionality
-- Transaction management system
+```bash
+# .env: VITE_USE_FIREBASE_EMULATORS=true
+npm run firebase:emulators
+```
 
-You can now connect your Firebase backend and start testing the full functionality!
+## 8. Hosting deploy
+
+```bash
+npm run firebase:deploy:hosting
+```
+
+## Checklist
+
+- [ ] New Firebase project created
+- [ ] `.env` filled with web app config
+- [ ] Auth providers enabled
+- [ ] `npm run firebase:deploy:rules`
+- [ ] Admin UID granted via `npm run admin:set-role`
+- [ ] Cloudinary + Maps keys in `.env`

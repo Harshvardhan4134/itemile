@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Minus, Plus, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Listing } from "@/lib/firestore";
+import { formatCurrency } from "@/lib/format";
+import { US_MARKET } from "@/lib/constants";
 
 interface TenureSelectorProps {
   listing: Listing;
@@ -31,15 +31,18 @@ export interface BookingData {
   requiresSecurePay: boolean;
 }
 
-// Calculate deposit: 10% of itemValue, minimum ₹300
+// Calculate deposit: 10% of item value, minimum $25 (items $5,000+)
 function calcDeposit(itemValue: number): number {
-  if (itemValue < 5000) return 0;
-  return Math.max(Math.ceil(itemValue * 0.10), 300);
+  if (itemValue < US_MARKET.highValueItemUsd) return 0;
+  return Math.max(
+    Math.ceil(itemValue * US_MARKET.depositRate),
+    US_MARKET.minDepositUsd
+  );
 }
 
 // Calculate service fee: 5% of total rent
 function calcServiceFee(totalRent: number): number {
-  return Math.ceil(totalRent * 0.05);
+  return Math.ceil(totalRent * US_MARKET.serviceFeeRate);
 }
 
 export default function TenureSelector({ listing, onBookingDataChange, disabled = false }: TenureSelectorProps) {
@@ -231,7 +234,7 @@ export default function TenureSelector({ listing, onBookingDataChange, disabled 
             <span className="text-muted-foreground">
               Rent per {durationType === 'days' ? 'day' : 'month'}
             </span>
-            <span className="font-medium">₹{rentPerUnit.toLocaleString()}</span>
+            <span className="font-medium">{formatCurrency(rentPerUnit)}</span>
           </div>
           
           {durationType === 'months' && !(listing as any).price?.rentPerMonth && (
@@ -245,7 +248,7 @@ export default function TenureSelector({ listing, onBookingDataChange, disabled 
 
           <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-muted-foreground">Total Rent</span>
-            <span className="font-medium">₹{totalRent.toLocaleString()}</span>
+            <span className="font-medium">{formatCurrency(totalRent)}</span>
           </div>
 
           {deposit > 0 && (
@@ -253,19 +256,19 @@ export default function TenureSelector({ listing, onBookingDataChange, disabled 
               <span className="text-muted-foreground flex items-center gap-1">
                 Deposit {requiresDeposit && <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 py-0">Required</Badge>}
               </span>
-              <span className="font-medium">₹{deposit.toLocaleString()}</span>
+              <span className="font-medium">{formatCurrency(deposit)}</span>
             </div>
           )}
 
           <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-muted-foreground">Service Fee</span>
-            <span className="font-medium">₹{serviceFee.toLocaleString()}</span>
+            <span className="font-medium">{formatCurrency(serviceFee)}</span>
           </div>
 
           <div className="border-t pt-2 mt-2">
             <div className="flex justify-between text-sm sm:text-base font-semibold">
               <span>Payable Now</span>
-              <span>₹{payableNow.toLocaleString()}</span>
+              <span>{formatCurrency(payableNow)}</span>
             </div>
           </div>
 
@@ -273,7 +276,7 @@ export default function TenureSelector({ listing, onBookingDataChange, disabled 
             <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-[10px] sm:text-xs text-blue-800 dark:text-blue-200 mt-2">
               <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0" />
               <span>
-                SecurePay required for items valued ₹5,000 or more to enable platform liability and insurance.
+                SecurePay required for items valued {formatCurrency(US_MARKET.highValueItemUsd)} or more to enable platform liability and insurance.
               </span>
             </div>
           )}

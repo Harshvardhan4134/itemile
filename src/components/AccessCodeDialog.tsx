@@ -69,7 +69,7 @@ const AccessCodeDialog: React.FC<AccessCodeDialogProps> = ({
       
       toast({
         title: "Access granted!",
-        description: "Welcome to Lendlly! You now have full access to the platform.",
+        description: "Welcome to Itemile! You now have full access to the platform.",
       });
 
       onAccessGranted();
@@ -84,7 +84,7 @@ const AccessCodeDialog: React.FC<AccessCodeDialogProps> = ({
 
   const handleSkip = () => {
     // Don't allow skipping - user must enter access code
-    setError('Access code is required to use Lendlly');
+    setError('Access code is required to use Itemile');
   };
 
   return (
@@ -105,7 +105,7 @@ const AccessCodeDialog: React.FC<AccessCodeDialogProps> = ({
           </div>
           <DialogTitle className="text-center">Enter Access Code</DialogTitle>
           <DialogDescription className="text-center pt-2">
-            Lendlly is currently in early access. Please enter your access code to continue.
+            Itemile is currently in early access. Please enter your access code to continue.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleVerify} className="space-y-4">

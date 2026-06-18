@@ -21,7 +21,7 @@ const Contact = () => {
           <CardContent className="p-8 md:p-12">
             <h1 className="text-4xl font-bold mb-2">Contact Us</h1>
             <p className="text-muted-foreground mb-8">
-              We're here to help! Get in touch with the Lendlly team for support, questions, or feedback.
+              We're here to help! Get in touch with the Itemile team for support, questions, or feedback.
             </p>
 
             <div className="space-y-8">
@@ -41,10 +41,10 @@ const Contact = () => {
                             For general inquiries, support, or feedback
                           </p>
                           <a 
-                            href="mailto:support@lendlly.in" 
+                            href="mailto:support@itemile.com" 
                             className="text-primary hover:underline font-medium"
                           >
-                            support@lendlly.in
+                            support@itemile.com
                           </a>
                           <p className="text-sm text-muted-foreground mt-2">
                             Response time: 24-48 hours
@@ -66,10 +66,10 @@ const Contact = () => {
                             Call us for immediate assistance or inquiries
                           </p>
                           <a 
-                            href="tel:+918547652100" 
+                            href="mailto:support@itemile.com" 
                             className="text-primary hover:underline font-medium"
                           >
-                            +91 85476 52100
+                            
                           </a>
                           <p className="text-sm text-muted-foreground mt-2">
                             Available: Monday - Friday, 9 AM - 6 PM IST
@@ -107,7 +107,7 @@ const Contact = () => {
                     <CardContent className="p-6">
                       <h3 className="font-semibold mb-2">How do I report an issue with a rental?</h3>
                       <p className="text-muted-foreground">
-                        If you encounter any issues with a rental, please contact us immediately at support@lendlly.in with details, photos, and your booking reference number. We'll investigate and help resolve the issue.
+                        If you encounter any issues with a rental, please contact us immediately at support@itemile.com with details, photos, and your booking reference number. We'll investigate and help resolve the issue.
                       </p>
                     </CardContent>
                   </Card>
@@ -125,7 +125,7 @@ const Contact = () => {
                     <CardContent className="p-6">
                       <h3 className="font-semibold mb-2">What if I need help with a payment?</h3>
                       <p className="text-muted-foreground">
-                        For payment-related issues, refunds, or transaction disputes, email us at <a href="mailto:support@lendlly.in" className="text-primary hover:underline">support@lendlly.in</a> or call <a href="tel:+918547652100" className="text-primary hover:underline">+91 85476 52100</a> with your transaction ID and details. We'll assist you promptly.
+                        For payment-related issues, refunds, or transaction disputes, email us at <a href="mailto:support@itemile.com" className="text-primary hover:underline">support@itemile.com</a> or call <a href="mailto:support@itemile.com" className="text-primary hover:underline"></a> with your transaction ID and details. We'll assist you promptly.
                       </p>
                     </CardContent>
                   </Card>
@@ -147,7 +147,7 @@ const Contact = () => {
                   <CardContent className="p-6">
                     <div className="space-y-2 text-muted-foreground">
                       <p><strong className="text-foreground">Phone Support:</strong> Monday - Friday, 9 AM - 6 PM IST</p>
-                      <p><strong className="text-foreground">Phone:</strong> <a href="tel:+918547652100" className="text-primary hover:underline">+91 85476 52100</a></p>
+                      <p><strong className="text-foreground">Phone:</strong> <a href="mailto:support@itemile.com" className="text-primary hover:underline"></a></p>
                       <p><strong className="text-foreground">Email Support:</strong> Available 24/7</p>
                       <p><strong className="text-foreground">Response Time:</strong> 24-48 hours (Monday - Friday)</p>
                       <p><strong className="text-foreground">Urgent Issues:</strong> We prioritize urgent matters and aim to respond within 12 hours</p>
@@ -160,19 +160,19 @@ const Contact = () => {
                 <h2 className="text-2xl font-semibold mb-4">Other Ways to Reach Us</h2>
                 <div className="space-y-3 text-muted-foreground">
                   <p>
-                    <strong className="text-foreground">Phone:</strong> <a href="tel:+918547652100" className="text-primary hover:underline">+91 85476 52100</a>
+                    <strong className="text-foreground">Phone:</strong> <a href="mailto:support@itemile.com" className="text-primary hover:underline"></a>
                   </p>
                   <p>
-                    <strong className="text-foreground">Email:</strong> <a href="mailto:support@lendlly.in" className="text-primary hover:underline">support@lendlly.in</a>
+                    <strong className="text-foreground">Email:</strong> <a href="mailto:support@itemile.com" className="text-primary hover:underline">support@itemile.com</a>
                   </p>
                   <p>
-                    <strong className="text-foreground">For Partners & Collaborations:</strong> support@lendlly.in
+                    <strong className="text-foreground">For Partners & Collaborations:</strong> support@itemile.com
                   </p>
                   <p>
-                    <strong className="text-foreground">For Press & Media:</strong> support@lendlly.in
+                    <strong className="text-foreground">For Press & Media:</strong> support@itemile.com
                   </p>
                   <p>
-                    <strong className="text-foreground">For Legal Matters:</strong> support@lendlly.in
+                    <strong className="text-foreground">For Legal Matters:</strong> support@itemile.com
                   </p>
                 </div>
               </section>
@@ -180,15 +180,15 @@ const Contact = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">Visit Our Website</h2>
                 <p className="text-muted-foreground mb-4">
-                  For more information about Lendlly, our services, and policies, visit:
+                  For more information about Itemile, our services, and policies, visit:
                 </p>
                 <a 
-                  href="https://lendlly.in" 
+                  href="https://itemile.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-primary hover:underline font-medium"
                 >
-                  https://lendlly.in
+                  https://itemile.com
                 </a>
               </section>
 

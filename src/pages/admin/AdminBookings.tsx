@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -283,7 +284,7 @@ export default function AdminBookings() {
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4 text-muted-foreground" />
                               <span className="font-medium">
-                                ₹{(booking.amount || booking.totalRent || 0).toLocaleString()}
+                                {formatCurrency((booking.amount || booking.totalRent || 0).toLocaleString())}
                               </span>
                             </div>
                           ) : (

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatCurrency } from "@/lib/format";
 import { Header } from "@/components/Layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,10 +72,15 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { isDirectListingAllowed } from "@/lib/categoryRules";
 import { cn } from "@/lib/utils";
+import {
+  CITY_COORDS,
+  DEFAULT_MAP_CENTER,
+  STORAGE_KEYS,
+} from "@/lib/constants";
 
-const TERMS_VERSION = "2025-11";
+const TERMS_VERSION = "2026-06";
 const buildTermsKey = (uid?: string | null) =>
-  `termsAccepted:${TERMS_VERSION}:${uid ?? "anonymous"}`;
+  STORAGE_KEYS.termsAccepted(TERMS_VERSION, uid);
 
 const hasAcceptedTerms = (user?: FirebaseUser | null): boolean => {
   if (typeof window === "undefined") {
@@ -101,35 +107,7 @@ const persistTermsAcceptance = (user?: FirebaseUser | null) => {
   }
 };
 
-// Lightweight city → coordinate defaults for manual selection fallback
-const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
-  "bengaluru": { lat: 12.9716, lng: 77.5946 },
-  "mumbai": { lat: 19.076, lng: 72.8777 },
-  "delhi": { lat: 28.6139, lng: 77.209 },
-  "hyderabad": { lat: 17.385, lng: 78.4867 },
-  "chennai": { lat: 13.0827, lng: 80.2707 },
-  "pune": { lat: 18.5204, lng: 73.8567 },
-  "kolkata": { lat: 22.5726, lng: 88.3639 },
-  "ahmedabad": { lat: 23.0225, lng: 72.5714 },
-  "jaipur": { lat: 26.9124, lng: 75.7873 },
-  "lucknow": { lat: 26.8467, lng: 80.9462 },
-  "surat": { lat: 21.1702, lng: 72.8311 },
-  "indore": { lat: 22.7196, lng: 75.8577 },
-  "chandigarh": { lat: 30.7333, lng: 76.7794 },
-  "noida": { lat: 28.5355, lng: 77.391 },
-  "gurugram": { lat: 28.4595, lng: 77.0266 },
-  "visakhapatnam": { lat: 17.6868, lng: 83.2185 },
-  "vizag": { lat: 17.6868, lng: 83.2185 },
-  "bhopal": { lat: 23.2599, lng: 77.4126 },
-  "coimbatore": { lat: 11.0168, lng: 76.9558 },
-  "kochi": { lat: 9.9312, lng: 76.2673 },
-  "thiruvananthapuram": { lat: 8.5241, lng: 76.9366 },
-  "nagpur": { lat: 21.1458, lng: 79.0882 },
-  "goa": { lat: 15.2993, lng: 74.124 },
-};
-
-/** Default map center (Bengaluru) when GPS / city is not available yet */
-const DEFAULT_MAP_CENTER = { lat: 12.9716, lng: 77.5946 };
+/** Default map center when GPS / city is not available yet */
 const LISTINGS_PER_PAGE = 9;
 
 // Calculate distance between two points using Haversine formula (in km)
@@ -201,7 +179,7 @@ const Explore = () => {
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [selectedCityFromStorage, setSelectedCityFromStorage] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("lendlly_selected_city");
+    return localStorage.getItem(STORAGE_KEYS.selectedCity);
   });
 
   const listings = useMemo(
@@ -314,11 +292,11 @@ const Explore = () => {
     if (typeof window === "undefined") return;
 
     const syncCityFromStorage = () => {
-      setSelectedCityFromStorage(localStorage.getItem("lendlly_selected_city"));
+      setSelectedCityFromStorage(localStorage.getItem(STORAGE_KEYS.selectedCity));
     };
 
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "lendlly_selected_city") {
+      if (event.key === STORAGE_KEYS.selectedCity) {
         syncCityFromStorage();
       }
     };
@@ -328,11 +306,11 @@ const Explore = () => {
     };
 
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("lendlly-city-changed", handleCityChanged as EventListener);
+    window.addEventListener(STORAGE_KEYS.cityChangedEvent, handleCityChanged as EventListener);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("lendlly-city-changed", handleCityChanged as EventListener);
+      window.removeEventListener(STORAGE_KEYS.cityChangedEvent, handleCityChanged as EventListener);
     };
   }, []);
 
@@ -1109,7 +1087,7 @@ const Explore = () => {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     name="explore-search"
-                    placeholder="Search on Lendlly"
+                    placeholder="Search on Itemile"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="h-11 rounded-xl border-zinc-200 bg-zinc-50/80 pl-10 pr-3 text-sm focus-visible:ring-2 focus-visible:ring-primary"
@@ -1294,7 +1272,7 @@ const Explore = () => {
                                 </span>
                               </div>
                               <p className="text-lg font-bold tracking-tight">
-                                ₹{rent}
+                                {formatCurrency(rent)}
                                 <span className="text-sm font-normal text-muted-foreground"> / day</span>
                               </p>
                               <div className="flex gap-2 pt-1">
@@ -1704,7 +1682,7 @@ const Explore = () => {
                               </div>
                               <p className="font-semibold text-base sm:text-lg">{business.featuredListing.title}</p>
                               <p className="text-sm text-muted-foreground line-clamp-2">{business.featuredListing.description}</p>
-                              <p className="text-base font-semibold text-primary">₹{business.featuredListing.rentPerDay}/day</p>
+                              <p className="text-base font-semibold text-primary">{formatCurrency(business.featuredListing.rentPerDay)}/day</p>
                             </div>
                           </div>
                         </div>
@@ -1776,7 +1754,7 @@ const Explore = () => {
                               </Badge>
                               <p className="font-semibold text-lg">{listing.title}</p>
                               <p className="text-sm text-muted-foreground line-clamp-2">{listing.description}</p>
-                              <p className="text-base font-semibold text-primary">₹{listing.rentPerDay}/day</p>
+                              <p className="text-base font-semibold text-primary">{formatCurrency(listing.rentPerDay)}/day</p>
                             </div>
                           </div>
                         </div>
@@ -1897,7 +1875,7 @@ const Explore = () => {
                               <p className="font-semibold text-lg">{request.itemName}</p>
                               <p className="text-sm text-muted-foreground">{request.description}</p>
                               {request.maxBudget && (
-                                <span className="text-sm font-semibold text-primary">Up to ₹{request.maxBudget}</span>
+                                <span className="text-sm font-semibold text-primary">Up to {formatCurrency(request.maxBudget)}</span>
                               )}
                             </div>
                           </div>
@@ -2018,7 +1996,7 @@ const Explore = () => {
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-muted-foreground">
-                      Use Lendlly chat for all payments and messages.
+                      Use Itemile chat for all payments and messages.
                     </p>
                   </div>
                 </div>

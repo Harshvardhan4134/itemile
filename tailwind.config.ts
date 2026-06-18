@@ -25,7 +25,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				urbanist: ['Urbanist', 'sans-serif'],
+				sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+				display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+				urbanist: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
 				inter: ['Inter', 'sans-serif'],
 			},
 			colors: {

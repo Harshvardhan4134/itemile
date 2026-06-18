@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { formatCurrency } from "@/lib/format";
 import { Wrapper, Status } from '@googlemaps/react-wrapper';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,7 +84,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   <div>
                     <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">${listing.title}</h3>
                     <div style="display: flex; align-items: center; gap: 4px; margin-top: 4px;">
-                      <span style="color: #3b82f6; font-weight: 600; font-size: 16px;">₹${listing.rentPerDay}</span>
+                      <span style="color: #3b82f6; font-weight: 600; font-size: 16px;">${formatCurrency(listing.rentPerDay)}</span>
                       <span style="color: #6b7280; font-size: 12px;">/day</span>
                     </div>
                   </div>

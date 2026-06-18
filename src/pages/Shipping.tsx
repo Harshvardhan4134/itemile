@@ -26,10 +26,10 @@ const Shipping = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">1. Overview</h2>
                 <p className="text-muted-foreground mb-4">
-                  At Lendlly, we facilitate peer-to-peer rentals where items are handed over directly between Owners and Renters. This policy outlines how item handover, delivery, and pickup work on our platform.
+                  At Itemile, we facilitate peer-to-peer rentals where items are handed over directly between Owners and Renters. This policy outlines how item handover, delivery, and pickup work on our platform.
                 </p>
                 <p className="text-muted-foreground">
-                  Since Lendlly is a marketplace connecting local users, most rentals involve direct handover between parties. This policy explains the different handover methods available and the responsibilities of each party.
+                  Since Itemile is a marketplace connecting local users, most rentals involve direct handover between parties. This policy explains the different handover methods available and the responsibilities of each party.
                 </p>
               </section>
 
@@ -55,7 +55,7 @@ const Shipping = () => {
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground mb-4">
                   <li>Owner provides pickup address (can be approximate for privacy)</li>
                   <li>Renter arrives at the agreed time</li>
-                  <li>Owner verifies Renter's identity through the Lendlly app</li>
+                  <li>Owner verifies Renter's identity through the Itemile app</li>
                   <li>Item inspection and handover documentation completed</li>
                   <li>Renter is responsible for safe transport of the item</li>
                 </ul>
@@ -79,8 +79,8 @@ const Shipping = () => {
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                   <li>Both parties must agree on the delivery service and costs</li>
                   <li>Proper packaging and insurance are recommended</li>
-                  <li>Tracking information should be shared through Lendlly messaging</li>
-                  <li>Lendlly is not responsible for items lost or damaged during third-party delivery</li>
+                  <li>Tracking information should be shared through Itemile messaging</li>
+                  <li>Itemile is not responsible for items lost or damaged during third-party delivery</li>
                   <li>Disputes regarding delivery are between the parties and the delivery service</li>
                 </ul>
               </section>
@@ -93,11 +93,11 @@ const Shipping = () => {
                   Both parties should:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground mb-4">
-                  <li>Confirm handover location, date, and time through Lendlly messaging</li>
-                  <li>Verify each other's identity using Lendlly profiles</li>
+                  <li>Confirm handover location, date, and time through Itemile messaging</li>
+                  <li>Verify each other's identity using Itemile profiles</li>
                   <li>Ensure the item is clean and in the condition described in the listing</li>
                   <li>Prepare any necessary accessories, manuals, or documentation</li>
-                  <li>Have the Lendlly app ready for handover confirmation</li>
+                  <li>Have the Itemile app ready for handover confirmation</li>
                 </ul>
 
                 <h3 className="text-xl font-semibold mb-3">3.2 During Handover</h3>
@@ -105,11 +105,11 @@ const Shipping = () => {
                   At the handover:
                 </p>
                 <ol className="list-decimal pl-6 space-y-2 text-muted-foreground mb-4">
-                  <li>Both parties verify identity (check Lendlly profile photos and verification badges)</li>
+                  <li>Both parties verify identity (check Itemile profile photos and verification badges)</li>
                   <li>Inspect the item together for any existing damage or issues</li>
                   <li>Take photos of the item from multiple angles (especially for valuable items)</li>
                   <li>Test functionality if applicable (e.g., electronics, tools)</li>
-                  <li>Confirm handover in the Lendlly app</li>
+                  <li>Confirm handover in the Itemile app</li>
                   <li>Rental period officially begins</li>
                 </ol>
 
@@ -122,7 +122,7 @@ const Shipping = () => {
                   <li>Return all accessories and components</li>
                   <li>Meet at the agreed location and time</li>
                   <li>Owner inspects the item for damage beyond normal wear and tear</li>
-                  <li>Both parties confirm return in the Lendlly app</li>
+                  <li>Both parties confirm return in the Itemile app</li>
                   <li>Security deposit refund process begins (if applicable)</li>
                 </ul>
               </section>
@@ -163,7 +163,7 @@ const Shipping = () => {
                   <li><strong>Third-party delivery:</strong> Costs are agreed upon between parties and may be split or assigned to one party</li>
                 </ul>
                 <p className="text-muted-foreground">
-                  All delivery fees and arrangements should be discussed and agreed upon through Lendlly messaging before the rental begins.
+                  All delivery fees and arrangements should be discussed and agreed upon through Itemile messaging before the rental begins.
                 </p>
               </section>
 
@@ -176,7 +176,7 @@ const Shipping = () => {
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground mb-4">
                   <li>Owner should wait a reasonable time (15-30 minutes) or as agreed</li>
                   <li>If Renter doesn't show, Owner may cancel and Renter may forfeit rental fee</li>
-                  <li>Communication through Lendlly messaging is essential</li>
+                  <li>Communication through Itemile messaging is essential</li>
                 </ul>
 
                 <h3 className="text-xl font-semibold mb-3">6.2 Late Returns</h3>
@@ -200,7 +200,7 @@ const Shipping = () => {
                   <li>Taking clear, timestamped photos of the item before handover</li>
                   <li>Documenting any existing scratches, dents, or wear</li>
                   <li>Testing functionality and noting any quirks or limitations</li>
-                  <li>Sharing photos through Lendlly messaging for record-keeping</li>
+                  <li>Sharing photos through Itemile messaging for record-keeping</li>
                   <li>Comparing condition photos at return to identify new damage</li>
                 </ul>
               </section>
@@ -212,11 +212,11 @@ const Shipping = () => {
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                   <li>Meet in public, well-lit locations when possible</li>
-                  <li>Verify identity through Lendlly profiles before handover</li>
+                  <li>Verify identity through Itemile profiles before handover</li>
                   <li>Bring a friend or family member if you feel uncomfortable</li>
                   <li>Trust your instincts - if something feels wrong, don't proceed</li>
-                  <li>Report any safety concerns to Lendlly support immediately</li>
-                  <li>Use Lendlly's messaging system for all communications (don't share personal contact info until comfortable)</li>
+                  <li>Report any safety concerns to Itemile support immediately</li>
+                  <li>Use Itemile's messaging system for all communications (don't share personal contact info until comfortable)</li>
                 </ul>
               </section>
 
@@ -226,11 +226,11 @@ const Shipping = () => {
                   If issues arise during handover or delivery:
                 </p>
                 <ol className="list-decimal pl-6 space-y-2 text-muted-foreground mb-4">
-                  <li>Communicate immediately through Lendlly messaging</li>
+                  <li>Communicate immediately through Itemile messaging</li>
                   <li>Document the issue with photos or videos</li>
-                  <li>Contact Lendlly support at support@lendlly.in</li>
+                  <li>Contact Itemile support at support@itemile.com</li>
                   <li>Provide all relevant details and documentation</li>
-                  <li>Lendlly will mediate and help resolve the dispute</li>
+                  <li>Itemile will mediate and help resolve the dispute</li>
                 </ol>
               </section>
 
@@ -240,8 +240,8 @@ const Shipping = () => {
                   For questions about rentals, delivery, or handover processes:
                 </p>
                 <ul className="list-none space-y-2 text-muted-foreground">
-                  <li><strong>Email:</strong> support@lendlly.in</li>
-                  <li><strong>Website:</strong> https://lendlly.in</li>
+                  <li><strong>Email:</strong> support@itemile.com</li>
+                  <li><strong>Website:</strong> https://itemile.com</li>
                 </ul>
               </section>
             </div>

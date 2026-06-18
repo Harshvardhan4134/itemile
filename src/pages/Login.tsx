@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { auth } from '../lib/firebase';
+import { auth } from '@/lib/firebase';
+import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -59,11 +60,11 @@ const Login: React.FC = () => {
         <Card className="app-surface w-full max-w-md shadow-xl">
           <CardHeader className="text-center pb-4 sm:pb-6 px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex items-center justify-center mb-2">
-              <span className="text-2xl sm:text-3xl font-bold gradient-text">Lendlly</span>
+              <span className="text-2xl sm:text-3xl font-bold gradient-text">{APP_NAME}</span>
             </div>
-            <Badge className="mb-2 glass-effect text-xs sm:text-sm" variant="outline">✨ Welcome Back</Badge>
-            <CardTitle className="text-xl sm:text-2xl font-urbanist font-bold">Sign In</CardTitle>
-            <p className="text-sm sm:text-base text-muted-foreground">Sign in to continue your sharing journey</p>
+            <Badge className="mb-2 glass-effect text-xs sm:text-sm" variant="outline">Welcome back</Badge>
+            <CardTitle className="text-xl sm:text-2xl font-semibold">Sign in</CardTitle>
+            <p className="text-sm sm:text-base text-muted-foreground">{APP_TAGLINE}</p>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
             <form onSubmit={handleLogin} className="space-y-4">

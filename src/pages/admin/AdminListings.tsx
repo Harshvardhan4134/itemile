@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { formatCurrency } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -290,11 +291,11 @@ const AdminListings = () => {
             subjectPrefix = '⚠️ URGENT: Listing Removed - Safety Concern';
           }
           
-          const emailMessage = `Hi ${owner.name},\n\nYour listing "${selectedListing.title}" has been removed by our admin team.\n\nReason: ${reasonText}${additionalNotes.trim() ? `\n\nAdditional Notes: ${additionalNotes.trim()}` : ''}${strikeUser ? '\n\n⚠️ Important: Your account has received a strike due to this violation. Repeated violations may result in account suspension.' : ''}\n\nIf you believe this was done in error, please contact our support team at support@lendlly.in or call +91 8547652100.\n\nView your listings: ${window.location.origin}/profile\n\nBest regards,\nLendlly Admin Team`;
+          const emailMessage = `Hi ${owner.name},\n\nYour listing "${selectedListing.title}" has been removed by our admin team.\n\nReason: ${reasonText}${additionalNotes.trim() ? `\n\nAdditional Notes: ${additionalNotes.trim()}` : ''}${strikeUser ? '\n\n⚠️ Important: Your account has received a strike due to this violation. Repeated violations may result in account suspension.' : ''}\n\nIf you believe this was done in error, please contact our support team at support@itemile.com.\n\nView your listings: ${window.location.origin}/profile\n\nBest regards,\nItemile Admin Team`;
           
           await sendEmailNotification({
             email: owner.email,
-            subject: `${subjectPrefix}: ${selectedListing.title} - Lendlly`,
+            subject: `${subjectPrefix}: ${selectedListing.title} - Itemile`,
             message: emailMessage,
             type: 'admin_action',
             read: false,
@@ -382,8 +383,8 @@ const AdminListings = () => {
           // Send email notification
           await sendEmailNotification({
             email: owner.email,
-            subject: `Listing Approved ✅ - ${listing.title} - Lendlly`,
-            message: `Hi ${owner.name},\n\nGreat news! Your listing "${listing.title}" has been approved by our admin team and is now live on the platform.\n\nView your listing: ${window.location.origin}/item/${listing.id}\n\nBest regards,\nLendlly Team`,
+            subject: `Listing Approved ✅ - ${listing.title} - Itemile`,
+            message: `Hi ${owner.name},\n\nGreat news! Your listing "${listing.title}" has been approved by our admin team and is now live on the platform.\n\nView your listing: ${window.location.origin}/item/${listing.id}\n\nBest regards,\nItemile Team`,
             type: 'transaction_update',
             createdAt: new Date(),
           });
@@ -513,7 +514,7 @@ const AdminListings = () => {
             <p>Owner: {resolveOwner(listing.ownerId)}</p>
             <p>Category: {listing.category ?? "—"}</p>
             <p>City: {resolveCity(listing)}</p>
-            <p>Price: ₹{listing.rentPerDay ?? 0}/day</p>
+            <p>Price: {formatCurrency(listing.rentPerDay ?? 0)}/day</p>
             <p>
               Availability: {listing.available ? "Available" : "Unavailable"}
             </p>

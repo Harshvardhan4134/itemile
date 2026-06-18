@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import {
   Dialog,
   DialogContent,
@@ -155,29 +156,29 @@ export default function PaymentDialog({
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Rent per {bookingData.durationType === 'days' ? 'day' : 'month'}</span>
-                <span className="font-medium">₹{bookingData.rentPerUnit.toLocaleString()}</span>
+                <span className="font-medium">{formatCurrency(bookingData.rentPerUnit.toLocaleString())}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Total Rent</span>
-                <span className="font-medium">₹{bookingData.totalRent.toLocaleString()}</span>
+                <span className="font-medium">{formatCurrency(bookingData.totalRent.toLocaleString())}</span>
               </div>
               {bookingData.deposit > 0 && (
                 <div className="flex justify-between text-xs sm:text-sm flex-wrap gap-1">
                   <span className="text-muted-foreground flex items-center gap-1">
                     Deposit {bookingData.requiresDeposit && <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 py-0">Required</Badge>}
                   </span>
-                  <span className="font-medium">₹{bookingData.deposit.toLocaleString()}</span>
+                  <span className="font-medium">{formatCurrency(bookingData.deposit.toLocaleString())}</span>
                 </div>
               )}
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Service Fee</span>
-                <span className="font-medium">₹{bookingData.serviceFee.toLocaleString()}</span>
+                <span className="font-medium">{formatCurrency(bookingData.serviceFee.toLocaleString())}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-base sm:text-lg font-semibold">
                 <span>Total Payable</span>
-                <span>₹{bookingData.payableNow.toLocaleString()}</span>
+                <span>{formatCurrency(bookingData.payableNow.toLocaleString())}</span>
               </div>
             </CardContent>
           </Card>
@@ -271,7 +272,7 @@ export default function PaymentDialog({
                 <CreditCard className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                 {selectedPaymentMethod === 'offline' 
                   ? 'Confirm Booking Request' 
-                  : `Pay ₹${bookingData.payableNow.toLocaleString()}`}
+                  : `Pay ${formatCurrency(bookingData.payableNow.toLocaleString())}`}
               </>
             )}
           </Button>

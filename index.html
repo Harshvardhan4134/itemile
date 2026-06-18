@@ -3,20 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lendlly — Peer-to-Peer Rental Platform | Rent, Earn & Request Items Nearby</title>
-    <meta name="description" content="Lendlly is a peer-to-peer rental marketplace where people can rent items, earn from unused things, and request items nearby instead of buying new. Local, simple and community-driven." />
+    <title>Itemile — Rent &amp; Share Locally | US Peer-to-Peer Rentals</title>
+    <meta name="description" content="Itemile is a US peer-to-peer rental marketplace. Rent gear from neighbors, earn from what you own, and swap locally instead of buying new." />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Lendlly — Peer-to-Peer Rental Platform | Rent, Earn & Request Items Nearby" />
-    <meta property="og:description" content="Lendlly is a peer-to-peer rental marketplace where people can rent items, earn from unused things, and request items nearby instead of buying new. Local, simple and community-driven." />
-    <meta property="og:url" content="https://lendlly.in/" />
-    <meta property="og:image" content="https://lendlly.in/logo.png" />
+    <meta property="og:title" content="Itemile — Rent &amp; Share Locally | US Peer-to-Peer Rentals" />
+    <meta property="og:description" content="Itemile is a US peer-to-peer rental marketplace. Rent gear from neighbors, earn from what you own, and swap locally instead of buying new." />
+    <meta property="og:url" content="https://itemile.com/" />
+    <meta property="og:image" content="https://itemile.com/logo.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Lendlly — Peer-to-Peer Rental Platform | Rent, Earn & Request Items Nearby" />
-    <meta name="twitter:description" content="Lendlly is a peer-to-peer rental marketplace where people can rent items, earn from unused things, and request items nearby instead of buying new. Local, simple and community-driven." />
-    <meta name="twitter:image" content="https://lendlly.in/logo.png" />
+    <meta name="twitter:title" content="Itemile — Rent &amp; Share Locally | US Peer-to-Peer Rentals" />
+    <meta name="twitter:description" content="Itemile is a US peer-to-peer rental marketplace. Rent gear from neighbors, earn from what you own, and swap locally instead of buying new." />
+    <meta name="twitter:image" content="https://itemile.com/logo.png" />
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -28,7 +28,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -38,9 +38,9 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration to prevent FCM errors -->
+    <!-- Service worker: production only (avoids stale cache breaking local dev) -->
     <script>
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1')) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/firebase-messaging-sw.js')
             .then((registration) => {

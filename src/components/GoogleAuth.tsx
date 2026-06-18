@@ -286,7 +286,7 @@ const GoogleAuth: React.FC<GoogleAuthProps> = ({
               Were you referred?
             </DialogTitle>
             <DialogDescription>
-              If someone shared Lendlly with you, enter their referral code once. You can skip
+              If someone shared Itemile with you, enter their referral code once. You can skip
               if you do not have one.
             </DialogDescription>
           </DialogHeader>

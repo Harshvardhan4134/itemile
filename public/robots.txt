@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://lendlly.in/sitemap.xml
+Sitemap: https://itemile.com/sitemap.xml

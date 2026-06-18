@@ -5,7 +5,7 @@
  */
 
 // Simple encryption key (in production, this should be stored securely on backend)
-const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'rent-share-encryption-key-2025';
+const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'itemile-encryption-key-2026';
 
 /**
  * Simple encryption using base64 encoding (for development)

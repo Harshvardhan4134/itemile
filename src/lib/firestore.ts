@@ -21,6 +21,8 @@ import {
   limit
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { APP_NAME, SUPPORT_EMAIL } from './constants';
+import { formatCurrency } from './format';
 
 // Types
 export interface User {
@@ -43,16 +45,18 @@ export interface User {
     latitude: number;
     longitude: number;
   };
-  // KYC fields
+  // US identity verification (legacy India fields kept for read compat)
+  driversLicenseFrontUrl?: string;
+  driversLicenseBackUrl?: string;
+  selfieUrl?: string;
   aadharFrontUrl?: string;
   aadharBackUrl?: string;
   panUrl?: string;
-  selfieUrl?: string;
   verificationStatus?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
   /** Admin: user does not need to complete KYC */
   kycExempt?: boolean;
-  /** When verification is required, which uploads are mandatory (subset of aadharFront|aadharBack|pan|selfie) */
+  /** When verification is required, mandatory doc keys (driversLicenseFront|driversLicenseBack|selfie) */
   kycRequiredDocKeys?: string[];
   submittedAt?: any;
   verifiedAt?: any;
@@ -1880,9 +1884,8 @@ export const canUserReview = async (transactionId: string, userId: string): Prom
 export const submitKYCDocuments = async (
   uid: string,
   documents: Partial<{
-    aadharFrontUrl: string;
-    aadharBackUrl: string;
-    panUrl: string;
+    driversLicenseFrontUrl: string;
+    driversLicenseBackUrl: string;
     selfieUrl: string;
   }>
 ): Promise<void> => {
@@ -1932,8 +1935,8 @@ export const approveKYCVerification = async (uid: string): Promise<void> => {
     // Create email notification
     await sendEmailNotification({
       email: user.email,
-      subject: 'Verification Approved ✅ - Lendlly',
-      message: `Hi ${user.name},\n\nGreat news! Your verification has been approved. You now have full access to all Lendlly features.\n\nThank you for verifying your identity.\n\nBest regards,\nLendlly Team`,
+      subject: `Verification Approved ✅ - ${APP_NAME}`,
+      message: `Hi ${user.name},\n\nGreat news! Your verification has been approved. You now have full access to all ${APP_NAME} features.\n\nThank you for verifying your identity.\n\nBest regards,\n${APP_NAME} Team`,
       type: 'verification_approved',
       createdAt: serverTimestamp()
     });
@@ -1963,8 +1966,8 @@ export const rejectKYCVerification = async (uid: string, reason: string): Promis
     // Create email notification
     await sendEmailNotification({
       email: user.email,
-      subject: 'Verification Failed - Action Required - Lendlly',
-      message: `Hi ${user.name},\n\nUnfortunately, your verification could not be approved.\n\nReason: ${reason}\n\nPlease re-upload your documents in your profile section.\n\nIf you have any questions, contact us at support@lendlly.in.\n\nBest regards,\nLendlly Team`,
+      subject: `Verification Failed - Action Required - ${APP_NAME}`,
+      message: `Hi ${user.name},\n\nUnfortunately, your verification could not be approved.\n\nReason: ${reason}\n\nPlease re-upload your documents in your profile section.\n\nIf you have any questions, contact us at ${SUPPORT_EMAIL}.\n\nBest regards,\n${APP_NAME} Team`,
       type: 'verification_rejected',
       createdAt: serverTimestamp()
     });
@@ -2186,8 +2189,8 @@ export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<v
         try {
           await sendEmailNotification({
             email: user.email,
-            subject: `Someone nearby needs "${request.itemName}" - Lendlly`,
-            message: `Hi ${user.name || 'there'},\n\nSomeone near you is looking for "${request.itemName}". If you have it, respond in the app to rent it out!\n\nOpen app: ${window.location.origin}/requests\n\nThanks,\nLendlly Team`,
+            subject: `Someone nearby needs "${request.itemName}" - ${APP_NAME}`,
+            message: `Hi ${user.name || 'there'},\n\nSomeone near you is looking for "${request.itemName}". If you have it, respond in the app to rent it out!\n\nOpen app: ${window.location.origin}/requests\n\nThanks,\n${APP_NAME} Team`,
             type: 'new_request_nearby',
             createdAt: serverTimestamp(),
           });
@@ -2204,7 +2207,7 @@ export const notifyNearbyUsersAboutRequest = async (request: Request): Promise<v
 // Admin email list for notifications
 const ADMIN_EMAILS = [
   'gharsha238@gmail.com',
-  'support@lendlly.in',
+  SUPPORT_EMAIL,
   'rentshare11@gmail.com',
   'admin@rentshare.com'
 ];
@@ -2240,8 +2243,8 @@ export const notifyAdminsAboutNewListing = async (listing: Listing): Promise<voi
           try {
             await sendEmailNotification({
               email: admin.email,
-              subject: `New Listing Pending Approval - ${listing.title} - Lendlly`,
-              message: `Hi Admin,\n\nA new listing has been submitted and requires your approval:\n\nItem: ${listing.title}\nCategory: ${listing.category}\nOwner: ${listing.ownerId}\nPrice: ₹${listing.rentPerDay}/day\n\nPlease review and approve in the admin panel: ${window.location.origin}/admin/listings\n\nBest regards,\nLendlly System`,
+              subject: `New Listing Pending Approval - ${listing.title} - ${APP_NAME}`,
+              message: `Hi Admin,\n\nA new listing has been submitted and requires your approval:\n\nItem: ${listing.title}\nCategory: ${listing.category}\nOwner: ${listing.ownerId}\nPrice: ${formatCurrency(listing.rentPerDay)}/day\n\nPlease review and approve in the admin panel: ${window.location.origin}/admin/listings\n\nBest regards,\n${APP_NAME} System`,
               type: 'transaction_update',
               createdAt: serverTimestamp()
             });
@@ -2287,8 +2290,8 @@ export const notifyAdminsAboutNewRequest = async (request: Request): Promise<voi
           try {
             await sendEmailNotification({
               email: admin.email,
-              subject: `New Request Posted - ${request.itemName} - Lendlly`,
-              message: `Hi Admin,\n\nA new request has been posted:\n\nItem: ${request.itemName}\nCategory: ${request.category}\nUser: ${request.userId}\nDuration: ${request.duration} days\nMax Budget: ${request.maxBudget ? `₹${request.maxBudget}` : 'Not specified'}\n\nView in admin panel: ${window.location.origin}/admin\n\nBest regards,\nLendlly System`,
+              subject: `New Request Posted - ${request.itemName} - ${APP_NAME}`,
+              message: `Hi Admin,\n\nA new request has been posted:\n\nItem: ${request.itemName}\nCategory: ${request.category}\nUser: ${request.userId}\nDuration: ${request.duration} days\nMax Budget: ${request.maxBudget ? formatCurrency(request.maxBudget) : 'Not specified'}\n\nView in admin panel: ${window.location.origin}/admin\n\nBest regards,\n${APP_NAME} System`,
               type: 'new_request_nearby',
               createdAt: serverTimestamp()
             });
@@ -2332,7 +2335,7 @@ export const notifyNearbyUsersAboutListing = async (listing: Listing): Promise<v
           await sendEmailNotification({
             email: user.email,
             subject: `New item near you: "${listing.title}"`,
-            message: `Hi ${user.name || 'there'},\n\nA new item "${listing.title}" is available near you. Check it out in the app!\n\nOpen app: ${window.location.origin}/item/${listing.id}\n\nThanks,\nLendlly Team`,
+            message: `Hi ${user.name || 'there'},\n\nA new item "${listing.title}" is available near you. Check it out in the app!\n\nOpen app: ${window.location.origin}/item/${listing.id}\n\nThanks,\n${APP_NAME} Team`,
             type: 'new_listing_nearby',
             createdAt: serverTimestamp(),
           });
@@ -2810,7 +2813,7 @@ export const confirmPickupOtp = async (
         await sendEmailNotification({
           email: owner.email,
           subject: `Item Pickup in Progress - ${transaction.listingTitle || 'Your Item'}`,
-          message: `Hi ${owner.name},\n\n${renter?.name || 'A renter'} is currently picking up "${transaction.listingTitle || 'your item'}" from you.\n\n✅ Verification Status: ${renter?.verificationStatus === 'approved' ? 'Verified' : 'Pending'}\n📸 Live Pickup Proof: Uploaded\n📅 Expected Return: ${transaction.endDate?.toDate?.()?.toLocaleDateString() || 'N/A'}\n\nYou can view the transaction details in your dashboard.\n\nView Transaction: ${window.location.origin}/owner-bookings\n\nBest regards,\nLendlly Team`,
+          message: `Hi ${owner.name},\n\n${renter?.name || 'A renter'} is currently picking up "${transaction.listingTitle || 'your item'}" from you.\n\n✅ Verification Status: ${renter?.verificationStatus === 'approved' ? 'Verified' : 'Pending'}\n📸 Live Pickup Proof: Uploaded\n📅 Expected Return: ${transaction.endDate?.toDate?.()?.toLocaleDateString() || 'N/A'}\n\nYou can view the transaction details in your dashboard.\n\nView Transaction: ${window.location.origin}/owner-bookings\n\nBest regards,\n${APP_NAME} Team`,
           type: 'transaction_update',
           read: false,
           createdAt: new Date(),

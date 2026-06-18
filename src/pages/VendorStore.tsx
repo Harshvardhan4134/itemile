@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -221,7 +222,7 @@ const VendorStore = () => {
                     <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-2">{listing.description}</p>
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-xl sm:text-2xl font-bold text-primary">₹{listing.rentPerDay}</span>
+                        <span className="text-xl sm:text-2xl font-bold text-primary">{formatCurrency(listing.rentPerDay)}</span>
                         <span className="text-xs sm:text-sm text-muted-foreground">/day</span>
                       </div>
                       <Button size="sm" variant="outline">

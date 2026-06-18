@@ -35,7 +35,7 @@ Government-issued IDs/docs`}
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Takedown Subject</label>
-            <Input defaultValue="Your listing was removed on RentShare" />
+            <Input defaultValue="Your listing was removed on Itemile" />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Takedown Body</label>
@@ -46,7 +46,7 @@ Government-issued IDs/docs`}
 Your listing "{title}" was removed for violating our policy: {reason}.
 If you believe this was a mistake, reply within 48 hours with details/evidence.
 
-– RentShare Moderation Team`}
+– Itemile Moderation Team`}
             />
           </div>
           <Button>Save Templates</Button>

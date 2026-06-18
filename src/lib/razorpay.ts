@@ -11,7 +11,7 @@ declare global {
 
 export interface RazorpayOptions {
   key: string;
-  amount: number; // Amount in paise (e.g., 10000 = ₹100)
+  amount: number; // Amount in paise (e.g., 10000 = $100)
   currency: string;
   name: string;
   description: string;
@@ -181,7 +181,7 @@ export const createRazorpayPayment = async (
       key: razorpayKey,
       amount: amountInPaise,
       currency: currency,
-      name: 'Lendlly',
+      name: 'Itemile',
       description: description,
       order_id: orderId, // Use order_id if available
       prefill: prefill || {},

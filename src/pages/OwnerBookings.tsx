@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,12 +134,12 @@ export default function OwnerBookings() {
       if (renter?.email) {
         try {
           const subject = isDecline 
-            ? "Booking Request Declined - Rent Share" 
-            : "Booking Cancelled - Refund Initiated - Rent Share";
+            ? "Booking Request Declined - Itemile" 
+            : "Booking Cancelled - Refund Initiated - Itemile";
           
           const message = isDecline
-            ? `Hi ${renter.name},\n\nWe're sorry to inform you that your booking request has been declined by the owner.\n\nListing: ${selectedBooking.listingTitle}\nDeclined Date: ${format(new Date(), 'MMM dd, yyyy')}\n\n${selectedBooking.paymentStatus === 'completed' ? `Refund Details:\nTotal Rent: ₹${selectedBooking.totalRent || selectedBooking.amount || 0}\nDeposit: ₹${selectedBooking.deposit || 0}\nTotal Refund: ₹${refundAmount}\n\nYour refund will be processed within 5-7 business days.\n\n` : ''}You can browse other available items on our platform.\n\nView Details: ${window.location.origin}/transactions\n\nIf you have any questions, please contact us.\n\nBest regards,\nLendlly Team`
-            : `Hi ${renter.name},\n\nYour booking has been cancelled by the owner.\n\nListing: ${selectedBooking.listingTitle}\nCancelled Date: ${format(new Date(), 'MMM dd, yyyy')}\n\nRefund Details:\nTotal Rent: ₹${selectedBooking.totalRent || selectedBooking.amount || 0}\nDeposit: ₹${selectedBooking.deposit || 0}\nTotal Refund: ₹${refundAmount}\n\nYour refund will be processed within 5-7 business days.\n\nView Details: ${window.location.origin}/transactions\n\nIf you have any questions, please contact us.\n\nBest regards,\nLendlly Team`;
+            ? `Hi ${renter.name},\n\nWe're sorry to inform you that your booking request has been declined by the owner.\n\nListing: ${selectedBooking.listingTitle}\nDeclined Date: ${format(new Date(), 'MMM dd, yyyy')}\n\n${selectedBooking.paymentStatus === 'completed' ? `Refund Details:\nTotal Rent: ${formatCurrency(selectedBooking.totalRent || selectedBooking.amount || 0)}\nDeposit: ${formatCurrency(selectedBooking.deposit || 0)}\nTotal Refund: ${formatCurrency(refundAmount)}\n\nYour refund will be processed within 5-7 business days.\n\n` : ''}You can browse other available items on our platform.\n\nView Details: ${window.location.origin}/transactions\n\nIf you have any questions, please contact us.\n\nBest regards,\nItemile Team`
+            : `Hi ${renter.name},\n\nYour booking has been cancelled by the owner.\n\nListing: ${selectedBooking.listingTitle}\nCancelled Date: ${format(new Date(), 'MMM dd, yyyy')}\n\nRefund Details:\nTotal Rent: ${formatCurrency(selectedBooking.totalRent || selectedBooking.amount || 0)}\nDeposit: ${formatCurrency(selectedBooking.deposit || 0)}\nTotal Refund: ${formatCurrency(refundAmount)}\n\nYour refund will be processed within 5-7 business days.\n\nView Details: ${window.location.origin}/transactions\n\nIf you have any questions, please contact us.\n\nBest regards,\nItemile Team`;
           
           await sendEmailNotification({
             email: renter.email,
@@ -155,7 +156,7 @@ export default function OwnerBookings() {
 
       toast({
         title: "Booking Cancelled",
-        description: `The booking has been cancelled. Refund of ₹${refundAmount} will be processed.`,
+        description: `The booking has been cancelled. Refund of ${formatCurrency(refundAmount)} will be processed.`,
       });
 
       setShowCancelDialog(false);
@@ -536,12 +537,12 @@ function BookingCard({
         {booking.totalRent && (
           <div className="flex items-center gap-2 text-xs sm:text-sm">
             <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-            <span>₹{booking.totalRent.toLocaleString()}</span>
+            <span>{formatCurrency(booking.totalRent.toLocaleString())}</span>
           </div>
         )}
         {booking.deposit && booking.deposit > 0 && (
           <div className="text-[10px] sm:text-xs text-muted-foreground">
-            Deposit: ₹{booking.deposit.toLocaleString()}
+            Deposit: {formatCurrency(booking.deposit.toLocaleString())}
           </div>
         )}
 

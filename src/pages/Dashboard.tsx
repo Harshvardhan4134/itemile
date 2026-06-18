@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useNavigate, Link } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Button } from "@/components/ui/button";
@@ -195,7 +196,7 @@ const Dashboard = () => {
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Total Earnings</p>
                   <p className="text-xl sm:text-2xl font-urbanist font-bold gradient-text">
-                    ₹{stats.totalEarnings.toLocaleString()}
+                    {formatCurrency(stats.totalEarnings.toLocaleString())}
                   </p>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
@@ -288,7 +289,7 @@ const Dashboard = () => {
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className="font-semibold text-xs sm:text-sm">₹{(booking.totalRent || booking.amount || 0).toLocaleString()}</p>
+                            <p className="font-semibold text-xs sm:text-sm">{formatCurrency((booking.totalRent || booking.amount || 0).toLocaleString())}</p>
                             <Badge className={`text-[10px] sm:text-xs ${getStatusColor(booking.status)} text-white`}>
                               {booking.status}
                             </Badge>
@@ -328,7 +329,7 @@ const Dashboard = () => {
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className="font-semibold text-xs sm:text-sm">₹{rentPerDay}/day</p>
+                            <p className="font-semibold text-xs sm:text-sm">{formatCurrency(rentPerDay)}/day</p>
                             {stats.averageRating > 0 && (
                               <div className="flex items-center text-[10px] sm:text-xs">
                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
@@ -368,7 +369,7 @@ const Dashboard = () => {
                           <div className="flex-1 min-w-0 w-full sm:w-auto">
                             <h3 className="font-semibold text-sm sm:text-base">{listing.title}</h3>
                             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-1">
-                              <span>₹{rentPerDay}/day</span>
+                              <span>{formatCurrency(rentPerDay)}/day</span>
                               <Badge className={`text-[10px] sm:text-xs ${getStatusColor(status)} text-white`}>
                                 {status}
                               </Badge>
@@ -445,7 +446,7 @@ const Dashboard = () => {
                           </div>
                           <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
                             <div className="text-right">
-                              <p className="font-semibold text-sm sm:text-base">₹{(booking.totalRent || booking.amount || 0).toLocaleString()}</p>
+                              <p className="font-semibold text-sm sm:text-base">{formatCurrency((booking.totalRent || booking.amount || 0).toLocaleString())}</p>
                               <Badge className={`text-[10px] sm:text-xs ${getStatusColor(booking.status)} text-white`}>
                                 {booking.status}
                               </Badge>

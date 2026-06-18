@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { formatCurrency } from "@/lib/format";
 import { Wrapper, Status } from '@googlemaps/react-wrapper';
 import { MapPin, RefreshCw } from 'lucide-react';
 import { Listing, Request } from '@/lib/firestore';
@@ -194,7 +195,7 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
                   <div>
                     <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">${listing.title}</h3>
                     <div style="display: flex; align-items: center; gap: 4px; margin-top: 4px;">
-                      <span style="color: #3b82f6; font-weight: 600; font-size: 16px;">₹${listing.rentPerDay}</span>
+                      <span style="color: #3b82f6; font-weight: 600; font-size: 16px;">${formatCurrency(listing.rentPerDay)}</span>
                       <span style="color: #6b7280; font-size: 12px;">/day</span>
                     </div>
                   </div>
@@ -263,7 +264,7 @@ const LiveMapComponent: React.FC<LiveMapComponentProps> = ({
                 </div>
                 <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px; font-size: 11px; color: #6b7280;">
                   <span>⏱️ ${request.duration} day${request.duration !== 1 ? 's' : ''}</span>
-                  ${request.maxBudget ? `<span>💰 Up to ₹${request.maxBudget}</span>` : ''}
+                  ${request.maxBudget ? `<span>💰 Up to ${formatCurrency(request.maxBudget)}</span>` : ''}
                 </div>
                 <button onclick="window.viewRequestDetails('${request.id}')" 
                         style="width: 100%; background: ${request.matched ? '#10b981' : '#f59e0b'}; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer;">

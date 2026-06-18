@@ -26,10 +26,10 @@ const Refund = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">1. Overview</h2>
                 <p className="text-muted-foreground mb-4">
-                  At Lendlly, we understand that plans can change. This Cancellation & Refund Policy outlines the terms and conditions for canceling rentals and receiving refunds on our peer-to-peer rental marketplace platform.
+                  At Itemile, we understand that plans can change. This Cancellation & Refund Policy outlines the terms and conditions for canceling rentals and receiving refunds on our peer-to-peer rental marketplace platform.
                 </p>
                 <p className="text-muted-foreground">
-                  This policy applies to all rental transactions, security deposits, and service fees processed through Lendlly. Please read this policy carefully before making a rental booking.
+                  This policy applies to all rental transactions, security deposits, and service fees processed through Itemile. Please read this policy carefully before making a rental booking.
                 </p>
               </section>
 
@@ -54,12 +54,12 @@ const Refund = () => {
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground mb-4">
                   <li>Renter receives a full refund of all fees, including rental fee, security deposit, and service fees</li>
                   <li>Owner may be subject to penalties or account restrictions for repeated cancellations</li>
-                  <li>Lendlly will assist in finding alternative rental options when possible</li>
+                  <li>Itemile will assist in finding alternative rental options when possible</li>
                 </ul>
 
                 <h3 className="text-xl font-semibold mb-3">2.3 How to Cancel</h3>
                 <p className="text-muted-foreground">
-                  To cancel a rental, log into your Lendlly account, navigate to your bookings, and select the rental you wish to cancel. Follow the cancellation prompts. You will receive a confirmation email once the cancellation is processed.
+                  To cancel a rental, log into your Itemile account, navigate to your bookings, and select the rental you wish to cancel. Follow the cancellation prompts. You will receive a confirmation email once the cancellation is processed.
                 </p>
               </section>
 
@@ -78,13 +78,13 @@ const Refund = () => {
                   You may be eligible for a full or partial refund. To request a refund:
                 </p>
                 <ol className="list-decimal pl-6 space-y-2 text-muted-foreground mb-4">
-                  <li>Contact the Owner immediately through the Lendlly messaging system</li>
+                  <li>Contact the Owner immediately through the Itemile messaging system</li>
                   <li>Document the issue with photos or videos</li>
-                  <li>Report the issue to Lendlly support within 24 hours of receiving the item</li>
+                  <li>Report the issue to Itemile support within 24 hours of receiving the item</li>
                   <li>Return the item to the Owner in the same condition received</li>
                 </ol>
                 <p className="text-muted-foreground">
-                  Lendlly will review the case and may issue a refund based on the circumstances. Refunds will be processed within 5-7 business days after approval.
+                  Itemile will review the case and may issue a refund based on the circumstances. Refunds will be processed within 5-7 business days after approval.
                 </p>
               </section>
 
@@ -104,7 +104,7 @@ const Refund = () => {
                 <ol className="list-decimal pl-6 space-y-2 text-muted-foreground">
                   <li>Owner must provide evidence of damage (photos, repair estimates)</li>
                   <li>Renter will be notified and can dispute the claim</li>
-                  <li>Lendlly will mediate and make a final decision</li>
+                  <li>Itemile will mediate and make a final decision</li>
                   <li>Refund will be processed based on the final decision</li>
                 </ol>
               </section>
@@ -112,12 +112,12 @@ const Refund = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">5. Service Fees</h2>
                 <p className="text-muted-foreground mb-4">
-                  Service fees charged by Lendlly are generally non-refundable, except in the following cases:
+                  Service fees charged by Itemile are generally non-refundable, except in the following cases:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                   <li>Owner cancels the rental</li>
                   <li>Item is significantly misrepresented or defective</li>
-                  <li>Technical issues on Lendlly's platform prevent the rental from proceeding</li>
+                  <li>Technical issues on Itemile's platform prevent the rental from proceeding</li>
                   <li>As required by applicable law</li>
                 </ul>
               </section>
@@ -137,7 +137,7 @@ const Refund = () => {
 
                 <h3 className="text-xl font-semibold mb-3">6.2 Refund Method</h3>
                 <p className="text-muted-foreground">
-                  Refunds will be issued to the original payment method used for the transaction. If the original payment method is no longer available, please contact support@lendlly.in to arrange an alternative refund method.
+                  Refunds will be issued to the original payment method used for the transaction. If the original payment method is no longer available, please contact support@itemile.com to arrange an alternative refund method.
                 </p>
               </section>
 
@@ -147,13 +147,13 @@ const Refund = () => {
                   If you disagree with a refund decision or need to dispute a cancellation:
                 </p>
                 <ol className="list-decimal pl-6 space-y-2 text-muted-foreground mb-4">
-                  <li>Contact Lendlly support at support@lendlly.in within 7 days of the decision</li>
+                  <li>Contact Itemile support at support@itemile.com within 7 days of the decision</li>
                   <li>Provide all relevant documentation (photos, messages, receipts)</li>
                   <li>Our support team will review your case within 3-5 business days</li>
                   <li>We will provide a written decision and explanation</li>
                 </ol>
                 <p className="text-muted-foreground">
-                  Lendlly's decisions regarding refunds and cancellations are final, but we are committed to fair resolution of all disputes.
+                  Itemile's decisions regarding refunds and cancellations are final, but we are committed to fair resolution of all disputes.
                 </p>
               </section>
 
@@ -176,8 +176,8 @@ const Refund = () => {
                   If you have questions about cancellations or refunds, please contact us:
                 </p>
                 <ul className="list-none space-y-2 text-muted-foreground">
-                  <li><strong>Email:</strong> support@lendlly.in</li>
-                  <li><strong>Website:</strong> https://lendlly.in</li>
+                  <li><strong>Email:</strong> support@itemile.com</li>
+                  <li><strong>Website:</strong> https://itemile.com</li>
                   <li><strong>Response Time:</strong> We aim to respond within 24-48 hours</li>
                 </ul>
               </section>
@@ -185,7 +185,7 @@ const Refund = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">10. Policy Updates</h2>
                 <p className="text-muted-foreground">
-                  We reserve the right to update this Cancellation & Refund Policy at any time. Changes will be posted on this page with an updated "Last updated" date. Continued use of Lendlly after policy changes constitutes acceptance of the new terms.
+                  We reserve the right to update this Cancellation & Refund Policy at any time. Changes will be posted on this page with an updated "Last updated" date. Continued use of Itemile after policy changes constitutes acceptance of the new terms.
                 </p>
               </section>
             </div>

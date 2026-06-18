@@ -60,7 +60,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       await updateUser(auth.currentUser.uid, { role: selectedRole });
       
       toast({
-        title: "Welcome to Lendlly!",
+        title: "Welcome to Itemile!",
         description: "Your preferences have been saved. Let's start exploring!"
       });
 
@@ -83,13 +83,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
           <Badge className="mb-4 glass-effect" variant="outline">
-            ✨ Welcome to Lendlly
+            ✨ Welcome to Itemile
           </Badge>
           <h1 className="text-3xl md:text-4xl font-urbanist font-bold mb-4">
             How would you like to <span className="gradient-text">get started</span>?
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose your primary way of using Lendlly. You can always change this later in your settings.
+            Choose your primary way of using Itemile. You can always change this later in your settings.
           </p>
         </div>
 

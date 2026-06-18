@@ -2,16 +2,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is admin
+    // Admin/moderator: JWT custom claims (set via scripts/set-admin-role.js)
     function isAdmin() {
-      return request.auth != null && 
+      return request.auth != null &&
         (request.auth.token.role == 'admin' ||
-         request.auth.token.role == 'moderator' ||
-         request.auth.token.email in [
-           'rentshare11@gmail.com', 
-           'admin@rentshare.com',
-           'gharsha238@gmail.com'
-         ]);
+         request.auth.token.role == 'moderator');
     }
     
     // Users collection
@@ -35,7 +30,8 @@ service cloud.firestore {
       allow update: if request.auth != null && 
         request.auth.uid == userId &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['aadharFrontUrl', 'aadharBackUrl', 'panUrl', 'selfieUrl', 
+          .hasOnly(['driversLicenseFrontUrl', 'driversLicenseBackUrl', 'selfieUrl',
+                    'aadharFrontUrl', 'aadharBackUrl', 'panUrl',
                     'verificationStatus', 'submittedAt', 'rejectionReason']);
       
       // Users can update their own access status when granted access

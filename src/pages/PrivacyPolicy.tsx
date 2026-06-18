@@ -26,10 +26,10 @@ const PrivacyPolicy = () => {
               <section>
                 <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
                 <p className="text-muted-foreground mb-4">
-                  Welcome to Lendlly ("we," "our," or "us"). We are committed to protecting your privacy and ensuring you have a positive experience on our platform. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our rental and swap marketplace platform.
+                  Welcome to Itemile ("we," "our," or "us"). We are committed to protecting your privacy and ensuring you have a positive experience on our platform. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our rental and swap marketplace platform.
                 </p>
                 <p className="text-muted-foreground">
-                  By using Lendlly, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our services.
+                  By using Itemile, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our services.
                 </p>
               </section>
 
@@ -146,7 +146,7 @@ const PrivacyPolicy = () => {
                   <li>Withdraw consent where processing is based on consent</li>
                 </ul>
                 <p className="text-muted-foreground">
-                  To exercise these rights, please contact us at support@lendlly.in.
+                  To exercise these rights, please contact us at support@itemile.com.
                 </p>
               </section>
 
@@ -187,8 +187,8 @@ const PrivacyPolicy = () => {
                   If you have any questions about this Privacy Policy, please contact us:
                 </p>
                 <ul className="list-none space-y-2 text-muted-foreground">
-                  <li><strong>Email:</strong> support@lendlly.in</li>
-                  <li><strong>Website:</strong> https://lendlly.vercel.app/</li>
+                  <li><strong>Email:</strong> support@itemile.com</li>
+                  <li><strong>Website:</strong> https://itemile.com</li>
                 </ul>
               </section>
             </div>

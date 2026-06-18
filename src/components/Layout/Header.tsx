@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getUnreadNotificationCount, subscribeToNotifications, getUser } from "@/lib/firestore";
 import { VerificationBanner } from "@/components/VerificationBanner";
 import { CitySelectorDialog } from "@/components/CitySelectorDialog";
+import { APP_NAME, STORAGE_KEYS } from "@/lib/constants";
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -54,7 +55,7 @@ export const Header = () => {
   const [cityDialogOpen, setCityDialogOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("lendlly_selected_city");
+    return localStorage.getItem(STORAGE_KEYS.selectedCity);
   });
   const location = useLocation();
   const navigate = useNavigate();
@@ -96,9 +97,9 @@ export const Header = () => {
   const handleCitySelect = (city: string) => {
     setSelectedCity(city);
     if (typeof window !== "undefined") {
-      localStorage.setItem("lendlly_selected_city", city);
+      localStorage.setItem(STORAGE_KEYS.selectedCity, city);
       window.dispatchEvent(
-        new CustomEvent("lendlly-city-changed", { detail: { city } })
+        new CustomEvent(STORAGE_KEYS.cityChangedEvent, { detail: { city } })
       );
     }
   };
@@ -187,7 +188,7 @@ export const Header = () => {
               to="/"
               className="justify-self-center font-semibold text-base sm:text-lg tracking-tight text-foreground whitespace-nowrap hover:opacity-80 transition-opacity"
             >
-              Lendlly
+              {APP_NAME}
             </Link>
 
             <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-3 min-w-0">

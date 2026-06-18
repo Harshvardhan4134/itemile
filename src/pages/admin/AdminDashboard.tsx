@@ -135,7 +135,7 @@ const AdminDashboard = () => {
           <h3 className="text-lg font-semibold">Insights & Alerts</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
             This area will surface risk alerts, trends, and suggested actions to
-            keep RentShare safe.
+            keep Itemile safe.
           </p>
         </CardContent>
       </Card>

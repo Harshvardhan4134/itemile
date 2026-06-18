@@ -1,14 +1,22 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "itemile-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run firebase:sync-config && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "firebase:sync-config": "node scripts/sync-firebase-config.mjs",
+    "firebase:login": "firebase login",
+    "firebase:use": "firebase use itemile-prod",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "firebase:deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "firebase:deploy:functions": "firebase deploy --only functions",
+    "firebase:emulators": "firebase emulators:start --only auth,firestore,functions,storage",
+    "admin:set-role": "node scripts/set-admin-role.js"
   },
   "dependencies": {
     "@googlemaps/react-wrapper": "^1.2.0",
@@ -78,6 +86,7 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
     "firebase-admin": "^13.6.0",
+    "firebase-tools": "^13.35.1",
     "globals": "^15.9.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.11",

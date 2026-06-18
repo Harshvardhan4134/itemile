@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Button } from "@/components/ui/button";
@@ -248,7 +249,7 @@ const ProductDetail = () => {
     if (bookingData.requiresSecurePay && bookingData.deposit === 0) {
       toast({
         title: "Deposit Required",
-        description: "This item requires a deposit. SecurePay payment is mandatory for items valued ₹5,000 or more.",
+        description: "This item requires a deposit. SecurePay payment is mandatory for items valued $5,000 or more.",
         variant: "destructive"
       });
       return;
@@ -363,8 +364,8 @@ const ProductDetail = () => {
           if (owner?.email && bookingData) {
             await sendEmailNotification({
               email: owner.email,
-              subject: `New Booking ${paymentMethod === 'offline' ? 'Request' : 'Confirmed'}! 🎉 - Rent Share`,
-              message: `Hi ${owner.name},\n\nYou've received a ${paymentMethod === 'offline' ? 'new booking request' : 'new booking'}!\n\nListing: ${listing.title}\nBooked by: ${auth.currentUser?.displayName || 'A user'}\nDuration: ${bookingData.units} ${bookingData.durationType}\nAmount: ₹${bookingData.totalRent}\nDeposit: ₹${bookingData.deposit}\nTotal: ₹${bookingData.payableNow}\n\n${bookingData.startDate ? `Start Date: ${format(bookingData.startDate, 'MMM dd, yyyy')}\nEnd Date: ${format(bookingData.endDate || bookingData.startDate, 'MMM dd, yyyy')}\n` : ''}\nPlease review and manage this booking in your dashboard.\n\nView Booking: ${window.location.origin}/owner-bookings\n\nBest regards,\nRent Share Team`,
+              subject: `New Booking ${paymentMethod === 'offline' ? 'Request' : 'Confirmed'}! 🎉 - Itemile`,
+              message: `Hi ${owner.name},\n\nYou've received a ${paymentMethod === 'offline' ? 'new booking request' : 'new booking'}!\n\nListing: ${listing.title}\nBooked by: ${auth.currentUser?.displayName || 'A user'}\nDuration: ${bookingData.units} ${bookingData.durationType}\nAmount: ${formatCurrency(bookingData.totalRent)}\nDeposit: ${formatCurrency(bookingData.deposit)}\nTotal: ${formatCurrency(bookingData.payableNow)}\n\n${bookingData.startDate ? `Start Date: ${format(bookingData.startDate, 'MMM dd, yyyy')}\nEnd Date: ${format(bookingData.endDate || bookingData.startDate, 'MMM dd, yyyy')}\n` : ''}\nPlease review and manage this booking in your dashboard.\n\nView Booking: ${window.location.origin}/owner-bookings\n\nBest regards,\nItemile Team`,
               type: 'rental_request',
               read: false,
               createdAt: new Date(),
@@ -380,7 +381,7 @@ const ProductDetail = () => {
         title: paymentMethod === 'offline' ? "Booking Request Sent!" : "Payment Successful!",
         description: paymentMethod === 'offline' 
           ? "Your booking request has been sent. Payment will be collected on delivery. Please wait for owner approval to receive your pickup OTP."
-          : `Your payment of ₹${bookingData?.payableNow.toLocaleString()} has been processed successfully. Please wait for owner approval to receive your pickup OTP.`
+          : `Your payment of ${formatCurrency(bookingData?.payableNow.toLocaleString())} has been processed successfully. Please wait for owner approval to receive your pickup OTP.`
       });
 
       setShowPaymentDialog(false);
@@ -469,7 +470,7 @@ const ProductDetail = () => {
 
     const shareData = {
       title: listing.title,
-      text: `Check out this item: ${listing.title} - ₹${listing.rentPerDay}/day`,
+      text: `Check out this item: ${listing.title} - ${formatCurrency(listing.rentPerDay)}/day`,
       url: window.location.href
     };
 
@@ -698,7 +699,7 @@ const ProductDetail = () => {
               </div>
               
               <div className="text-2xl sm:text-3xl font-urbanist font-bold text-primary mb-4 sm:mb-6">
-                ₹{listing.rentPerDay}/day
+                {formatCurrency(listing.rentPerDay)}/day
               </div>
 
               {/* In Rent Status Badge */}

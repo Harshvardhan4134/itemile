@@ -374,7 +374,7 @@ const PostRequest = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="maxBudget">Max Budget (₹/day) - Optional</Label>
+                    <Label htmlFor="maxBudget">Max Budget (USD/day) - Optional</Label>
                     <Input
                       id="maxBudget"
                       type="number"

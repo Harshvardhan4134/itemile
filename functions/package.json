@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "description": "Cloud Functions for Rent Share",
+  "description": "Cloud Functions for Itemile",
   "scripts": {
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",

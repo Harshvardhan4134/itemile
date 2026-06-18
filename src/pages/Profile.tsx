@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/format";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Layout/Header";
 import { Button } from "@/components/ui/button";
@@ -209,7 +210,7 @@ const Profile = () => {
       setUploadingPhoto(true);
       
       // Upload to Cloudinary
-      const result = await uploadToCloudinary(file, 'rent-share/profile-photos');
+      const result = await uploadToCloudinary(file, 'itemile/profile-photos');
       
       // Update user profile photo URL in Firestore
       await updateUserProfilePhoto(auth.currentUser.uid, result.secure_url);
@@ -528,7 +529,7 @@ const Profile = () => {
                               <h3 className="font-semibold text-sm">{listing.title}</h3>
                               <p className="text-xs text-muted-foreground line-clamp-2">{listing.description}</p>
                               <div className="flex items-center justify-between mt-2">
-                                <span className="font-bold text-primary">₹{listing.rentPerDay}/day</span>
+                                <span className="font-bold text-primary">{formatCurrency(listing.rentPerDay)}/day</span>
                                 <Badge variant="secondary" className="text-xs">{listing.category}</Badge>
                               </div>
                               <div className="flex items-center gap-2 mt-2">
@@ -696,7 +697,7 @@ const Profile = () => {
                               <h3 className="font-semibold text-sm">{listing.title}</h3>
                               <p className="text-xs text-muted-foreground line-clamp-2">{listing.description}</p>
                               <div className="flex items-center justify-between mt-2">
-                                <span className="font-bold text-primary">₹{listing.rentPerDay}/day</span>
+                                <span className="font-bold text-primary">{formatCurrency(listing.rentPerDay)}/day</span>
                                 <Badge variant="secondary" className="text-xs">{listing.category}</Badge>
                               </div>
                             </div>
@@ -761,7 +762,7 @@ const Profile = () => {
                               {request.maxBudget && (
                                 <div className="flex items-center gap-2 mt-1 text-xs">
                                   <DollarSign className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-muted-foreground">Max: ₹{request.maxBudget}</span>
+                                  <span className="text-muted-foreground">Max: {formatCurrency(request.maxBudget)}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
@@ -1118,7 +1119,7 @@ const Profile = () => {
                       <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs sm:text-sm text-muted-foreground">Email Support</p>
-                        <a href="mailto:support@lendlly.in" className="font-medium text-primary hover:underline text-xs sm:text-sm break-all">support@lendlly.in</a>
+                        <a href="mailto:support@itemile.com" className="font-medium text-primary hover:underline text-xs sm:text-sm break-all">support@itemile.com</a>
                       </div>
                     </div>
                   </div>
@@ -1211,7 +1212,7 @@ const Profile = () => {
               <Textarea id="description" value={editListingForm.description} onChange={(e) => setEditListingForm(prev => ({ ...prev, description: e.target.value }))} className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="rentPerDay" className="text-sm sm:text-base">Rent Per Day (₹)</Label>
+              <Label htmlFor="rentPerDay" className="text-sm sm:text-base">Rent per day (USD)</Label>
               <Input id="rentPerDay" type="number" value={editListingForm.rentPerDay} onChange={(e) => setEditListingForm(prev => ({ ...prev, rentPerDay: Number(e.target.value) }))} className="h-9 sm:h-10 text-sm sm:text-base" />
             </div>
             <div className="grid gap-2">
