@@ -13,10 +13,11 @@ export function FirebaseSetupBanner() {
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Firebase not configured</AlertTitle>
       <AlertDescription>
-        Add your Firebase web app keys to <code className="text-xs">.env</code>{" "}
-        (see <code className="text-xs">SETUP.md</code>), then restart{" "}
-        <code className="text-xs">npm run dev</code>. Auth and data will not work
-        until then.
+        Add your Firebase web app keys in{" "}
+        <strong>Vercel → Project → Settings → Environment Variables</strong>{" "}
+        (all <code className="text-xs">VITE_FIREBASE_*</code> vars from{" "}
+        <code className="text-xs">.env.example</code>), then redeploy. Auth and
+        data will not work until then.
       </AlertDescription>
     </Alert>
   );

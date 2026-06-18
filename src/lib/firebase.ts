@@ -40,25 +40,18 @@ function getFirebaseConfig() {
     };
   }
 
-  // Dev-only placeholder so the UI still loads without .env (auth/API calls will fail until configured)
-  if (import.meta.env.DEV) {
-    console.warn(
-      `[Itemile] Firebase .env not configured (${missingKeys.join(", ")}). ` +
-        "UI runs in preview mode — add keys from Firebase Console to enable auth and data."
-    );
-    return {
-      apiKey: "demo-api-key",
-      authDomain: "itemile-dev.firebaseapp.com",
-      projectId: "itemile-dev",
-      storageBucket: "itemile-dev.appspot.com",
-      messagingSenderId: "000000000000",
-      appId: "1:000000000000:web:000000000000",
-    };
-  }
-
-  throw new Error(
-    `Missing Firebase env: ${missingKeys.join(", ")}. See SETUP.md and .env.example.`
+  console.warn(
+    `[Itemile] Firebase env not configured (${missingKeys.join(", ")}). ` +
+      "Add VITE_FIREBASE_* variables in Vercel → Settings → Environment Variables, then redeploy."
   );
+  return {
+    apiKey: "demo-api-key",
+    authDomain: "itemile-dev.firebaseapp.com",
+    projectId: "itemile-dev",
+    storageBucket: "itemile-dev.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:000000000000",
+  };
 }
 
 const app: FirebaseApp = initializeApp(getFirebaseConfig());
