@@ -28,7 +28,6 @@ export default {
 				sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
 				display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
 				urbanist: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-				inter: ['Inter', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

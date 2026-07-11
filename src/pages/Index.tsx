@@ -132,10 +132,10 @@ function SwapDiscoveryTile({
   icon: LucideIcon;
 }) {
   return (
-    <div className="group rounded-xl overflow-hidden border border-zinc-700/70 bg-zinc-900/80 hover:border-sky-500/35 transition-colors duration-200">
+    <div className="group rounded-xl overflow-hidden border border-zinc-700/70 bg-zinc-900/80 hover:border-primary/35 transition-colors duration-200">
       <div className="relative aspect-[5/4] bg-zinc-800 flex items-center justify-center">
         <Icon
-          className="h-10 w-10 sm:h-12 sm:w-12 text-zinc-500 group-hover:text-sky-400 transition-colors"
+          className="h-10 w-10 sm:h-12 sm:w-12 text-zinc-500 group-hover:text-primary transition-colors"
           strokeWidth={1.15}
         />
       </div>
@@ -255,19 +255,19 @@ const Index = () => {
       <div className="container py-6 sm:py-10">
         {/* Hero — Shopify Digital–inspired: dark panel, electric accent, bold product shot */}
         <section className="mb-10 sm:mb-14 lg:mb-16">
-          <div className="rounded-[1.75rem] sm:rounded-[2rem] bg-zinc-950 text-zinc-50 border border-zinc-800 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div className="rounded-2xl bg-zinc-950 text-zinc-50 border border-zinc-800 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.35)] overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-0 items-stretch">
               <div className="order-2 lg:order-1 text-center lg:text-left px-6 sm:px-10 lg:px-12 py-10 sm:py-12 lg:py-16 flex flex-col justify-center">
                 <Badge
                   variant="outline"
-                  className="mb-5 rounded-full px-3 py-1 text-xs font-medium border-sky-500/35 bg-sky-500/10 text-sky-300 w-fit mx-auto lg:mx-0"
+                  className="mb-5 rounded-full px-3 py-1 text-xs font-medium border-primary/35 bg-primary/10 text-primary/70 w-fit mx-auto lg:mx-0"
                 >
-                  <Sparkles className="w-3 h-3 mr-1.5 text-sky-400" />
+                  <Sparkles className="w-3 h-3 mr-1.5 text-primary" />
                   Peer-to-peer rentals
                 </Badge>
                 <h1 className="text-3xl sm:text-4xl lg:text-[2.65rem] xl:text-5xl font-semibold tracking-tight leading-[1.08] mb-4 sm:mb-5">
                   Rent{" "}
-                  <span className="text-sky-400">pro-grade</span> tech &amp; gear locally
+                  <span className="text-primary">pro-grade</span> tech &amp; gear locally
                 </h1>
                 <p className="text-base sm:text-lg text-zinc-400 max-w-lg mx-auto lg:mx-0 mb-8 leading-relaxed">
                   High-impact product presentation for renters and owners — browse real listings, list your kit, and skip buying new when you only need it for a while.
@@ -276,7 +276,7 @@ const Index = () => {
                   <Link to="/explore" className="w-full sm:w-auto">
                     <Button
                       size="lg"
-                      className="w-full sm:w-auto rounded-full px-8 h-12 bg-sky-500 text-zinc-950 font-semibold hover:bg-sky-400 border-0"
+                      className="w-full sm:w-auto rounded-full px-8 h-12 bg-primary text-primary-foreground font-semibold hover:bg-primary/90 border-0"
                     >
                       Browse products
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -296,8 +296,8 @@ const Index = () => {
               <div className="order-1 lg:order-2 relative min-h-[240px] sm:min-h-[320px] lg:min-h-[420px] flex items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(56,189,248,0.12),transparent_50%)] pointer-events-none" />
                 <div className="relative z-[2] flex flex-col items-center justify-center gap-4 p-8 text-center">
-                  <div className="rounded-2xl border border-sky-500/25 bg-sky-500/10 p-8 sm:p-10">
-                    <Package className="h-16 w-16 sm:h-20 sm:w-20 text-sky-400" strokeWidth={1.25} />
+                  <div className="rounded-2xl border border-primary/25 bg-primary/10 p-8 sm:p-10">
+                    <Package className="h-16 w-16 sm:h-20 sm:w-20 text-primary" strokeWidth={1.25} />
                   </div>
                   <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
                     Browse real listings from people near you — no stock photos.
@@ -310,7 +310,7 @@ const Index = () => {
 
         {/* Product discovery — Digital-style white panel, sharp cards */}
         <section
-          className="mb-12 sm:mb-16 rounded-[1.75rem] bg-white border border-zinc-200/90 shadow-sm px-5 py-7 sm:px-8 sm:py-9"
+          className="mb-12 sm:mb-16 rounded-2xl bg-white border border-zinc-200/90 shadow-sm px-5 py-7 sm:px-8 sm:py-9"
           aria-labelledby="showcase-heading"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-200 pb-6 mb-8">
@@ -352,14 +352,14 @@ const Index = () => {
                 <Link key={p.id} to="/explore" className="group block">
                   <div className="rounded-xl bg-zinc-50 border border-zinc-200/90 overflow-hidden transition-all group-hover:shadow-md group-hover:border-zinc-300">
                     <div className="aspect-[4/3] overflow-hidden bg-zinc-100 flex items-center justify-center">
-                      <Icon className="h-14 w-14 sm:h-16 sm:w-16 text-zinc-400 group-hover:text-sky-600 transition-colors" strokeWidth={1.15} />
+                      <Icon className="h-14 w-14 sm:h-16 sm:w-16 text-zinc-400 group-hover:text-primary transition-colors" strokeWidth={1.15} />
                     </div>
                   </div>
                   <div className="mt-3 px-0.5">
                     <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-500">
                       {p.category}
                     </p>
-                    <p className="font-semibold text-zinc-900 truncate group-hover:text-sky-600 transition-colors">
+                    <p className="font-semibold text-zinc-900 truncate group-hover:text-primary transition-colors">
                       {p.title}
                     </p>
                     <p className="text-sm text-zinc-500">{p.priceLabel}</p>
@@ -388,7 +388,7 @@ const Index = () => {
 
         {/* Product categories — dark electronics strip (Digital-style) */}
         <section
-          className="mb-12 sm:mb-16 rounded-[1.75rem] bg-zinc-950 text-zinc-100 border border-zinc-800 px-5 py-10 sm:px-8 sm:py-12"
+          className="mb-12 sm:mb-16 rounded-2xl bg-zinc-950 text-zinc-100 border border-zinc-800 px-5 py-10 sm:px-8 sm:py-12"
           aria-labelledby="categories-heading"
         >
           <div className="mb-8 max-w-2xl">
@@ -413,7 +413,7 @@ const Index = () => {
                 >
                   <Card className="h-full border-zinc-800 bg-zinc-900/80 hover:border-zinc-600 transition-all rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-black/20">
                     <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-6 min-h-[180px] sm:min-h-[200px]">
-                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800/80 text-sky-400 group-hover:border-sky-500/40 transition-colors">
+                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800/80 text-primary group-hover:border-primary/40 transition-colors">
                         <CatIcon className="h-8 w-8 sm:h-10 sm:w-10" strokeWidth={1.15} />
                       </div>
                       <div className="flex-1 flex flex-col justify-center text-left min-w-0">
@@ -423,7 +423,7 @@ const Index = () => {
                         <p className="text-sm text-zinc-400 mb-4 leading-relaxed">
                           {cat.blurb}
                         </p>
-                        <span className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 group-hover:gap-2 transition-all">
+                        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary group-hover:gap-2 transition-all">
                           Explore category
                           <ArrowRight className="h-4 w-4" />
                         </span>
@@ -438,7 +438,7 @@ const Index = () => {
 
         {/* What is Itemile Section */}
         <section className="py-6 sm:py-8 mb-8 sm:mb-12">
-          <Card className="border-border bg-card shadow-sm rounded-2xl sm:rounded-3xl">
+          <Card className="border-border bg-card shadow-sm rounded-2xl sm:rounded-2xl">
             <CardContent className="p-6 sm:p-8 md:p-10">
               <div className="text-center max-w-3xl mx-auto">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">
@@ -549,23 +549,23 @@ const Index = () => {
 
         {/* Swap — Digital-style dark panel, bundled imagery, readable copy */}
         <section className="py-6 sm:py-8 md:py-12 mb-8 sm:mb-12">
-          <div className="rounded-[1.75rem] overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_24px_64px_-20px_rgba(0,0,0,0.45)]">
+          <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_24px_64px_-20px_rgba(0,0,0,0.45)]">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
               <div className="lg:col-span-5 p-8 sm:p-10 lg:p-12 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-zinc-800">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-sky-500 text-zinc-950 shrink-0">
+                  <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shrink-0">
                     <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.25} />
                   </div>
                   <Badge
                     variant="outline"
-                    className="rounded-full border-sky-500/40 bg-sky-500/10 text-sky-300 text-xs font-medium px-3"
+                    className="rounded-full border-primary/40 bg-primary/10 text-primary/70 text-xs font-medium px-3"
                   >
                     Smart swapping
                   </Badge>
                 </div>
                 <h2 className="text-2xl sm:text-3xl md:text-[2rem] font-semibold tracking-tight text-white mb-4 leading-tight">
                   Swap items, not just{" "}
-                  <span className="text-sky-400">rent</span>
+                  <span className="text-primary">rent</span>
                 </h2>
                 <p className="text-base sm:text-[1.05rem] text-zinc-300 leading-relaxed mb-8 max-w-md">
                   Trade with people nearby—no checkout required for pure swaps. List what you have, message matches, and exchange on your terms.
@@ -586,7 +586,7 @@ const Index = () => {
                     },
                   ].map((row) => (
                     <li key={row.t} className="flex gap-3">
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-400">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
                         <CheckCircle className="h-3.5 w-3.5" strokeWidth={2.5} />
                       </span>
                       <div>
@@ -603,7 +603,7 @@ const Index = () => {
                 <Link to="/explore" className="w-full sm:w-auto">
                   <Button
                     size="lg"
-                    className="w-full sm:w-auto rounded-full px-8 h-12 bg-sky-500 text-zinc-950 font-semibold hover:bg-sky-400 border-0"
+                    className="w-full sm:w-auto rounded-full px-8 h-12 bg-primary text-primary-foreground font-semibold hover:bg-primary/90 border-0"
                   >
                     Explore swap listings
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -643,7 +643,7 @@ const Index = () => {
 
         {/* Newsletter — static marketing */}
         <section className="py-6 sm:py-10 mb-12 sm:mb-16" aria-labelledby="newsletter-heading">
-          <div className="rounded-2xl sm:rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
+          <div className="rounded-2xl sm:rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
             <div className="flex flex-col justify-center p-8 sm:p-10 lg:p-12 max-w-2xl mx-auto text-center sm:text-left">
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground mb-5 mx-auto sm:mx-0">
                 <Mail className="h-6 w-6" strokeWidth={1.5} />
@@ -655,7 +655,7 @@ const Index = () => {
                 Subscribe to our email updates
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base mb-6 leading-relaxed">
-                Get occasional tips on listing your gear and finding rentals nearby. This is a static demo form — wire it to your provider when you are ready.
+                 Get occasional tips on listing your gear and finding rentals nearby.
               </p>
               {newsletterDone ? (
                 <p className="text-sm font-medium text-foreground">
@@ -745,7 +745,7 @@ const Index = () => {
             ].map((x) => (
               <div
                 key={x.t}
-                className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-5 text-center"
+                className="rounded-2xl sm:rounded-2xl border border-border bg-card p-4 sm:p-5 text-center"
               >
                 <x.icon className="h-7 w-7 sm:h-8 sm:w-8 mx-auto mb-3 text-foreground" strokeWidth={1.5} />
                 <p className="font-semibold text-sm mb-1">{x.t}</p>
@@ -785,7 +785,7 @@ const Index = () => {
 
         {/* CTA Section */}
         <section className="py-6 sm:py-8 md:py-12">
-          <Card className="bg-muted/40 border border-border rounded-2xl sm:rounded-3xl">
+          <Card className="bg-muted/40 border border-border rounded-2xl sm:rounded-2xl">
             <CardContent className="p-6 sm:p-8 md:p-12 text-center">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight mb-3 sm:mb-4">
                 Ready to Start <span className="gradient-text">Sharing</span>?
@@ -935,7 +935,7 @@ const Index = () => {
               <h4 className="font-semibold mb-4">About</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <span className="text-muted-foreground">Built with ❤️ for the sharing community</span>
+                  <span className="text-muted-foreground">                 Built to make renting local, simple, and sustainable.</span>
                 </li>
                 <li>
                   <span className="text-muted-foreground">© 2026 Itemile. All rights reserved.</span>
