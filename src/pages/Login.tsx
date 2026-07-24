@@ -47,7 +47,7 @@ const Login: React.FC = () => {
 
   return (
     <div className="app-shell relative overflow-hidden flex flex-col">
-      <button onClick={() => navigate('/signup')} className="absolute top-6 left-6 flex items-center text-muted-foreground hover:text-primary transition-colors z-20">
+      <button onClick={() => window.location.href = '/signup'} className="absolute top-6 left-6 flex items-center text-muted-foreground hover:text-primary transition-colors z-20">
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Signup
       </button>

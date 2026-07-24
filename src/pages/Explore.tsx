@@ -1145,8 +1145,8 @@ const Explore = () => {
                   className={cn(
                     "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
                     selectedCategory === ""
-                       ? "bg-primary/10 font-semibold text-primary ring-1 ring-primary/20"
-                       : "hover:bg-zinc-50"
+                      ? "bg-rose-50 font-semibold text-rose-900 ring-1 ring-rose-200"
+                      : "hover:bg-zinc-50"
                   )}
                 >
                   <span>All listings</span>
@@ -1154,7 +1154,7 @@ const Explore = () => {
                     variant="secondary"
                     className={cn(
                       "shrink-0 text-xs",
-                       selectedCategory === "" ? "bg-primary/20 text-primary" : ""
+                      selectedCategory === "" ? "bg-rose-200/80 text-rose-950" : ""
                     )}
                   >
                     {totalShopCount}
@@ -1169,8 +1169,8 @@ const Explore = () => {
                     className={cn(
                       "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
                       selectedCategory === cat.value
-                         ? "bg-primary/10 font-medium text-primary ring-1 ring-primary/20"
-                         : "hover:bg-zinc-50"
+                        ? "bg-rose-50 font-medium text-rose-900 ring-1 ring-rose-200"
+                        : "hover:bg-zinc-50"
                     )}
                   >
                     <cat.icon className="h-4 w-4 shrink-0 opacity-70" />

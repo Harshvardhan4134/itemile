@@ -121,7 +121,7 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-neutral-200/60 text-foreground antialiased;
+    @apply bg-neutral-200/60 text-foreground font-inter antialiased;
   }
   
   h1, h2, h3, h4, h5, h6 {

@@ -3,12 +3,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  "apiKey": "REPLACE_ME",
+  "apiKey": "AIzaSyDF-HjilCZK0ubxZ9le13kuz4ksukPH4T8",
   "authDomain": "itemile-prod.firebaseapp.com",
   "projectId": "itemile-prod",
-  "storageBucket": "itemile-prod.appspot.com",
-  "messagingSenderId": "000000000000",
-  "appId": "1:000000000000:web:000000000000"
+  "storageBucket": "itemile-prod.firebasestorage.app",
+  "messagingSenderId": "367833641071",
+  "appId": "1:367833641071:web:268c1cbe4a81c241e61d9a"
 });
 
 const messaging = firebase.messaging();
